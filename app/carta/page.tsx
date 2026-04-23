@@ -2,7 +2,6 @@
 
 import { MenuHero } from "@/components/menu/MenuHero";
 import { MenuSectionBlock } from "@/components/menu/MenuSectionBlock";
-import { FeatureCard } from "@/components/ui/FeatureCard";
 import { SmashPromoCTA } from "@/components/menu/SmashPromoCTA";
 import { menuHero, foodSections, drinksSections, smashPromo, menuFooter } from "@/content/menu";
 
@@ -34,16 +33,24 @@ export default function CartaPage() {
             secondaryAction={{ label: "Cómo llegar", href: "/ubicacion-ogijares" }}
           />
 
-          <MenuSectionBlock section={smashSection} className="shadow-[0_30px_70px_rgba(217,75,43,0.18)]" />
+          <MenuSectionBlock
+            section={smashSection}
+            className="shadow-[0_30px_70px_rgba(217,75,43,0.18)]"
+          />
 
           <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
             <MenuSectionBlock section={premiumSection} />
-            <FeatureCard
-              eyebrow="Comida"
-              title="Pide rápido. Comparte. Alárgalo."
-              text="Las smash mandan. La parrilla remata. Y lo demás está para seguir sin complicarse."
-              accent="cream"
-            />
+            <div className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,#1a1a1a_0%,#111111_100%)] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.2)]">
+              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#f2c6bb]">
+                Comida
+              </p>
+              <h2 className="mt-3 text-[2.4rem] font-black uppercase leading-[0.88] tracking-[-0.06em] text-[#fff8ef] md:text-[3.4rem]">
+                Pide rápido. Comparte. Alárgalo.
+              </h2>
+              <p className="mt-4 text-sm font-semibold leading-6 text-stone-300">
+                Las smash mandan. La parrilla remata. Y lo demás está para seguir sin complicarse.
+              </p>
+            </div>
           </div>
 
           <div className="grid gap-5 lg:grid-cols-[1.18fr_0.82fr]">
