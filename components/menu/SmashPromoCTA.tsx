@@ -47,9 +47,9 @@ const sizeStyles = {
 const themeStyles = {
   dark: {
     wrapper:
-      "border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(217,75,43,0.38),transparent_18%),linear-gradient(180deg,#0a0a0a_0%,#171717_100%)] text-white hover:shadow-[0_34px_82px_rgba(0,0,0,0.28)]",
+      "border-white/10 bg-black text-white hover:shadow-[0_34px_82px_rgba(0,0,0,0.28)]",
     imageOverlay:
-      "linear-gradient(270deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.75) 78%)",
+      "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.75) 100%)",
     claim: "text-[#f2c6bb]",
     title: "text-[#fff8ef]",
     subtitle: "text-white/85",
@@ -59,9 +59,9 @@ const themeStyles = {
   },
   red: {
     wrapper:
-      "border-[#d94b2b]/40 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.14),transparent_18%),linear-gradient(180deg,#d94b2b_0%,#b9381c_100%)] text-white hover:shadow-[0_34px_82px_rgba(185,56,28,0.3)]",
+      "border-[#d94b2b]/40 bg-[#b9381c] text-white hover:shadow-[0_34px_82px_rgba(185,56,28,0.3)]",
     imageOverlay:
-      "linear-gradient(270deg, rgba(0,0,0,0.08) 0%, rgba(99,22,10,0.68) 78%)",
+      "linear-gradient(180deg, rgba(80,18,8,0.28) 0%, rgba(50,10,5,0.62) 100%)",
     claim: "text-[#ffe0d7]",
     title: "text-[#fff8ef]",
     subtitle: "text-white/92",
@@ -86,51 +86,53 @@ export function SmashPromoCTA({
   const [imageReady, setImageReady] = useState(false);
 
   return (
-    <section className={`group relative overflow-hidden rounded-[2.2rem] border shadow-[0_28px_70px_rgba(0,0,0,0.22)] transition duration-200 hover:-translate-y-0.5 ${themeClass.wrapper} ${styles.wrapper}`}>
-      <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(transparent_0%,rgba(255,255,255,0.04)_48%,transparent_100%)]" />
-      <div className="absolute inset-0 opacity-25 [background-image:radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.06),transparent_20%),linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] [background-size:auto,22px_22px,22px_22px]" />
-      {promo.image ? (
+    <section className={\`group relative min-h-[420px] overflow-hidden rounded-[2.2rem] border shadow-[0_28px_70px_rgba(0,0,0,0.22)] transition duration-200 hover:-translate-y-0.5 \${themeClass.wrapper} \${styles.wrapper}\`}>
+      
+      {promo.image && (
         <Image
           src={promo.image.src}
           alt={promo.image.alt}
-          width={1200}
-          height={900}
-          className="sr-only"
+          fill
+          priority={resolvedSize === "lg"}
+          className="object-cover object-center"
           onLoad={() => setImageReady(true)}
           onError={() => setImageReady(false)}
         />
-      ) : null}
-      {promo.image && imageReady ? (
+      )}
+
+      {promo.image && imageReady && (
         <div
-          role="img"
-          aria-label={promo.image.alt}
-          className={`absolute inset-y-0 right-0 hidden w-[36%] opacity-30 mix-blend-screen lg:block ${resolvedSize === "sm" ? "lg:w-[30%]" : ""}`}
+          className="absolute inset-0"
           style={{
-            backgroundImage: `${themeClass.imageOverlay}, url(${promo.image.src})`,
-            backgroundPosition: "center",
-            backgroundSize: "cover",
+            background: themeClass.imageOverlay,
           }}
         />
-      ) : null}
+      )}
+
       <div className="relative z-10">
-        <p className={`text-[11px] font-black uppercase tracking-[0.22em] ${themeClass.claim}`}>
+        <p className={\`text-[11px] font-black uppercase tracking-[0.22em] \${themeClass.claim}\`}>
           {promo.claim}
         </p>
-        <h2 className={`mt-3 font-black uppercase leading-[0.84] tracking-[-0.07em] ${themeClass.title} ${styles.title}`}>
+
+        <h2 className={\`mt-3 font-black uppercase leading-[0.84] tracking-[-0.07em] \${themeClass.title} \${styles.title}\`}>
           {promo.title}
         </h2>
-        <p className={`mt-3 font-semibold ${themeClass.subtitle} ${styles.subtitle}`}>
+
+        <p className={\`mt-3 font-semibold \${themeClass.subtitle} \${styles.subtitle}\`}>
           {promo.subtitle}
         </p>
+
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <span className={`rounded-full border px-4 py-2 font-black uppercase tracking-[-0.05em] ${themeClass.pricePill} ${themeClass.price} ${styles.price}`}>
+          <span className={\`rounded-full border px-4 py-2 font-black uppercase tracking-[-0.05em] \${themeClass.pricePill} \${themeClass.price} \${styles.price}\`}>
             {promo.price}
           </span>
-          <span className={`font-black uppercase tracking-[0.18em] ${themeClass.variants} ${styles.variants}`}>
+
+          <span className={\`font-black uppercase tracking-[0.18em] \${themeClass.variants} \${styles.variants}\`}>
             {promo.variants.join(" · ")}
           </span>
         </div>
-        {showActions ? (
+
+        {showActions && (
           <div className="mt-7 flex flex-wrap gap-3">
             {primaryAction ? (
               <ActionButton href={primaryAction.href}>
@@ -139,15 +141,18 @@ export function SmashPromoCTA({
             ) : !compact ? (
               <ActionButton href="/reservas-contacto">Pedir ahora</ActionButton>
             ) : null}
+
             {secondaryAction ? (
               <ActionButton href={secondaryAction.href} kind="secondary">
                 {secondaryAction.label}
               </ActionButton>
             ) : !compact ? (
-              <ActionButton href="/ubicacion-ogijares" kind="secondary">Cómo llegar</ActionButton>
+              <ActionButton href="/ubicacion-ogijares" kind="secondary">
+                Cómo llegar
+              </ActionButton>
             ) : null}
           </div>
-        ) : null}
+        )}
       </div>
     </section>
   );
