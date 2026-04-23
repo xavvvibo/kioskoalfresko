@@ -95,3 +95,4 @@ Falta conectar auth real y persistencia de edición antes de publicar.
 - integración real de reservas con Qamarero
 - legales definitivos
 - protección real del dashboard `/owner`
+# kioskoalfresko
