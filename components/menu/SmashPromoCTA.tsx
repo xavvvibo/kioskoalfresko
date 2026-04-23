@@ -26,6 +26,7 @@ const sizeStyles = {
     price: "text-[1.5rem] md:text-[2rem]",
     subtitle: "text-sm md:text-base",
     variants: "text-xs",
+    imageBox: "w-[46%] max-w-[320px]",
   },
   md: {
     wrapper: "p-5 md:p-6",
@@ -34,41 +35,45 @@ const sizeStyles = {
     price: "text-[1.9rem] md:text-[2.6rem]",
     subtitle: "text-base md:text-lg",
     variants: "text-sm",
+    imageBox: "w-[48%] max-w-[420px]",
   },
   lg: {
     wrapper: "p-6 md:p-8",
     minHeight: "min-h-[420px] md:min-h-[500px]",
     title: "text-[2.9rem] md:text-[5.2rem]",
-    price: "text-[1.9rem] md:text-[2.6rem]",
+    price: "text-[2.2rem] md:text-[3rem]",
     subtitle: "text-base md:text-lg",
     variants: "text-sm",
+    imageBox: "w-[52%] max-w-[560px]",
   },
 } as const;
 
 const themeStyles = {
   dark: {
-    wrapper:
-      "border-white/10 bg-black text-white hover:shadow-[0_34px_82px_rgba(0,0,0,0.28)]",
+    wrapper: "border-white/10 bg-black text-white",
     claim: "text-[#f2c6bb]",
     title: "text-[#fff8ef]",
     subtitle: "text-white/90",
     price: "text-[#fff8ef]",
     variants: "text-[#f2c6bb]",
-    pricePill: "border-[#f0d28f]/40 bg-black/35 backdrop-blur-sm",
+    pricePill: "border-[#f0d28f]/40 bg-black/45 backdrop-blur-sm",
+    sectionBg:
+      "linear-gradient(180deg, rgba(8,8,8,1) 0%, rgba(14,14,14,1) 100%)",
     overlay:
-      "linear-gradient(90deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.80) 28%, rgba(0,0,0,0.48) 56%, rgba(0,0,0,0.18) 78%, rgba(0,0,0,0.08) 100%)",
+      "linear-gradient(90deg, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.88) 34%, rgba(0,0,0,0.52) 58%, rgba(0,0,0,0.18) 76%, rgba(0,0,0,0.06) 100%)",
   },
   red: {
-    wrapper:
-      "border-[#d94b2b]/40 bg-[#b9381c] text-white hover:shadow-[0_34px_82px_rgba(185,56,28,0.3)]",
+    wrapper: "border-[#d94b2b]/40 bg-[#b9381c] text-white",
     claim: "text-[#ffe0d7]",
     title: "text-[#fff8ef]",
     subtitle: "text-white/95",
     price: "text-[#fff8ef]",
     variants: "text-[#ffe0d7]",
     pricePill: "border-[#fff0d7]/35 bg-black/20 backdrop-blur-sm",
+    sectionBg:
+      "linear-gradient(180deg, rgba(160,45,18,1) 0%, rgba(120,30,8,1) 100%)",
     overlay:
-      "linear-gradient(90deg, rgba(43,7,0,0.86) 0%, rgba(70,12,2,0.72) 30%, rgba(115,30,8,0.38) 58%, rgba(0,0,0,0.14) 100%)",
+      "linear-gradient(90deg, rgba(35,5,0,0.88) 0%, rgba(65,10,2,0.76) 30%, rgba(120,28,8,0.40) 58%, rgba(0,0,0,0.12) 100%)",
   },
 } as const;
 
@@ -87,26 +92,27 @@ export function SmashPromoCTA({
 
   return (
     <section
-      className={`group relative overflow-hidden rounded-[2.2rem] border shadow-[0_28px_70px_rgba(0,0,0,0.22)] transition duration-200 hover:-translate-y-0.5 ${themeClass.wrapper} ${styles.wrapper} ${styles.minHeight}`}
+      className={`group relative overflow-hidden rounded-[2.2rem] border shadow-[0_28px_70px_rgba(0,0,0,0.22)] ${themeClass.wrapper} ${styles.wrapper} ${styles.minHeight}`}
+      style={{ background: themeClass.sectionBg }}
     >
-      {promo.image && (
-        <div className="absolute inset-0">
+      <div
+        className="absolute inset-0"
+        style={{ background: themeClass.overlay }}
+      />
+
+      <div className="absolute inset-0 opacity-10 [background-image:linear-gradient(transparent_0%,rgba(255,255,255,0.03)_50%,transparent_100%)]" />
+
+      {promo.image?.src ? (
+        <div
+          className={`pointer-events-none absolute bottom-0 right-0 z-0 hidden h-[92%] ${styles.imageBox} md:block`}
+        >
           <img
             src={promo.image.src}
             alt=""
-            className="h-full w-full object-cover object-right"
-          />
-
-          <div
-            className="absolute inset-0"
-            style={{
-              background: themeClass.overlay,
-            }}
+            className="h-full w-full object-contain object-right-bottom"
           />
         </div>
-      )}
-
-      <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(transparent_0%,rgba(255,255,255,0.03)_50%,transparent_100%)]" />
+      ) : null}
 
       <div className="relative z-10 flex h-full max-w-[760px] flex-col justify-center">
         <p className={`text-[11px] font-black uppercase tracking-[0.22em] ${themeClass.claim}`}>
