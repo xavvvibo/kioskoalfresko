@@ -15,7 +15,7 @@ export const smashPromo: MenuPromo = {
   price: "14,00€",
   variants: ["Ahumada", "Baiconera", "Cabra Loca"],
   image: {
-    src: "/menu/smash-burgers-hero.png",
+    src: "/menu/smash-burgers-hero-glow.png",
     alt: "Smash burgers de Kiosko Alfresko con patatas",
   },
 };
