@@ -96,3 +96,4 @@ Falta conectar auth real y persistencia de edición antes de publicar.
 - legales definitivos
 - protección real del dashboard `/owner`
 # kioskoalfresko
+# kioskoalfresko
