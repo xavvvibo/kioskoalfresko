@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5efe5;
+  --foreground: #111111;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Inter", "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background:
+    radial-gradient(circle at top right, rgba(217, 75, 43, 0.12), transparent 24%),
+    linear-gradient(180deg, #f5efe5 0%, #f2e7d7 55%, #f5efe5 100%);
+  color: var(--foreground);
+}
+a { text-decoration: none; }
+::selection { background: rgba(217, 75, 43, 0.28); }
