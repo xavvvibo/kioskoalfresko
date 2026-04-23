@@ -85,28 +85,28 @@ export function SmashPromoCTA({
   const themeClass = themeStyles[theme];
   const showActions = !compact || primaryAction || secondaryAction;
 
-  const hasImage = Boolean(promo.image?.src);
-  const backgroundImage = hasImage
-    ? `${themeClass.overlay}, url(${promo.image!.src})`
-    : "radial-gradient(circle at top right, rgba(217,75,43,0.35), transparent 24%), linear-gradient(180deg, #0a0a0a 0%, #171717 100%)";
-
   return (
     <section
       className={`group relative overflow-hidden rounded-[2.2rem] border shadow-[0_28px_70px_rgba(0,0,0,0.22)] transition duration-200 hover:-translate-y-0.5 ${themeClass.wrapper} ${styles.wrapper} ${styles.minHeight}`}
     >
-      <div
-        aria-hidden="true"
-        className="absolute inset-0"
-        style={{
-          backgroundImage,
-          backgroundPosition: "center right",
-          backgroundSize: "cover",
-          backgroundRepeat: "no-repeat",
-        }}
-      />
+      {promo.image && (
+        <div className="absolute inset-0">
+          <img
+            src={promo.image.src}
+            alt=""
+            className="h-full w-full object-cover object-right"
+          />
+
+          <div
+            className="absolute inset-0"
+            style={{
+              background: themeClass.overlay,
+            }}
+          />
+        </div>
+      )}
 
       <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(transparent_0%,rgba(255,255,255,0.03)_50%,transparent_100%)]" />
-      <div className="absolute inset-0 opacity-15 [background-image:radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.06),transparent_20%)]" />
 
       <div className="relative z-10 flex h-full max-w-[760px] flex-col justify-center">
         <p className={`text-[11px] font-black uppercase tracking-[0.22em] ${themeClass.claim}`}>
