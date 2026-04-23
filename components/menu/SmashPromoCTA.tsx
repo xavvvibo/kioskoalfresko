@@ -86,8 +86,9 @@ export function SmashPromoCTA({
   const [imageReady, setImageReady] = useState(false);
 
   return (
-    <section className={\`group relative min-h-[420px] overflow-hidden rounded-[2.2rem] border shadow-[0_28px_70px_rgba(0,0,0,0.22)] transition duration-200 hover:-translate-y-0.5 \${themeClass.wrapper} \${styles.wrapper}\`}>
-      
+    <section
+      className={`group relative min-h-[420px] overflow-hidden rounded-[2.2rem] border shadow-[0_28px_70px_rgba(0,0,0,0.22)] transition duration-200 hover:-translate-y-0.5 ${themeClass.wrapper} ${styles.wrapper}`}
+    >
       {promo.image && (
         <Image
           src={promo.image.src}
@@ -110,24 +111,32 @@ export function SmashPromoCTA({
       )}
 
       <div className="relative z-10">
-        <p className={\`text-[11px] font-black uppercase tracking-[0.22em] \${themeClass.claim}\`}>
+        <p
+          className={`text-[11px] font-black uppercase tracking-[0.22em] ${themeClass.claim}`}
+        >
           {promo.claim}
         </p>
 
-        <h2 className={\`mt-3 font-black uppercase leading-[0.84] tracking-[-0.07em] \${themeClass.title} \${styles.title}\`}>
+        <h2
+          className={`mt-3 font-black uppercase leading-[0.84] tracking-[-0.07em] ${themeClass.title} ${styles.title}`}
+        >
           {promo.title}
         </h2>
 
-        <p className={\`mt-3 font-semibold \${themeClass.subtitle} \${styles.subtitle}\`}>
+        <p className={`mt-3 font-semibold ${themeClass.subtitle} ${styles.subtitle}`}>
           {promo.subtitle}
         </p>
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <span className={\`rounded-full border px-4 py-2 font-black uppercase tracking-[-0.05em] \${themeClass.pricePill} \${themeClass.price} \${styles.price}\`}>
+          <span
+            className={`rounded-full border px-4 py-2 font-black uppercase tracking-[-0.05em] ${themeClass.pricePill} ${themeClass.price} ${styles.price}`}
+          >
             {promo.price}
           </span>
 
-          <span className={\`font-black uppercase tracking-[0.18em] \${themeClass.variants} \${styles.variants}\`}>
+          <span
+            className={`font-black uppercase tracking-[0.18em] ${themeClass.variants} ${styles.variants}`}
+          >
             {promo.variants.join(" · ")}
           </span>
         </div>
