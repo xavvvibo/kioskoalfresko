@@ -1,22 +1,17 @@
-import { menuFooter, menuHero, drinksSections, foodSections, smashPromo } from "@/content/menu";
-import { buildMetadata } from "@/lib/metadata";
+"use client";
+
 import { MenuHero } from "@/components/menu/MenuHero";
 import { MenuSectionBlock } from "@/components/menu/MenuSectionBlock";
+import { FeatureCard } from "@/components/ui/FeatureCard";
 import { SmashPromoCTA } from "@/components/menu/SmashPromoCTA";
-import { FeatureCard } from "@/components/menu/FeatureCard";
-
-export const metadata = buildMetadata({
-  title: "Carta de Kiosko Alfresko | Ogíjares",
-  description: "Consulta la carta de Kiosko Alfresko con smash burgers, parrilla, bebidas y planes para compartir.",
-  path: "/carta",
-});
+import { menuHero, foodSections, drinksSections, smashPromo, menuFooter } from "@/content/menu";
 
 export default function CartaPage() {
   const smashSection = foodSections.find((section) => section.id === "smash-burgers")!;
-  const premiumSection = foodSections.find((section) => section.id === "parrilla-premium")!;
+  const premiumSection = foodSections.find((section) => section.id === "premium")!;
   const shareSection = foodSections.find((section) => section.id === "para-compartir")!;
   const plansSection = foodSections.find((section) => section.id === "planes")!;
-  const grillSection = foodSections.find((section) => section.id === "brasa")!;
+  const grillSection = foodSections.find((section) => section.id === "parrilla")!;
   const potatoesSection = foodSections.find((section) => section.id === "patatas")!;
   const easySection = foodSections.find((section) => section.id === "sin-complicarse")!;
   const eggsSection = foodSections.find((section) => section.id === "huevos")!;
@@ -38,7 +33,9 @@ export default function CartaPage() {
             primaryAction={{ label: "Pedir ahora", href: "/reservas-contacto" }}
             secondaryAction={{ label: "Cómo llegar", href: "/ubicacion-ogijares" }}
           />
+
           <MenuSectionBlock section={smashSection} className="shadow-[0_30px_70px_rgba(217,75,43,0.18)]" />
+
           <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
             <MenuSectionBlock section={premiumSection} />
             <FeatureCard
@@ -48,6 +45,7 @@ export default function CartaPage() {
               accent="cream"
             />
           </div>
+
           <div className="grid gap-5 lg:grid-cols-[1.18fr_0.82fr]">
             <MenuSectionBlock section={shareSection} />
             <MenuSectionBlock section={plansSection} />
@@ -82,21 +80,12 @@ export default function CartaPage() {
               Bebe. Come. Quédate.
             </p>
           </div>
+
           <div className="grid gap-5 lg:grid-cols-[1fr_1fr_0.9fr]">
             <MenuSectionBlock section={sodaSection} />
             <MenuSectionBlock section={beerSection} />
             <MenuSectionBlock section={packsSection} className="lg:-translate-y-2" />
           </div>
-        </section>
-
-        <section className="mt-14">
-          <SmashPromoCTA
-            promo={smashPromo}
-            size="md"
-            theme="red"
-            compact
-            primaryAction={{ label: "Ver carta", href: "/carta" }}
-          />
         </section>
 
         <footer className="mt-12 rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,#151515_0%,#0f0f0f_100%)] px-6 py-8 text-center shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
