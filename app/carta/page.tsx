@@ -7,10 +7,12 @@ import { menuHero, foodSections, drinksSections, smashPromo, menuFooter } from "
 
 export default function CartaPage() {
   const smashSection = foodSections.find((section) => section.id === "smash-burgers")!;
-  const premiumSection = foodSections.find((section) => section.id === "premium")!;
+  const premiumSection = foodSections.find((section) => section.id === 
+"parrilla-premium")!;
   const shareSection = foodSections.find((section) => section.id === "para-compartir")!;
   const plansSection = foodSections.find((section) => section.id === "planes")!;
-  const grillSection = foodSections.find((section) => section.id === "parrilla")!;
+  const grillSection = foodSections.find((section) => section.id === 
+"brasa")!;
   const potatoesSection = foodSections.find((section) => section.id === "patatas")!;
   const easySection = foodSections.find((section) => section.id === "sin-complicarse")!;
   const eggsSection = foodSections.find((section) => section.id === "huevos")!;
