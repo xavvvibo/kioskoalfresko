@@ -10,15 +10,30 @@ const sectionStyles = {
     "border-[#d94b2b]/40 bg-[linear-gradient(180deg,#d94b2b_0%,#b9381c_100%)] text-white shadow-[0_24px_60px_rgba(217,75,43,0.22)]",
 } as const;
 
+type SectionAccent = keyof typeof sectionStyles;
+
+function getAccent(accent: unknown): SectionAccent {
+  if (accent === "dark" || accent === "red" || accent === "light") {
+    return accent;
+  }
+
+  return "light";
+}
+
 export function MenuSectionBlock({
   section,
   className = "",
 }: {
-  section: MenuSection;
+  section?: MenuSection;
   className?: string;
 }) {
-  const accent = section.accent === "dark" || section.accent === "red" || section.accent === "light" ? section.accent : "light";
+  if (!section) {
+    return null;
+  }
+
+  const accent = getAccent(section.accent);
   const dark = accent !== "light";
+  const items = section.items ?? [];
 
   return (
     <section
@@ -30,19 +45,22 @@ export function MenuSectionBlock({
           {section.eyebrow}
         </p>
       ) : null}
+
       <h2
         id={section.id}
         className="mt-2 text-[2rem] font-black uppercase leading-[0.92] tracking-[-0.05em] md:text-[2.4rem]"
       >
         {section.title}
       </h2>
+
       {section.intro ? (
         <p className={`mt-3 text-sm leading-6 ${dark ? "text-white/78" : "text-stone-700"}`}>
           {section.intro}
         </p>
       ) : null}
+
       <ul className="mt-5 space-y-3">
-        {section.items.map((item) => (
+        {items.map((item) => (
           <MenuItemRow
             key={`${section.id}-${item.name}`}
             item={item}
