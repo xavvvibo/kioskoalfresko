@@ -17,7 +17,7 @@ export function MenuSectionBlock({
   section: MenuSection;
   className?: string;
 }) {
-  const accent = section.accent ?? "light";
+  const accent = section.accent === "dark" || section.accent === "red" || section.accent === "light" ? section.accent : "light";
   const dark = accent !== "light";
 
   return (
