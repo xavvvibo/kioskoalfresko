@@ -18,15 +18,17 @@ export const siteConfig = {
     mapsUrl: "https://www.google.com/maps/search/?api=1&query=Parque+San+Sebastián+Ogíjares",
   },
   contact: {
-    phoneDisplay: "[PENDIENTE_TELÉFONO]",
-    phoneHref: "tel:[PENDIENTE_TELÉFONO]",
-    email: "[PENDIENTE_EMAIL]",
-    whatsappUrl: "[PENDIENTE_WHATSAPP]",
+    phoneDisplay: "696 320 465",
+    phoneHref: "tel:696320465",
+    email: "info@kioskoalfresko.es",
+    emailHref: "mailto:info@kioskoalfresko.es",
+    whatsappDisplay: "+34 696 320 465",
+    whatsappUrl: "https://wa.me/34696320465",
   },
   ctas: {
     primary: { label: "Cómo llegar", href: "/ubicacion-ogijares" },
     secondary: { label: "Ver carta", href: "/carta" },
-    call: { label: "Llamar", href: "tel:[PENDIENTE_TELÉFONO]" },
+    call: { label: "Llamar", href: "tel:696320465" },
     booking: { label: "Reservas y contacto", href: "/reservas-contacto" },
   },
   positioning: {
@@ -134,7 +136,7 @@ export const menuCategories: MenuCategory[] = [
 export const heroActions: ActionLink[] = [
   { label: "Cómo llegar", href: "/ubicacion-ogijares", kind: "primary" },
   { label: "Ver carta", href: "/carta", kind: "secondary" },
-  { label: "Llamar", href: "tel:[PENDIENTE_TELÉFONO]", kind: "ghost" },
+  { label: "Llamar", href: "tel:696320465", kind: "ghost" },
 ];
 
 export const seoLandings: SeoLanding[] = [
