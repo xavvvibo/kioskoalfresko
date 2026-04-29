@@ -1,4 +1,5 @@
 import { smashPromo } from "@/content/menu";
+import { maySalesFocus } from "@/content/site";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { SmashPromoCTA } from "@/components/menu/SmashPromoCTA";
 
@@ -9,7 +10,10 @@ export function MenuPreview() {
         <div>
           <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d94b2b]">Carta</p>
           <p className="mt-4 text-4xl font-black uppercase leading-none tracking-[-0.04em] text-stone-950">Empieza por la ronda.</p>
-          <p className="mt-3 text-lg font-medium leading-7 text-stone-800">Smash burgers, parrilla, cosas para compartir y bebidas con precios claros para decidir rápido.</p>
+          <p className="mt-3 text-lg font-medium leading-7 text-stone-800">{maySalesFocus.body}</p>
+          <p className="mt-4 rounded-full border border-stone-950/10 bg-[#f8f1e7] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-stone-950">
+            {maySalesFocus.extra}
+          </p>
           <div className="mt-6"><ActionButton href="/carta">Ver carta</ActionButton></div>
         </div>
         <SmashPromoCTA

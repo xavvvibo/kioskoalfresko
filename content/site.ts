@@ -1,4 +1,4 @@
-import type { ActionLink, MenuCategory, SeasonalScheduleItem, SeoLanding } from "@/types/site";
+import type { ActionLink, MenuCategory, ScheduleEvent, SeasonalScheduleItem, SeoLanding } from "@/types/site";
 
 export const siteConfig = {
   name: "Kiosko Alfresko",
@@ -37,19 +37,57 @@ export const siteConfig = {
   },
   schedule: {
     currentLabel: "Horario actual",
-    currentSummary: "Abrimos desde el 25 de abril.",
+    currentSummary: "En mayo abrimos de jueves a domingo de 10:00 a 17:00, salvo eventos especiales.",
     note: "Junio, julio, agosto y septiembre se actualizarán aquí en cuanto se cierre el horario definitivo.",
   },
 };
 
 export const seasonalSchedule: SeasonalScheduleItem[] = [
   { month: "Abril", status: "confirmed", summary: "Reapertura el 25 de abril · evento de 11:00 a 14:00 y de 17:00 a 20:00", note: "Primer día de temporada en el Parque San Sebastián.", highlight: true },
-  { month: "Mayo", status: "confirmed", summary: "Sábados y domingos · 12:00 a 18:00", highlight: true },
+  { month: "Mayo", status: "confirmed", summary: "Jueves a domingo · 10:00 a 17:00", note: "Este finde hay horario ampliado por Día de la Bicicleta y Cruces.", highlight: true },
   { month: "Junio", status: "pending", summary: "Horario especial pendiente de actualizar", note: "Bloque listo para cargar el horario real en cuanto quede cerrado." },
   { month: "Julio", status: "pending", summary: "Horario especial pendiente de actualizar", note: "Mes fuerte de terraza. Pendiente de confirmación final." },
   { month: "Agosto", status: "pending", summary: "Horario especial pendiente de actualizar", note: "Mes fuerte de terraza. Pendiente de confirmación final." },
   { month: "Septiembre", status: "special", summary: "Horario especial por fiestas patronales, pendiente de actualizar", note: "Preparado para reflejar el tramo especial sin rehacer el bloque." },
 ];
+
+export const maySchedule = {
+  normalLabel: "Mayo en el Parque San Sebastián",
+  normalHours: "Jueves a domingo · 10:00–17:00",
+  normalSummary: "En mayo abrimos de jueves a domingo de 10:00 a 17:00, salvo eventos especiales.",
+  weekendNotice: "Este finde abrimos hasta tarde: sábado y domingo de Cruces hasta las 23:00.",
+  weekendLead: "Este finde horarios especiales por Día de la Bicicleta y Cruces.",
+};
+
+export const maySpecialEvents: ScheduleEvent[] = [
+  {
+    date: "Viernes 1 de mayo",
+    title: "Día de la Bicicleta",
+    hours: "10:00–20:00",
+    note: "Horario especial para aprovechar todo el día en el parque.",
+    highlight: true,
+  },
+  {
+    date: "Sábado 2 de mayo",
+    title: "Cruces",
+    hours: "10:00–23:00",
+    note: "Concierto a las 21:00.",
+    highlight: true,
+  },
+  {
+    date: "Domingo 3 de mayo",
+    title: "Cruces",
+    hours: "10:00–23:00",
+    note: "Seguimos hasta tarde para cerrar el finde.",
+    highlight: true,
+  },
+];
+
+export const maySalesFocus = {
+  title: "Smash Burgers 180G, bebida + tapa y parque.",
+  body: "Smash Burgers 180G, bebida + tapa y plan fácil en el Parque San Sebastián · Ogíjares.",
+  extra: "Sábado · concierto a las 21:00.",
+};
 
 export const reopeningCampaign = {
   date: "25 de abril",
@@ -135,7 +173,7 @@ export const seoLandings: SeoLanding[] = [
 
 export const ownerSections = [
   { title: "Resumen de negocio", items: ["Reapertura 25 de abril", "CTAs activos", "Páginas SEO publicadas", "Estado de placeholders"] },
-  { title: "Horarios estacionales", items: ["25 de abril: reapertura", "Mayo fin de semana 12:00–18:00", "Junio pendiente", "Julio pendiente", "Agosto pendiente", "Septiembre especial"] },
+  { title: "Horarios estacionales", items: ["25 de abril: reapertura", "Mayo jueves a domingo 10:00–17:00", "1 mayo 10:00–20:00", "2 y 3 mayo 10:00–23:00", "Junio pendiente", "Julio pendiente", "Agosto pendiente", "Septiembre especial"] },
   { title: "Carta y categorías", items: ["Bebidas", "Tapas", "Raciones", "Para compartir", "Opciones para niños"] },
   { title: "SEO local", items: ["Tomar algo en Ogíjares", "Tapas en Ogíjares", "Terraza en Ogíjares", "Bar en Ogíjares"] },
 ];

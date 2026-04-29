@@ -8,6 +8,14 @@ export type SeasonalScheduleItem = {
   highlight?: boolean;
 };
 
+export type ScheduleEvent = {
+  date: string;
+  title: string;
+  hours: string;
+  note?: string;
+  highlight?: boolean;
+};
+
 export type MenuCategory = {
   id: string;
   title: string;

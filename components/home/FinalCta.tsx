@@ -1,3 +1,4 @@
+import { maySalesFocus } from "@/content/site";
 import { ActionButton } from "@/components/ui/ActionButton";
 
 export function FinalCta() {
@@ -8,12 +9,12 @@ export function FinalCta() {
       <div className="mx-auto max-w-4xl text-center">
         <p className="relative z-10 text-xs font-black uppercase tracking-[0.28em] text-[#f2c6bb]">Temporada abierta</p>
         <h2 className="relative z-10 mt-5 text-[3rem] font-black uppercase leading-[0.88] tracking-[-0.06em] md:text-[5.6rem]">Si os apetece terraceo, ya está abierto.</h2>
-        <p className="relative z-10 mt-5 text-lg font-semibold text-stone-300 md:text-xl">Desde el 25 de abril.</p>
+        <p className="relative z-10 mt-5 text-lg font-semibold text-stone-300 md:text-xl">Smash Burgers 180G, bebida + tapa y parque en Ogíjares.</p>
         <div className="relative z-10 mt-9 flex flex-wrap justify-center gap-3">
           <ActionButton href="/ubicacion-ogijares">Cómo llegar</ActionButton>
           <ActionButton href="/horarios" kind="secondary">Ver horarios</ActionButton>
         </div>
-        <p className="relative z-10 mt-6 text-sm font-semibold text-stone-300">Perfecto para una ronda, unas tapas y echar el rato.</p>
+        <p className="relative z-10 mt-6 text-sm font-semibold text-stone-300">{maySalesFocus.extra}</p>
       </div>
     </div>
   );

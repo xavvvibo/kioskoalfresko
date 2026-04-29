@@ -1,4 +1,4 @@
-import { seasonalSchedule, siteConfig } from "@/content/site";
+import { maySchedule, maySpecialEvents, seasonalSchedule, siteConfig } from "@/content/site";
 import { ActionButton } from "@/components/ui/ActionButton";
 
 const statusClasses = {
@@ -14,11 +14,24 @@ export function SchedulePanel() {
         <div>
           <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d94b2b]">{siteConfig.schedule.currentLabel}</p>
           <h3 className="mt-3 text-4xl font-black uppercase leading-none tracking-[-0.04em] text-stone-950 md:text-5xl">{siteConfig.schedule.currentSummary}</h3>
-          <p className="mt-5 text-lg font-black uppercase tracking-[-0.03em] text-stone-950">Mayo · Sábados y domingos · 12:00 a 18:00</p>
+          <p className="mt-5 text-lg font-black uppercase tracking-[-0.03em] text-stone-950">{maySchedule.normalHours}</p>
+          <p className="mt-4 inline-flex rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white">
+            {maySchedule.weekendNotice}
+          </p>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-stone-700">{siteConfig.schedule.note}</p>
           <p className="mt-4 text-sm font-semibold text-stone-700">Consulta aquí antes de venir.</p>
         </div>
         <ActionButton href="/horarios" kind="secondary">Ver horarios</ActionButton>
+      </div>
+      <div className="mt-8 grid gap-4 lg:grid-cols-3">
+        {maySpecialEvents.map((item) => (
+          <article key={item.date} className="rounded-[1.5rem] border border-stone-950 bg-[#f8f1e7] p-5 shadow-[0_10px_24px_rgba(0,0,0,0.04)]">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#d94b2b]">{item.date}</p>
+            <h4 className="mt-3 text-2xl font-black uppercase tracking-[-0.03em] text-stone-950">{item.title}</h4>
+            <p className="mt-4 text-lg font-black uppercase tracking-[-0.03em] text-stone-950">{item.hours}</p>
+            {item.note ? <p className="mt-3 text-sm leading-6 text-stone-700">{item.note}</p> : null}
+          </article>
+        ))}
       </div>
       <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {seasonalSchedule.map((item) => (
