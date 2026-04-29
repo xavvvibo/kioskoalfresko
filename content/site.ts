@@ -15,7 +15,7 @@ export const siteConfig = {
     postalCode: "18151",
     region: "Andalucía",
     addressLine: "Parque San Sebastián",
-    mapsUrl: "[PENDIENTE_MAPS_URL]",
+    mapsUrl: "https://www.google.com/maps/search/?api=1&query=Parque+San+Sebastián+Ogíjares",
   },
   contact: {
     phoneDisplay: "[PENDIENTE_TELÉFONO]",
@@ -87,6 +87,11 @@ export const maySalesFocus = {
   title: "Smash Burgers 180G, bebida + tapa y parque.",
   body: "Smash Burgers 180G, bebida + tapa y plan fácil en el Parque San Sebastián · Ogíjares.",
   extra: "Sábado · concierto a las 21:00.",
+  microcopy: [
+    "Parque San Sebastián · Ogíjares",
+    "Smash 180G + patatas",
+    "Cada bebida con tapa",
+  ],
 };
 
 export const reopeningCampaign = {

@@ -8,10 +8,12 @@ export function ActionButton({
   href,
   children,
   kind = "primary",
+  newTab = false,
 }: {
   href: string;
   children: React.ReactNode;
   kind?: "primary" | "secondary" | "ghost";
+  newTab?: boolean;
 }) {
   const className =
     kind === "primary"
@@ -38,7 +40,16 @@ export function ActionButton({
     href.startsWith("http") || href.startsWith("tel:") || href.startsWith("mailto:");
 
   if (external) {
-    return <a href={href} className={sharedClassName}>{children}</a>;
+    return (
+      <a
+        href={href}
+        className={sharedClassName}
+        target={newTab ? "_blank" : undefined}
+        rel={newTab ? "noreferrer noopener" : undefined}
+      >
+        {children}
+      </a>
+    );
   }
 
   return <Link href={href} className={sharedClassName}>{children}</Link>;

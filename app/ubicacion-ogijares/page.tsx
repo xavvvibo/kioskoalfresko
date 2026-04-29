@@ -19,8 +19,16 @@ export default function UbicacionPage() {
           <article className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
             <h2 className="text-2xl font-semibold text-stone-950">{siteConfig.location.area}</h2>
             <p className="mt-3 text-sm leading-6 text-stone-600">{siteConfig.location.city}, {siteConfig.location.province}</p>
-            <p className="mt-3 text-sm leading-6 text-stone-500">[Pendiente: enlace real de Google Maps, referencias de aparcamiento y acceso.]</p>
-            <div className="mt-6"><ActionButton href={siteConfig.location.mapsUrl}>Abrir ruta</ActionButton></div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Parque San Sebastián · Ogíjares</span>
+              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Smash 180G + patatas</span>
+              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Cada bebida con tapa</span>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-stone-500">Abre la ruta en Google Maps y llega directo al Parque San Sebastián.</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <ActionButton href={siteConfig.location.mapsUrl} newTab>Abrir ruta</ActionButton>
+              <ActionButton href={siteConfig.location.mapsUrl} kind="secondary" newTab>📍 Llegar ahora</ActionButton>
+            </div>
           </article>
           <article className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
             <h2 className="text-2xl font-semibold text-stone-950">Antes de venir</h2>

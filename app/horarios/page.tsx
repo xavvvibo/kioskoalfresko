@@ -1,5 +1,6 @@
-import { maySchedule, maySpecialEvents, seasonalSchedule, siteConfig } from "@/content/site";
+import { maySalesFocus, maySchedule, maySpecialEvents, seasonalSchedule, siteConfig } from "@/content/site";
 import { buildMetadata } from "@/lib/metadata";
+import { ActionButton } from "@/components/ui/ActionButton";
 
 export const metadata = buildMetadata({
   title: "Horarios de Kiosko Alfresko | Ogíjares",
@@ -15,13 +16,26 @@ export default function HorariosPage() {
         <h1 className="mt-3 text-4xl font-black uppercase tracking-[-0.04em] text-stone-950 md:text-5xl">Horario actual</h1>
         <p className="mt-5 max-w-3xl text-lg leading-8 text-stone-700">{maySchedule.normalSummary}</p>
         <div className="mt-8 rounded-[2rem] border border-stone-950 bg-white p-6 shadow-sm">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">🔥 Hoy abierto</p>
+          <p className="mt-2 text-sm font-semibold text-stone-700">👉 Consulta abajo horarios especiales</p>
           <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-stone-950">{siteConfig.schedule.currentSummary}</h2>
           <p className="mt-4 text-lg font-black uppercase tracking-[-0.03em] text-stone-950">{maySchedule.normalHours}</p>
           <p className="mt-4 inline-flex rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white">
             {maySchedule.weekendNotice}
           </p>
+          <p className="mt-4 text-sm font-semibold text-stone-800">Este finde abrimos hasta las 23:00 por Cruces y Día de la Bicicleta.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {maySalesFocus.microcopy.map((item) => (
+              <span key={item} className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">
+                {item}
+              </span>
+            ))}
+          </div>
           <p className="mt-3 text-sm leading-6 text-stone-700">{siteConfig.schedule.note}</p>
           <p className="mt-4 text-sm font-semibold text-stone-700">Consulta aquí antes de venir.</p>
+          <div className="mt-6">
+            <ActionButton href={siteConfig.location.mapsUrl} newTab>📍 Llegar ahora</ActionButton>
+          </div>
         </div>
         <div className="mt-8 rounded-[2rem] border border-stone-950 bg-stone-950 p-6 text-white shadow-[0_24px_60px_rgba(0,0,0,0.16)]">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-[#f2c6bb]">Horarios especiales</p>

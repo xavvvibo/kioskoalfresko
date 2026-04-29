@@ -23,6 +23,7 @@ export function Hero() {
             {heroActions.filter((action) => action.label !== "Llamar").map((action) => (
               <ActionButton key={action.label} href={action.href} kind={action.kind}>{action.label}</ActionButton>
             ))}
+            <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab>📍 Llegar ahora</ActionButton>
           </div>
           <p className="mt-5 text-sm font-semibold text-stone-700">Mira dónde estamos y decide rápido si hoy es plan.</p>
         </div>
@@ -36,6 +37,7 @@ export function Hero() {
             <div className="relative z-10 mt-6 flex flex-wrap gap-3">
               <ActionButton href="/carta">Ver carta</ActionButton>
               <ActionButton href="/ubicacion-ogijares" kind="secondary">Cómo llegar</ActionButton>
+              <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab>📍 Llegar ahora</ActionButton>
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -47,6 +49,13 @@ export function Hero() {
               <div className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80">Este finde</div>
               <div className="mt-3 text-lg font-black uppercase leading-tight md:text-[1.35rem]">{maySalesFocus.title}</div>
               <p className="mt-3 text-sm font-semibold leading-6 text-white/88">{maySalesFocus.extra}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {maySalesFocus.microcopy.map((item) => (
+                  <span key={item} className="rounded-full border border-white/18 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-white">
+                    {item}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
