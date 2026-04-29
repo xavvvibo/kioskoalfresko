@@ -10,12 +10,11 @@ import { SchedulePanel } from "@/components/home/SchedulePanel";
 import { ContactPanel } from "@/components/home/ContactPanel";
 import { SeoLinksPanel } from "@/components/home/SeoLinksPanel";
 import { FinalCta } from "@/components/home/FinalCta";
-import { ReopeningPanel } from "@/components/home/ReopeningPanel";
 import { SpringHighlights } from "@/components/home/SpringHighlights";
 
 export const metadata = buildMetadata({
   title: "Kiosko Alfresko | Terraza para tomar algo en Ogíjares",
-  description: "Kiosko Alfresko reabre el 25 de abril en Ogíjares: terraza para tomar algo, arrancar la primavera y quedarse en el Parque San Sebastián.",
+  description: "Terraza para tomar algo en Ogíjares con smash burgers, tapas y plan fácil en el Parque San Sebastián.",
   path: "/",
 });
 
@@ -23,9 +22,6 @@ export default function HomePage() {
   return (
     <main>
       <Hero />
-      <Section eyebrow="Reapertura" title="Volvemos el 25 de abril.">
-        <ReopeningPanel />
-      </Section>
       <Section title="Lo ves. Lo propones. Vais." description="La home ya no va de explicarlo todo. Va de que en unos segundos se entienda el plan.">
         <QuickDecision />
       </Section>

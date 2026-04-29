@@ -24,7 +24,8 @@ export default function UbicacionPage() {
               <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Smash 180G + patatas</span>
               <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Cada bebida con tapa</span>
             </div>
-            <p className="mt-3 text-sm leading-6 text-stone-500">Abre la ruta en Google Maps y llega directo al Parque San Sebastián.</p>
+            <p className="mt-3 text-sm leading-6 text-stone-500">Abre la ruta y ven directo al Parque San Sebastián de Ogíjares.</p>
+            <p className="mt-3 text-sm font-semibold leading-6 text-stone-700">terraza exterior · parque · ideal para quedar</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <ActionButton href={siteConfig.location.mapsUrl} newTab>Abrir ruta</ActionButton>
               <ActionButton href={siteConfig.location.mapsUrl} kind="secondary" newTab>📍 Llegar ahora</ActionButton>

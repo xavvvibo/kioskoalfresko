@@ -7,7 +7,7 @@ export const siteConfig = {
   domain: "kioskoalfresko.es",
   locale: "es_ES",
   description:
-    "Kiosko Alfresko reabre el 25 de abril en Ogíjares: terraza para tomar algo, arrancar la primavera y liarse un rato más en el Parque San Sebastián.",
+    "Terraza para tomar algo en el Parque San Sebastián de Ogíjares, con smash burgers, tapas y plan fácil de jueves a domingo.",
   location: {
     area: "Parque San Sebastián",
     city: "Ogíjares",
@@ -34,8 +34,8 @@ export const siteConfig = {
   positioning: {
     headline: "Aquí no se viene a comer. Se viene a quedarse.",
     subheadline:
-      "Volvemos el 25 de abril.",
-    support: ["Arrancamos temporada en el Parque San Sebastián."],
+      "Jueves a domingo · 10:00–17:00",
+    support: ["Parque San Sebastián · Ogíjares", "Smash 180G + patatas", "Cada bebida con tapa"],
   },
   schedule: {
     currentLabel: "Horario actual",
@@ -109,14 +109,14 @@ export const reopeningCampaign = {
 
 export const springHighlights = [
   {
-    date: "25 abril",
-    title: "Abril",
-    detail: "Arrancamos el día 25.",
+    date: "Mayo",
+    title: "Jueves a domingo",
+    detail: "Horario normal de 10:00 a 17:00 para venir sin pensarlo demasiado.",
   },
   {
-    date: "Mayo",
-    title: "Cruces, San Isidro y mucho movimiento",
-    detail: "Cruces, San Isidro y mucho movimiento en el pueblo.",
+    date: "Este finde",
+    title: "Cruces y Día de la Bicicleta",
+    detail: "Horario ampliado y más ambiente en el parque.",
   },
   {
     date: "Junio",
