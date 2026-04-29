@@ -17,8 +17,8 @@ export function SmashPromoCTA({
 }) {
   const backgroundImage = promo.image?.src
     ? [
-        "radial-gradient(circle at 70% 40%, rgba(255,120,40,0.35), transparent 60%)",
-        "linear-gradient(270deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.8) 70%)",
+        "radial-gradient(circle at 75% 45%, rgba(255,120,40,0.25), transparent 60%)",
+        "linear-gradient(270deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.65) 65%)",
         `url(${promo.image.src})`,
       ].join(", ")
     : "linear-gradient(180deg, #0a0a0a 0%, #171717 100%)";
