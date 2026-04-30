@@ -63,6 +63,33 @@ export default function HomePage() {
             </article>
           ))}
         </div>
+        <p className="mt-5 text-sm font-semibold text-stone-800">🍺 Pide otra ronda… hay tapa otra vez 😉</p>
+      </Section>
+      <Section eyebrow="Venta rápida" title="Lo que pide todo el mundo">
+        <div className="rounded-[2rem] border border-stone-950 bg-white p-8 shadow-[0_18px_40px_rgba(0,0,0,0.06)]">
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              "Smash 180G + patatas",
+              "Bebida + tapa",
+              "Otra ronda para alargarlo",
+            ].map((item) => (
+              <div
+                key={item}
+                className="rounded-[1.4rem] border border-stone-950 bg-[#f8f1e7] px-5 py-5 text-center text-sm font-black uppercase tracking-[0.14em] text-stone-950"
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      </Section>
+      <Section eyebrow="Venta rápida" title="Plan perfecto ahora">
+        <div className="rounded-[2rem] border border-stone-950 bg-stone-950 p-8 text-white shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#f2c6bb]">Ahora mismo</p>
+          <p className="mt-4 text-[2.3rem] font-black uppercase leading-[0.9] tracking-[-0.05em] md:text-[3.6rem]">
+            Rápido, sin líos, y te vas contento
+          </p>
+        </div>
       </Section>
       <Section eyebrow="Primavera en Ogíjares" title="Primavera en Ogíjares">
         <p className="max-w-2xl text-base leading-7 text-stone-700 md:text-lg">Empieza la temporada de calle, parque y terraceo. Y se nota.</p>
