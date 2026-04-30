@@ -35,7 +35,7 @@ export const siteConfig = {
     headline: "Aquí no se viene a comer. Se viene a quedarse.",
     subheadline:
       "Jueves a domingo · 10:00–17:00",
-    support: ["Parque San Sebastián · Ogíjares", "Smash 180G + patatas", "Cada bebida con tapa"],
+    support: ["Smash 180G + patatas · 14€", "Cada bebida incluye tapa", "Parque San Sebastián · Ogíjares"],
   },
   schedule: {
     currentLabel: "Horario actual",

@@ -26,6 +26,11 @@ export default function UbicacionPage() {
             </div>
             <p className="mt-3 text-sm leading-6 text-stone-500">Abre la ruta y ven directo al Parque San Sebastián de Ogíjares.</p>
             <p className="mt-3 text-sm font-semibold leading-6 text-stone-700">terraza exterior · parque · ideal para quedar</p>
+            <div className="mt-4 space-y-2 text-sm font-semibold text-stone-700">
+              <p>🚗 Aparcamiento fácil</p>
+              <p>🌳 Dentro del parque</p>
+              <p>🍻 Ideal para quedar</p>
+            </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <ActionButton href={siteConfig.location.mapsUrl} newTab>Abrir ruta</ActionButton>
               <ActionButton href={siteConfig.location.mapsUrl} kind="secondary" newTab>📍 Llegar ahora</ActionButton>

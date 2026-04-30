@@ -27,6 +27,7 @@ export function SchedulePanel() {
               </span>
             ))}
           </div>
+          <p className="mt-4 text-sm font-black uppercase tracking-[0.14em] text-stone-950">👉 Vente antes de que se llene</p>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-stone-700">{siteConfig.schedule.note}</p>
           <p className="mt-4 text-sm font-semibold text-stone-700">Consulta aquí antes de venir.</p>
         </div>

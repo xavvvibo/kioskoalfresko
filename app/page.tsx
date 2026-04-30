@@ -25,6 +25,45 @@ export default function HomePage() {
       <Section title="Lo ves. Lo propones. Vais." description="La home ya no va de explicarlo todo. Va de que en unos segundos se entienda el plan.">
         <QuickDecision />
       </Section>
+      <Section eyebrow="Venta rápida" title="Lo que hay aquí">
+        <div className="rounded-[2rem] border border-stone-950 bg-white p-8 shadow-[0_18px_40px_rgba(0,0,0,0.06)]">
+          <div className="flex flex-wrap gap-3">
+            {[
+              "Smash burgers 180G",
+              "Bebida + tapa incluida",
+              "Parrilla (secreto, costillas)",
+              "Patatas top",
+              "Terraza en parque",
+            ].map((item) => (
+              <span
+                key={item}
+                className="rounded-full border border-stone-950 bg-[#f8f1e7] px-4 py-3 text-sm font-black uppercase tracking-[0.12em] text-stone-950"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+      </Section>
+      <Section eyebrow="Venta rápida" title="🔥 Las más pedidas">
+        <div className="grid gap-4 md:grid-cols-3">
+          {["Baiconera", "Cabra Loca", "Ahumada"].map((item, index) => (
+            <article
+              key={item}
+              className={`rounded-[1.8rem] border border-stone-950 p-6 shadow-[0_14px_28px_rgba(0,0,0,0.06)] ${
+                index === 0 ? "bg-stone-950 text-white" : index === 1 ? "bg-[#d94b2b] text-white" : "bg-white text-stone-950"
+              }`}
+            >
+              <p className={`text-[11px] font-black uppercase tracking-[0.18em] ${index === 2 ? "text-[#d94b2b]" : "text-white/75"}`}>
+                Smash Burgers 180G
+              </p>
+              <h3 className="mt-4 text-3xl font-black uppercase leading-none tracking-[-0.05em]">
+                {item}
+              </h3>
+            </article>
+          ))}
+        </div>
+      </Section>
       <Section eyebrow="Primavera en Ogíjares" title="Primavera en Ogíjares">
         <p className="max-w-2xl text-base leading-7 text-stone-700 md:text-lg">Empieza la temporada de calle, parque y terraceo. Y se nota.</p>
         <div className="mt-8">
