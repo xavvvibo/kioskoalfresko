@@ -2,6 +2,14 @@ import { heroActions, maySchedule, maySalesFocus, siteConfig } from "@/content/s
 import { ActionButton } from "@/components/ui/ActionButton";
 
 export function Hero() {
+  const now = new Date();
+  const day = now.getDay();
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  const opensAt = 10 * 60;
+  const closesAt = 17 * 60;
+  const isServiceDay = day === 4 || day === 5 || day === 6 || day === 0;
+  const isOpenBySchedule = isServiceDay && minutes >= opensAt && minutes < closesAt;
+
   return (
     <section className="relative overflow-hidden border-b border-stone-950 bg-[radial-gradient(circle_at_85%_14%,rgba(217,75,43,0.28),transparent_19%),radial-gradient(circle_at_20%_10%,rgba(17,17,17,0.06),transparent_28%),linear-gradient(180deg,#f5efe5_0%,#eadfce_100%)]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[linear-gradient(90deg,transparent_0%,rgba(17,17,17,0.08)_48%,transparent_100%)]" />
@@ -11,6 +19,15 @@ export function Hero() {
           <p className="inline-flex rounded-full border border-stone-950 bg-stone-950 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-white shadow-[0_10px_24px_rgba(0,0,0,0.14)]">Ogíjares · Parque San Sebastián</p>
           <p className="mt-4 inline-flex rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-white shadow-[0_14px_28px_rgba(217,75,43,0.24)]">
             {maySchedule.weekendNotice}
+          </p>
+          <p
+            className={`mt-4 inline-flex rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] shadow-[0_10px_20px_rgba(0,0,0,0.08)] ${
+              isOpenBySchedule
+                ? "border-emerald-700 bg-emerald-700 text-white"
+                : "border-stone-950 bg-white text-stone-950"
+            }`}
+          >
+            {isOpenBySchedule ? "🟢 Abierto ahora" : "🔴 Cerrado"}
           </p>
           <h1 className="mt-7 max-w-4xl text-[3.3rem] font-black uppercase leading-[0.88] tracking-[-0.07em] text-stone-950 sm:text-[4.3rem] md:max-w-3xl md:text-[6.25rem]">{siteConfig.positioning.headline}</h1>
           <p className="mt-5 max-w-lg text-base font-semibold leading-7 text-stone-800 md:text-xl md:leading-8">{siteConfig.positioning.subheadline}</p>
@@ -23,9 +40,10 @@ export function Hero() {
             {heroActions.filter((action) => action.label !== "Llamar").map((action) => (
               <ActionButton key={action.label} href={action.href} kind={action.kind}>{action.label}</ActionButton>
             ))}
+            <ActionButton href={siteConfig.contact.orderWhatsappUrl} kind="secondary" newTab>📲 Pedir por WhatsApp</ActionButton>
             <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab>📍 Llegar ahora</ActionButton>
           </div>
-          <p className="mt-5 text-sm font-semibold text-stone-700">Mira dónde estamos y decide rápido si hoy es plan.</p>
+          <p className="mt-5 text-sm font-semibold text-stone-700">👉 Vienes por una… te quedas por todo</p>
         </div>
         <div className="relative grid gap-4 self-end md:pl-6">
           <div className="absolute -left-5 top-10 hidden h-[78%] w-px bg-stone-950/14 md:block" />

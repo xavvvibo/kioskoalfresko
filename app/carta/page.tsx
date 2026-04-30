@@ -27,6 +27,9 @@ export default function CartaPage() {
         <MenuHero {...menuHero} />
 
         <section className="mt-8 space-y-5 md:mt-10">
+          <div className="inline-flex rounded-full border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#fff8ef] shadow-[0_10px_24px_rgba(217,75,43,0.12)]">
+            🔥 Rápido y sin complicarse
+          </div>
           <SmashPromoCTA
             promo={smashPromo}
             size="lg"

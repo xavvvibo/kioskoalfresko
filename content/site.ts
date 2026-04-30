@@ -24,6 +24,7 @@ export const siteConfig = {
     emailHref: "mailto:info@kioskoalfresko.es",
     whatsappDisplay: "+34 696 320 465",
     whatsappUrl: "https://wa.me/34696320465",
+    orderWhatsappUrl: "https://wa.me/34696320465?text=Hola%20quiero%20pedir%20en%20Kiosko%20Alfresko",
   },
   ctas: {
     primary: { label: "Cómo llegar", href: "/ubicacion-ogijares" },
