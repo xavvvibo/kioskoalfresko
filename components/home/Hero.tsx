@@ -29,6 +29,9 @@ export function Hero() {
           >
             {isOpenBySchedule ? "🟢 Abierto ahora" : "🔴 Cerrado"}
           </p>
+          <p className="mt-4 text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">
+            🔥 Hoy hay ambiente
+          </p>
           <h1 className="mt-7 max-w-4xl text-[3.3rem] font-black uppercase leading-[0.88] tracking-[-0.07em] text-stone-950 sm:text-[4.3rem] md:max-w-3xl md:text-[6.25rem]">{siteConfig.positioning.headline}</h1>
           <p className="mt-5 max-w-lg text-base font-semibold leading-7 text-stone-800 md:text-xl md:leading-8">{siteConfig.positioning.subheadline}</p>
           <div className="mt-5 flex max-w-2xl flex-wrap gap-2.5">
@@ -44,6 +47,8 @@ export function Hero() {
             <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab>📍 Llegar ahora</ActionButton>
           </div>
           <p className="mt-5 text-sm font-semibold text-stone-700">👉 Vienes por una… te quedas por todo</p>
+          <p className="mt-2 text-sm font-semibold text-stone-700">👉 En 5 minutos estás aquí con una cerveza</p>
+          <p className="mt-2 text-sm font-semibold text-stone-700">👉 Aquí siempre cae otra 😉</p>
         </div>
         <div className="relative grid gap-4 self-end md:pl-6">
           <div className="absolute -left-5 top-10 hidden h-[78%] w-px bg-stone-950/14 md:block" />
@@ -57,6 +62,7 @@ export function Hero() {
               <ActionButton href="/ubicacion-ogijares" kind="secondary">Cómo llegar</ActionButton>
               <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab>📍 Llegar ahora</ActionButton>
             </div>
+            <p className="relative z-10 mt-4 text-sm font-semibold text-white/80">👉 Abre Google Maps directo</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-[1.8rem] border border-stone-950 bg-white p-5 shadow-[0_12px_28px_rgba(0,0,0,0.06)]">
@@ -76,6 +82,13 @@ export function Hero() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+      <div className="px-4 pb-10 sm:px-6 md:pb-14">
+        <div className="mx-auto max-w-6xl">
+          <p className="text-center text-base font-black uppercase tracking-[0.14em] text-stone-950">
+            👉 Si no has venido aún, estás tardando
+          </p>
         </div>
       </div>
     </section>

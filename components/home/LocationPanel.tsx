@@ -16,6 +16,7 @@ export function LocationPanel() {
           <ActionButton href="/ubicacion-ogijares">Cómo llegar</ActionButton>
           <ActionButton href={siteConfig.location.mapsUrl} kind="secondary" newTab>📍 Llegar ahora</ActionButton>
         </div>
+        <p className="mt-4 text-sm font-semibold text-stone-700">👉 Abre Google Maps directo</p>
       </div>
       <div className="rounded-[2rem] border border-stone-950 bg-stone-950 p-8 text-white">
         <p className="text-sm font-black uppercase tracking-[0.18em] text-[#efb7a8]">Dónde estás yendo</p>
