@@ -55,21 +55,14 @@ export const seasonalSchedule: SeasonalScheduleItem[] = [
 ];
 
 export const maySchedule = {
-  normalLabel: "Mayo en el Parque San Sebastián",
-  normalHours: "Jueves a domingo · 10:00–17:00",
-  normalSummary: "Jueves a domingo · 10:00–17:00, con desayunos desde las 10:00, terraza al sol y confirmación en Instagram si cambia algo.",
-  weekendNotice: "Instagram en directo para confirmar cambios por clima o evento.",
-  weekendLead: "Consulta el estado del sábado y cualquier cambio puntual en Instagram antes de venir.",
+  normalLabel: "☕ Desayunos ALFRESKO",
+  normalHours: "JUEVES A DOMINGO · DESDE LAS 10:00",
+  normalSummary: "Jueves a domingo desde las 10:00, con desayunos, café + tostadas, tapas, cerveza fría y terraza al sol.",
+  weekendNotice: "Próximo evento sujeto a climatología. Confirmamos en Instagram.",
+  weekendLead: "Desayunos, café, tostadas, tapas, cerveza fría y smash burgers.",
 };
 
 export const maySpecialEvents: ScheduleEvent[] = [
-  {
-    date: "Cruces · ya pasó",
-    title: "🔥 Así se vivieron las Cruces en ALFRESKO",
-    hours: "Ambiente, tapas y terraza en el parque",
-    note: "Buen ambiente, tapas y terraza llena en el parque.",
-    highlight: true,
-  },
   {
     date: "Este sábado",
     title: "🎶 Evento pendiente de confirmación",
@@ -80,7 +73,7 @@ export const maySpecialEvents: ScheduleEvent[] = [
 ];
 
 export const maySalesFocus = {
-  title: "Desayuno, cerveza fría, tapas y smash.",
+  title: "☕ Desayunos ALFRESKO",
   body: "Café + tostadas desde las 10:00, tapas + cerveza y smash burgers Granada en la terraza de Ogíjares.",
   extra: "Instagram en directo para confirmar el evento del sábado y el ambiente real del día.",
   microcopy: [
@@ -98,16 +91,39 @@ export const springHighlights = [
     detail: "Café + tostadas desde las 10:00, cervezas frías, tapas y terraza en el parque.",
   },
   {
-    date: "Cruces",
-    title: "🔥 Así se vivieron las Cruces en ALFRESKO",
-    detail: "Bloque histórico para mantener el ambiente vivido sin comunicarlo como evento futuro.",
+    date: "Desayunos",
+    title: "☕ Desayunos ALFRESKO",
+    detail: "Café + tostadas + terraza al sol. Jueves a domingo desde las 10:00.",
   },
   {
-    date: "Este sábado",
-    title: "🎶 Evento pendiente de confirmación",
-    detail: "El evento previsto para este sábado está pendiente de confirmación debido a la previsión de lluvia. Consulta Instagram en tiempo real.",
+    date: "Sábado",
+    title: "🎶 Próximo evento sujeto a climatología",
+    detail: "Confirmamos siempre en Instagram antes de darlo por seguro.",
   },
 ];
+
+export const upcomingEvents = {
+  eyebrow: "Plazas limitadas en eventos",
+  title: "Próximos eventos ALFRESKO",
+  intro: "Música, terraza, smash burgers y ambiente en el Parque San Sebastián.",
+  reservationTitle: "¿Vienes con mesa reservada?",
+  reservationBody:
+    "Te atendemos mejor, más rápido y con servicio completo durante los eventos.",
+  reservationMicrocopy:
+    "En días de mucha afluencia, sin reserva podremos activar barra rápida de bebida.",
+  primaryCta: { label: "Reservar mesa", href: "/reservas-contacto" },
+  secondaryCta: { label: "Ver Instagram", href: "https://instagram.com/alfresko.granada" },
+  items: [
+    {
+      title: "Evento de sábado",
+      date: "Sábado · pendiente de confirmación",
+      status: "Sujeto a climatología",
+      description:
+        "Si se confirma, será uno de esos días de terraza llena, música y más ritmo en el parque.",
+      cta: { label: "Reservar mesa", href: "/reservas-contacto" },
+    },
+  ],
+};
 
 export const menuCategories: MenuCategory[] = [
   { id: "bebidas", title: "Bebidas", description: "Empieza por la ronda. Lo demás viene después.", placeholder: true },

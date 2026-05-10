@@ -7,6 +7,7 @@ import { WhyCome } from "@/components/home/WhyCome";
 import { MenuPreview } from "@/components/home/MenuPreview";
 import { LocationPanel } from "@/components/home/LocationPanel";
 import { SchedulePanel } from "@/components/home/SchedulePanel";
+import { UpcomingEvents } from "@/components/home/UpcomingEvents";
 import { ContactPanel } from "@/components/home/ContactPanel";
 import { SeoLinksPanel } from "@/components/home/SeoLinksPanel";
 import { FinalCta } from "@/components/home/FinalCta";
@@ -112,6 +113,9 @@ export default function HomePage() {
       </Section>
       <Section eyebrow="Horarios" title="Horario actual">
         <SchedulePanel />
+      </Section>
+      <Section eyebrow="Plazas limitadas en eventos" title="Próximos eventos ALFRESKO">
+        <UpcomingEvents />
       </Section>
       <Section eyebrow="Contacto" title="Si quieres cerrar algo antes de salir.">
         <ContactPanel />
