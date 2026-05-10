@@ -13,8 +13,8 @@ import { FinalCta } from "@/components/home/FinalCta";
 import { SpringHighlights } from "@/components/home/SpringHighlights";
 
 export const metadata = buildMetadata({
-  title: "Kiosko Alfresko | Terraza para tomar algo en Ogíjares",
-  description: "Terraza para tomar algo en Ogíjares con smash burgers, tapas y plan fácil en el Parque San Sebastián.",
+  title: "Kiosko Alfresko | Terraza en Ogíjares con desayunos, tapas y smash burgers",
+  description: "Kiosko en Ogíjares con desayunos jueves a domingo desde las 10:00, terraza, tapas, cervezas frías y smash burgers en el Parque San Sebastián.",
   path: "/",
 });
 
@@ -91,12 +91,12 @@ export default function HomePage() {
           </p>
         </div>
       </Section>
-      <Section eyebrow="Primavera en Ogíjares" title="Primavera en Ogíjares">
-        <p className="max-w-2xl text-base leading-7 text-stone-700 md:text-lg">Empieza la temporada de calle, parque y terraceo. Y se nota.</p>
+      <Section eyebrow="Estado actual" title="Lo que pasa hoy en ALFRESKO">
+        <p className="max-w-2xl text-base leading-7 text-stone-700 md:text-lg">Terraza en Ogíjares con desayunos desde las 10:00, café + tostadas al sol, tapas, cervezas frías y smash burgers. Estado real del día, sin prometer de más.</p>
         <div className="mt-8">
           <SpringHighlights />
         </div>
-        <p className="mt-6 text-base font-semibold text-stone-900">Si hay plan en Ogíjares, se acaba pasando por aquí.</p>
+        <p className="mt-6 text-base font-semibold text-stone-900">Si hay plan en Ogíjares, lo normal es acabar aquí.</p>
       </Section>
       <Section eyebrow="Qué tipo de sitio es" title="No se reserva una experiencia. Se monta el plan.">
         <TypeOfPlace />

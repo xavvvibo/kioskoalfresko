@@ -7,7 +7,7 @@ export const siteConfig = {
   domain: "kioskoalfresko.es",
   locale: "es_ES",
   description:
-    "Terraza para tomar algo en el Parque San Sebastián de Ogíjares, con smash burgers, tapas y plan fácil de jueves a domingo.",
+    "Kiosko en Ogíjares con desayunos desde las 10:00, terraza al sol, tapas, cervezas frías y smash burgers en el Parque San Sebastián.",
   location: {
     area: "Parque San Sebastián",
     city: "Ogíjares",
@@ -25,29 +25,29 @@ export const siteConfig = {
     whatsappDisplay: "+34 696 320 465",
     whatsappUrl: "https://wa.me/34696320465",
     orderWhatsappUrl: "https://wa.me/34696320465?text=Hola%20quiero%20pedir%20en%20Kiosko%20Alfresko",
+    instagramUrl: "https://instagram.com/alfresko.granada",
+    instagramHandle: "@alfresko.granada",
   },
   ctas: {
-    primary: { label: "Cómo llegar", href: "/ubicacion-ogijares" },
-    secondary: { label: "Ver carta", href: "/carta" },
-    call: { label: "Llamar", href: "tel:696320465" },
+    primary: { label: "Cómo llegar ahora", href: "/ubicacion-ogijares" },
+    secondary: { label: "Ver carta rápida", href: "/carta" },
+    call: { label: "Llamar ahora", href: "tel:696320465" },
     booking: { label: "Reservas y contacto", href: "/reservas-contacto" },
   },
   positioning: {
     headline: "Aquí no se viene a comer. Se viene a quedarse.",
-    subheadline:
-      "Jueves a domingo · 10:00–17:00",
-    support: ["Smash 180G + patatas · 14€", "Cada bebida incluye tapa", "Parque San Sebastián · Ogíjares"],
+    subheadline: "Desayunos jueves a domingo desde las 10:00, café + tostadas al sol, tapas, cervezas frías y smash burgers en Ogíjares.",
+    support: ["Smash 180G + patatas · 14€", "Café + tostadas desde las 10:00", "Parque San Sebastián · Ogíjares"],
   },
   schedule: {
     currentLabel: "Horario actual",
-    currentSummary: "En mayo abrimos de jueves a domingo de 10:00 a 17:00, salvo eventos especiales.",
+    currentSummary: "Jueves a domingo · 10:00 a 17:00. Desayunos desde las 10:00 y confirmación en Instagram si cambia algo por clima o evento.",
     note: "Junio, julio, agosto y septiembre se actualizarán aquí en cuanto se cierre el horario definitivo.",
   },
 };
 
 export const seasonalSchedule: SeasonalScheduleItem[] = [
-  { month: "Abril", status: "confirmed", summary: "Reapertura el 25 de abril · evento de 11:00 a 14:00 y de 17:00 a 20:00", note: "Primer día de temporada en el Parque San Sebastián.", highlight: true },
-  { month: "Mayo", status: "confirmed", summary: "Jueves a domingo · 10:00 a 17:00", note: "Este finde hay horario ampliado por Día de la Bicicleta y Cruces.", highlight: true },
+  { month: "Mayo", status: "confirmed", summary: "Jueves a domingo · 10:00 a 17:00", note: "Seguimos activos en el parque y confirmamos cualquier cambio puntual en Instagram.", highlight: true },
   { month: "Junio", status: "pending", summary: "Horario especial pendiente de actualizar", note: "Bloque listo para cargar el horario real en cuanto quede cerrado." },
   { month: "Julio", status: "pending", summary: "Horario especial pendiente de actualizar", note: "Mes fuerte de terraza. Pendiente de confirmación final." },
   { month: "Agosto", status: "pending", summary: "Horario especial pendiente de actualizar", note: "Mes fuerte de terraza. Pendiente de confirmación final." },
@@ -57,72 +57,55 @@ export const seasonalSchedule: SeasonalScheduleItem[] = [
 export const maySchedule = {
   normalLabel: "Mayo en el Parque San Sebastián",
   normalHours: "Jueves a domingo · 10:00–17:00",
-  normalSummary: "En mayo abrimos de jueves a domingo de 10:00 a 17:00, salvo eventos especiales.",
-  weekendNotice: "Este finde abrimos hasta tarde: sábado y domingo de Cruces hasta las 23:00.",
-  weekendLead: "Este finde horarios especiales por Día de la Bicicleta y Cruces.",
+  normalSummary: "Jueves a domingo · 10:00–17:00, con desayunos desde las 10:00, terraza al sol y confirmación en Instagram si cambia algo.",
+  weekendNotice: "Instagram en directo para confirmar cambios por clima o evento.",
+  weekendLead: "Consulta el estado del sábado y cualquier cambio puntual en Instagram antes de venir.",
 };
 
 export const maySpecialEvents: ScheduleEvent[] = [
   {
-    date: "Viernes 1 de mayo",
-    title: "Día de la Bicicleta",
-    hours: "10:00–20:00",
-    note: "Horario especial para aprovechar todo el día en el parque.",
+    date: "Cruces · ya pasó",
+    title: "🔥 Así se vivieron las Cruces en ALFRESKO",
+    hours: "Ambiente, tapas y terraza en el parque",
+    note: "Buen ambiente, tapas y terraza llena en el parque.",
     highlight: true,
   },
   {
-    date: "Sábado 2 de mayo",
-    title: "Cruces",
-    hours: "10:00–23:00",
-    note: "Concierto a las 21:00.",
-    highlight: true,
-  },
-  {
-    date: "Domingo 3 de mayo",
-    title: "Cruces",
-    hours: "10:00–23:00",
-    note: "Seguimos hasta tarde para cerrar el finde.",
+    date: "Este sábado",
+    title: "🎶 Evento pendiente de confirmación",
+    hours: "Pendiente por lluvia",
+    note: "El evento previsto para este sábado está pendiente de confirmación debido a la previsión de lluvia. 👉 Consulta nuestro Instagram para confirmación en tiempo real.",
     highlight: true,
   },
 ];
 
 export const maySalesFocus = {
-  title: "Smash Burgers 180G, bebida + tapa y parque.",
-  body: "Smash Burgers 180G, bebida + tapa y plan fácil en el Parque San Sebastián · Ogíjares.",
-  extra: "Sábado · concierto a las 21:00.",
+  title: "Desayuno, cerveza fría, tapas y smash.",
+  body: "Café + tostadas desde las 10:00, tapas + cerveza y smash burgers Granada en la terraza de Ogíjares.",
+  extra: "Instagram en directo para confirmar el evento del sábado y el ambiente real del día.",
   microcopy: [
     "Parque San Sebastián · Ogíjares",
     "Smash 180G + patatas",
     "Cada bebida con tapa",
+    "Desayunos desde las 10:00",
   ],
-};
-
-export const reopeningCampaign = {
-  date: "25 de abril",
-  title: "Volvemos el 25 de abril",
-  subtitle: "Primer día de temporada.",
-  eventName: "X Feria de la Cultura y del Ocio de Ogíjares",
-  eventPlace: "Parque San Sebastián · Recinto Ferial",
-  eventHours: "11:00–14:00 y 17:00–20:00",
-  note: "Nos vemos en el Parque San Sebastián, con ambiente, gente y plan de tarde.",
-  microcopy: "Abrimos y el plan ya está montado.",
 };
 
 export const springHighlights = [
   {
     date: "Mayo",
-    title: "Jueves a domingo",
-    detail: "Horario normal de 10:00 a 17:00 para venir sin pensarlo demasiado.",
+    title: "🔥 Hoy hay ambiente en ALFRESKO",
+    detail: "Café + tostadas desde las 10:00, cervezas frías, tapas y terraza en el parque.",
   },
   {
-    date: "Este finde",
-    title: "Cruces y Día de la Bicicleta",
-    detail: "Horario ampliado y más ambiente en el parque.",
+    date: "Cruces",
+    title: "🔥 Así se vivieron las Cruces en ALFRESKO",
+    detail: "Bloque histórico para mantener el ambiente vivido sin comunicarlo como evento futuro.",
   },
   {
-    date: "Junio",
-    title: "Zoco medieval, conciertos y ambiente",
-    detail: "Zoco medieval, conciertos y ambiente en el parque.",
+    date: "Este sábado",
+    title: "🎶 Evento pendiente de confirmación",
+    detail: "El evento previsto para este sábado está pendiente de confirmación debido a la previsión de lluvia. Consulta Instagram en tiempo real.",
   },
 ];
 

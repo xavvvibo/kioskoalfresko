@@ -34,6 +34,7 @@ export function Hero() {
           </p>
           <h1 className="mt-7 max-w-4xl text-[3.3rem] font-black uppercase leading-[0.88] tracking-[-0.07em] text-stone-950 sm:text-[4.3rem] md:max-w-3xl md:text-[6.25rem]">{siteConfig.positioning.headline}</h1>
           <p className="mt-5 max-w-lg text-base font-semibold leading-7 text-stone-800 md:text-xl md:leading-8">{siteConfig.positioning.subheadline}</p>
+          <p className="mt-4 text-sm font-semibold text-stone-800">Café + tostadas al sol desde las 10:00, cervezas frías, tapas y terraza en el parque.</p>
           <div className="mt-5 flex max-w-2xl flex-wrap gap-2.5">
             {siteConfig.positioning.support.map((item) => (
               <span key={item} className="rounded-full border border-stone-950/90 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-stone-950 shadow-[0_8px_20px_rgba(0,0,0,0.05)]">{item}</span>
@@ -43,8 +44,7 @@ export function Hero() {
             {heroActions.filter((action) => action.label !== "Llamar").map((action) => (
               <ActionButton key={action.label} href={action.href} kind={action.kind}>{action.label}</ActionButton>
             ))}
-            <ActionButton href={siteConfig.contact.orderWhatsappUrl} kind="secondary" newTab>📲 Pedir por WhatsApp</ActionButton>
-            <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab>📍 Llegar ahora</ActionButton>
+            <ActionButton href={siteConfig.contact.instagramUrl} kind="ghost" newTab>Ver Instagram ahora</ActionButton>
           </div>
           <p className="mt-5 text-sm font-semibold text-stone-700">👉 Vienes por una… te quedas por todo</p>
           <p className="mt-2 text-sm font-semibold text-stone-700">👉 En 5 minutos estás aquí con una cerveza</p>
@@ -58,9 +58,9 @@ export function Hero() {
             <p className="relative z-10 mt-5 text-[2.4rem] font-black uppercase leading-[0.9] tracking-[-0.06em] md:text-[3.8rem]">{maySchedule.normalHours}</p>
             <p className="relative z-10 mt-5 max-w-sm text-sm leading-6 text-stone-300 md:text-base">{maySchedule.weekendLead}</p>
             <div className="relative z-10 mt-6 flex flex-wrap gap-3">
-              <ActionButton href="/carta">Ver carta</ActionButton>
-              <ActionButton href="/ubicacion-ogijares" kind="secondary">Cómo llegar</ActionButton>
-              <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab>📍 Llegar ahora</ActionButton>
+              <ActionButton href="/carta">Ver carta rápida</ActionButton>
+              <ActionButton href="/ubicacion-ogijares" kind="secondary">Cómo llegar ahora</ActionButton>
+              <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab>📍 Abrir ruta</ActionButton>
             </div>
             <p className="relative z-10 mt-4 text-sm font-semibold text-white/80">👉 Abre Google Maps directo</p>
           </div>
@@ -70,7 +70,7 @@ export function Hero() {
               <div className="mt-3 text-lg font-black uppercase leading-tight text-stone-950 md:text-[1.35rem]">{maySchedule.normalSummary}</div>
             </div>
             <div className="rounded-[1.8rem] border border-stone-950 bg-[#d94b2b] p-5 text-white shadow-[0_16px_34px_rgba(217,75,43,0.22)]">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80">Este finde</div>
+              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80">Ahora</div>
               <div className="mt-3 text-lg font-black uppercase leading-tight md:text-[1.35rem]">{maySalesFocus.title}</div>
               <p className="mt-3 text-sm font-semibold leading-6 text-white/88">{maySalesFocus.extra}</p>
               <div className="mt-4 flex flex-wrap gap-2">

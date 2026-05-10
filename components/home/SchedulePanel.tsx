@@ -14,7 +14,7 @@ export function SchedulePanel() {
         <div>
           <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d94b2b]">{siteConfig.schedule.currentLabel}</p>
           <p className="mt-3 text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">🔥 Hoy abierto</p>
-          <p className="mt-2 text-sm font-semibold text-stone-700">👉 Consulta abajo horarios especiales</p>
+          <p className="mt-2 text-sm font-semibold text-stone-700">👉 Consulta aquí el estado real de horarios y eventos</p>
           <h3 className="mt-3 text-4xl font-black uppercase leading-none tracking-[-0.04em] text-stone-950 md:text-5xl">{siteConfig.schedule.currentSummary}</h3>
           <p className="mt-5 text-lg font-black uppercase tracking-[-0.03em] text-stone-950">{maySchedule.normalHours}</p>
           <p className="mt-4 inline-flex rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white">
@@ -32,8 +32,8 @@ export function SchedulePanel() {
           <p className="mt-4 text-sm font-semibold text-stone-700">Consulta aquí antes de venir.</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <ActionButton href="/horarios" kind="secondary">Ver horarios</ActionButton>
-          <ActionButton href={siteConfig.location.mapsUrl} newTab>📍 Llegar ahora</ActionButton>
+          <ActionButton href="/horarios" kind="secondary">Ver horarios de hoy</ActionButton>
+          <ActionButton href={siteConfig.location.mapsUrl} newTab>Cómo llegar ahora</ActionButton>
         </div>
       </div>
       <div className="mt-8 grid gap-4 lg:grid-cols-3">
@@ -45,6 +45,14 @@ export function SchedulePanel() {
             {item.note ? <p className="mt-3 text-sm leading-6 text-stone-700">{item.note}</p> : null}
           </article>
         ))}
+        <article className="rounded-[1.5rem] border border-stone-950 bg-stone-950 p-5 text-white shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Instagram</p>
+          <h4 className="mt-3 text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Confirmación en tiempo real</h4>
+          <p className="mt-3 text-sm leading-6 text-stone-300">Si cambia el clima o el evento del sábado, lo confirmamos primero en Instagram.</p>
+          <div className="mt-5">
+            <ActionButton href={siteConfig.contact.instagramUrl} kind="secondary" newTab>Instagram en directo</ActionButton>
+          </div>
+        </article>
       </div>
       <div className="mt-8 rounded-[1.7rem] border border-stone-950/12 bg-stone-50 p-5">
         <p className="text-[11px] font-black uppercase tracking-[0.18em] text-stone-500">Próximamente</p>
