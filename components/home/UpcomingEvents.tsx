@@ -40,7 +40,7 @@ export function UpcomingEvents() {
                 {item.description}
               </p>
               <div className="mt-5">
-                <ActionButton href={item.cta.href}>{item.cta.label}</ActionButton>
+                <ActionButton href={item.cta.href} newTab>{item.cta.label}</ActionButton>
               </div>
             </article>
           ))}
@@ -60,7 +60,7 @@ export function UpcomingEvents() {
             {upcomingEvents.reservationMicrocopy}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <ActionButton href={upcomingEvents.primaryCta.href}>
+            <ActionButton href={upcomingEvents.primaryCta.href} newTab>
               {upcomingEvents.primaryCta.label}
             </ActionButton>
             <ActionButton href={upcomingEvents.secondaryCta.href} kind="secondary" newTab>

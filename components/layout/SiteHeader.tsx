@@ -9,7 +9,7 @@ const links = [
   { href: "/carta", label: "Carta" },
   { href: "/horarios", label: "Horarios" },
   { href: "/ubicacion-ogijares", label: "Ubicación" },
-  { href: "/reservas-contacto", label: "Reservas / contacto" },
+  { href: siteConfig.contact.bookingUrl, label: "Reservas / contacto", external: true },
 ];
 
 export function SiteHeader() {
@@ -56,7 +56,19 @@ export function SiteHeader() {
           </button>
           <nav className="hidden items-center gap-7 rounded-full border border-stone-950/10 bg-white/70 px-5 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.05)] md:flex">
             {links.map((item) => (
-              <Link key={item.href} href={item.href} className="text-[11px] font-black uppercase tracking-[0.18em] text-stone-700 transition hover:text-[#d94b2b]">{item.label}</Link>
+              item.external ? (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] font-black uppercase tracking-[0.18em] text-stone-700 transition hover:text-[#d94b2b]"
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <Link key={item.href} href={item.href} className="text-[11px] font-black uppercase tracking-[0.18em] text-stone-700 transition hover:text-[#d94b2b]">{item.label}</Link>
+              )
             ))}
           </nav>
         </div>
@@ -85,14 +97,27 @@ export function SiteHeader() {
 
           <nav className="mt-10 flex flex-col gap-5 text-[2rem] font-black uppercase leading-none tracking-[-0.04em]">
             {links.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={closeMenu}
-                className="border-b border-white/10 pb-4 text-white transition hover:text-[#f2c6bb]"
-              >
-                {item.label}
-              </Link>
+              item.external ? (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={closeMenu}
+                  className="border-b border-white/10 pb-4 text-white transition hover:text-[#f2c6bb]"
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeMenu}
+                  className="border-b border-white/10 pb-4 text-white transition hover:text-[#f2c6bb]"
+                >
+                  {item.label}
+                </Link>
+              )
             ))}
           </nav>
 

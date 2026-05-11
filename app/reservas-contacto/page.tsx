@@ -44,6 +44,7 @@ export default function ReservasContactoPage() {
             <div className="mt-6 flex flex-wrap gap-3">
               <ActionButton href={siteConfig.contact.phoneHref}>Llamar</ActionButton>
               <ActionButton href={siteConfig.contact.whatsappUrl} kind="secondary" newTab>WhatsApp</ActionButton>
+              <ActionButton href={siteConfig.contact.bookingUrl} newTab>Reservar mesa</ActionButton>
               <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab>📍 Llegar ahora</ActionButton>
               <ActionButton href="/carta" kind="secondary">Ver carta</ActionButton>
             </div>

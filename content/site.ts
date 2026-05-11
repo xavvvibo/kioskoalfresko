@@ -1,4 +1,5 @@
 import type { ActionLink, MenuCategory, ScheduleEvent, SeasonalScheduleItem, SeoLanding } from "@/types/site";
+import { QAMARERO_BOOKING_URL } from "@/lib/integrations/qamarero";
 
 export const siteConfig = {
   name: "Kiosko Alfresko",
@@ -27,12 +28,13 @@ export const siteConfig = {
     orderWhatsappUrl: "https://wa.me/34696320465?text=Hola%20quiero%20pedir%20en%20Kiosko%20Alfresko",
     instagramUrl: "https://instagram.com/alfresko.granada",
     instagramHandle: "@alfresko.granada",
+    bookingUrl: QAMARERO_BOOKING_URL,
   },
   ctas: {
     primary: { label: "Cómo llegar ahora", href: "/ubicacion-ogijares" },
     secondary: { label: "Ver carta rápida", href: "/carta" },
     call: { label: "Llamar ahora", href: "tel:696320465" },
-    booking: { label: "Reservas y contacto", href: "/reservas-contacto" },
+    booking: { label: "Reservar mesa", href: QAMARERO_BOOKING_URL },
   },
   positioning: {
     headline: "Aquí no se viene a comer. Se viene a quedarse.",
@@ -111,7 +113,7 @@ export const upcomingEvents = {
     "Te atendemos mejor, más rápido y con servicio completo durante los eventos.",
   reservationMicrocopy:
     "En días de mucha afluencia, sin reserva podremos activar barra rápida de bebida.",
-  primaryCta: { label: "Reservar mesa", href: "/reservas-contacto" },
+  primaryCta: { label: "Reservar mesa", href: QAMARERO_BOOKING_URL },
   secondaryCta: { label: "Ver Instagram", href: "https://instagram.com/alfresko.granada" },
   items: [
     {
@@ -120,7 +122,7 @@ export const upcomingEvents = {
       status: "Sujeto a climatología",
       description:
         "Si se confirma, será uno de esos días de terraza llena, música y más ritmo en el parque.",
-      cta: { label: "Reservar mesa", href: "/reservas-contacto" },
+      cta: { label: "Reservar mesa", href: QAMARERO_BOOKING_URL },
     },
   ],
 };

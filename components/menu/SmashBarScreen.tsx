@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import type { MenuPromo } from "@/types/site";
 import { smashPromo } from "@/content/menu";
+import { siteConfig } from "@/content/site";
 import { ActionButton } from "@/components/ui/ActionButton";
 
 type SmashBarScreenProps = {
@@ -131,7 +132,7 @@ export function SmashBarScreen({
           </ul>
 
           <div className={`mt-7 ${styles.actions}`}>
-            <ActionButton href="/reservas-contacto">Pedir ahora</ActionButton>
+            <ActionButton href={siteConfig.contact.bookingUrl} newTab>Pedir ahora</ActionButton>
             {showSecondaryAction ? (
               <ActionButton href="/carta" kind="secondary">
                 Ver carta

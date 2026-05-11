@@ -17,10 +17,13 @@ export type ReservationRequest = {
   phone: string;
 };
 
+export const QAMARERO_BOOKING_URL =
+  "https://booking.qamarero.com/new-reservation/kiosko-alfresko";
+
 export function getQamareroConfig(): QamareroConfig {
   return {
     mode: (process.env.NEXT_PUBLIC_QAMARERO_MODE as QamareroMode) || "external_url",
-    publicUrl: process.env.NEXT_PUBLIC_QAMARERO_PUBLIC_URL,
+    publicUrl: process.env.NEXT_PUBLIC_QAMARERO_PUBLIC_URL || QAMARERO_BOOKING_URL,
     iframeUrl: process.env.NEXT_PUBLIC_QAMARERO_IFRAME_URL,
     apiBaseUrl: process.env.QAMARERO_API_BASE_URL,
     venueId: process.env.QAMARERO_VENUE_ID,

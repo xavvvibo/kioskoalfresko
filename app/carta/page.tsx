@@ -4,6 +4,7 @@ import { MenuHero } from "@/components/menu/MenuHero";
 import { MenuSectionBlock } from "@/components/menu/MenuSectionBlock";
 import { SmashPromoCTA } from "@/components/menu/SmashPromoCTA";
 import { menuHero, foodSections, drinksSections, smashPromo, menuFooter } from "@/content/menu";
+import { siteConfig } from "@/content/site";
 
 export default function CartaPage() {
   const smashSection = foodSections.find((section) => section.id === "smash-burgers")!;
@@ -39,7 +40,7 @@ export default function CartaPage() {
             promo={smashPromo}
             size="lg"
             theme="dark"
-            primaryAction={{ label: "Pedir ahora", href: "/reservas-contacto" }}
+            primaryAction={{ label: "Pedir ahora", href: siteConfig.contact.bookingUrl }}
             secondaryAction={{ label: "Cómo llegar", href: "/ubicacion-ogijares" }}
           />
 

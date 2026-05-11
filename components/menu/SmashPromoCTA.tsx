@@ -1,7 +1,6 @@
-"use client";
-
 import type { MenuPromo } from "@/types/site";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { siteConfig } from "@/content/site";
 
 export function SmashPromoCTA({
   promo,
@@ -66,7 +65,7 @@ export function SmashPromoCTA({
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <ActionButton href={primaryAction?.href || "/reservas-contacto"}>
+          <ActionButton href={primaryAction?.href || siteConfig.contact.bookingUrl} newTab>
             {primaryAction?.label || "Pedir ahora"}
           </ActionButton>
 

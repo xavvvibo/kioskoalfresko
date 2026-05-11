@@ -18,7 +18,7 @@ export function SiteFooter() {
           <div className="mt-4 space-y-2 text-sm text-stone-300">
             <Link className="block hover:text-white" href="/carta">Carta</Link>
             <Link className="block hover:text-white" href="/horarios">Horarios</Link>
-            <Link className="block hover:text-white" href="/reservas-contacto">Reservas y contacto</Link>
+            <a className="block hover:text-white" href={siteConfig.contact.bookingUrl} target="_blank" rel="noreferrer">Reservas y contacto</a>
             <Link className="block hover:text-white" href="/ubicacion-ogijares">Ubicación</Link>
           </div>
         </div>
