@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { siteConfig } from "@/content/site";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { trackEvent } from "@/lib/analytics";
 
 const links = [
-  { href: "/carta", label: "Carta" },
+  { href: "/carta", label: "Carta", analyticsEvent: "click_ver_carta" },
   { href: "/horarios", label: "Horarios" },
-  { href: "/ubicacion-ogijares", label: "Ubicación" },
-  { href: siteConfig.contact.bookingUrl, label: "Reservas / contacto", external: true },
+  { href: "/ubicacion-ogijares", label: "Ubicación", analyticsEvent: "click_como_llegar" },
+  { href: siteConfig.contact.bookingUrl, label: "Reservas / contacto", external: true, analyticsEvent: "click_reserva_qamarero" },
 ];
 
 export function SiteHeader() {
@@ -62,12 +63,13 @@ export function SiteHeader() {
                   href={item.href}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={() => item.analyticsEvent ? trackEvent(item.analyticsEvent, { location: "header_desktop" }) : undefined}
                   className="text-[11px] font-black uppercase tracking-[0.18em] text-stone-700 transition hover:text-[#d94b2b]"
                 >
                   {item.label}
                 </a>
               ) : (
-                <Link key={item.href} href={item.href} className="text-[11px] font-black uppercase tracking-[0.18em] text-stone-700 transition hover:text-[#d94b2b]">{item.label}</Link>
+                <Link key={item.href} href={item.href} onClick={() => item.analyticsEvent ? trackEvent(item.analyticsEvent, { location: "header_desktop" }) : undefined} className="text-[11px] font-black uppercase tracking-[0.18em] text-stone-700 transition hover:text-[#d94b2b]">{item.label}</Link>
               )
             ))}
           </nav>
@@ -103,7 +105,10 @@ export function SiteHeader() {
                   href={item.href}
                   target="_blank"
                   rel="noreferrer"
-                  onClick={closeMenu}
+                  onClick={() => {
+                    if (item.analyticsEvent) trackEvent(item.analyticsEvent, { location: "header_mobile" });
+                    closeMenu();
+                  }}
                   className="border-b border-white/10 pb-4 text-white transition hover:text-[#f2c6bb]"
                 >
                   {item.label}
@@ -112,7 +117,10 @@ export function SiteHeader() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={closeMenu}
+                  onClick={() => {
+                    if (item.analyticsEvent) trackEvent(item.analyticsEvent, { location: "header_mobile" });
+                    closeMenu();
+                  }}
                   className="border-b border-white/10 pb-4 text-white transition hover:text-[#f2c6bb]"
                 >
                   {item.label}
@@ -122,8 +130,8 @@ export function SiteHeader() {
           </nav>
 
           <div className="mt-auto flex flex-col gap-4 pt-10">
-            <ActionButton href={siteConfig.contact.phoneHref}>Llamar</ActionButton>
-            <ActionButton href={siteConfig.contact.whatsappUrl} kind="secondary" newTab>WhatsApp</ActionButton>
+            <ActionButton href={siteConfig.contact.phoneHref} analyticsEvent="click_llamar" analyticsPayload={{ location: "header_mobile" }}>Llamar</ActionButton>
+            <ActionButton href={siteConfig.contact.whatsappUrl} kind="secondary" newTab analyticsEvent="click_whatsapp" analyticsPayload={{ location: "header_mobile" }}>WhatsApp</ActionButton>
           </div>
         </div>
       </div>

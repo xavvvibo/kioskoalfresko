@@ -47,9 +47,17 @@ export function Hero() {
           </div>
           <div className="mt-9 flex flex-wrap gap-3">
             {heroActions.filter((action) => action.label !== "Llamar").map((action) => (
-              <ActionButton key={action.label} href={action.href} kind={action.kind}>{action.label}</ActionButton>
+              <ActionButton
+                key={action.label}
+                href={action.href}
+                kind={action.kind}
+                analyticsEvent={action.label.includes("Carta") ? "click_ver_carta" : "click_como_llegar"}
+                analyticsPayload={{ location: "hero_primary" }}
+              >
+                {action.label}
+              </ActionButton>
             ))}
-            <ActionButton href={siteConfig.contact.instagramUrl} kind="ghost" newTab>Ver Instagram ahora</ActionButton>
+            <ActionButton href={siteConfig.contact.instagramUrl} kind="ghost" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "hero_primary" }}>Ver Instagram ahora</ActionButton>
           </div>
           <p className="mt-5 text-sm font-semibold text-stone-700">👉 Vienes por una… te quedas por todo</p>
           <p className="mt-2 text-sm font-semibold text-stone-700">👉 En 5 minutos estás aquí con una cerveza</p>
@@ -63,9 +71,9 @@ export function Hero() {
             <p className="relative z-10 mt-5 text-[2.4rem] font-black uppercase leading-[0.9] tracking-[-0.06em] md:text-[3.8rem]">{maySchedule.normalHours}</p>
             <p className="relative z-10 mt-5 max-w-sm text-sm leading-6 text-stone-300 md:text-base">{maySchedule.weekendLead}</p>
             <div className="relative z-10 mt-6 flex flex-wrap gap-3">
-              <ActionButton href="/carta">Ver carta rápida</ActionButton>
-              <ActionButton href="/ubicacion-ogijares" kind="secondary">Cómo llegar ahora</ActionButton>
-              <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab>📍 Abrir ruta</ActionButton>
+              <ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "hero_schedule" }}>Ver carta rápida</ActionButton>
+              <ActionButton href="/ubicacion-ogijares" kind="secondary" analyticsEvent="click_como_llegar" analyticsPayload={{ location: "hero_schedule" }}>Cómo llegar ahora</ActionButton>
+              <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab analyticsEvent="click_como_llegar" analyticsPayload={{ location: "hero_schedule_maps" }}>📍 Abrir ruta</ActionButton>
             </div>
             <p className="relative z-10 mt-4 text-sm font-semibold text-white/80">👉 Abre Google Maps directo</p>
           </div>

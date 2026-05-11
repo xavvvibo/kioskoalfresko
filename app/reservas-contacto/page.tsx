@@ -42,11 +42,11 @@ export default function ReservasContactoPage() {
               <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Cada bebida con tapa</span>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <ActionButton href={siteConfig.contact.phoneHref}>Llamar</ActionButton>
-              <ActionButton href={siteConfig.contact.whatsappUrl} kind="secondary" newTab>WhatsApp</ActionButton>
-              <ActionButton href={siteConfig.contact.bookingUrl} newTab>Reservar mesa</ActionButton>
-              <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab>📍 Llegar ahora</ActionButton>
-              <ActionButton href="/carta" kind="secondary">Ver carta</ActionButton>
+              <ActionButton href={siteConfig.contact.phoneHref} analyticsEvent="click_llamar" analyticsPayload={{ location: "reservas_contacto" }}>Llamar</ActionButton>
+              <ActionButton href={siteConfig.contact.whatsappUrl} kind="secondary" newTab analyticsEvent="click_whatsapp" analyticsPayload={{ location: "reservas_contacto" }}>WhatsApp</ActionButton>
+              <ActionButton href={siteConfig.contact.bookingUrl} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "reservas_contacto" }}>Reservar mesa</ActionButton>
+              <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab analyticsEvent="click_como_llegar" analyticsPayload={{ location: "reservas_contacto" }}>📍 Llegar ahora</ActionButton>
+              <ActionButton href="/carta" kind="secondary" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "reservas_contacto" }}>Ver carta</ActionButton>
             </div>
           </article>
           <article className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
@@ -55,7 +55,7 @@ export default function ReservasContactoPage() {
               Estamos en {siteConfig.location.area}, {siteConfig.location.city}, {siteConfig.location.province}. Si os encaja el plan, abrid ruta y venid directamente.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <ActionButton href={siteConfig.location.mapsUrl} newTab>📍 Llegar ahora</ActionButton>
+              <ActionButton href={siteConfig.location.mapsUrl} newTab analyticsEvent="click_como_llegar" analyticsPayload={{ location: "reservas_contacto_location" }}>📍 Llegar ahora</ActionButton>
               <ActionButton href="/horarios" kind="secondary">Ver horarios</ActionButton>
             </div>
           </article>
@@ -67,7 +67,7 @@ export default function ReservasContactoPage() {
               Si prefieres verlo todo desde el móvil, puedes abrir nuestra carta digital o entrar al flujo online de reserva.
             </p>
             <div className="mt-6">
-              <ActionButton href={reservation.url} newTab>Abrir reservas</ActionButton>
+              <ActionButton href={reservation.url} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "reservas_contacto_online" }}>Abrir reservas</ActionButton>
             </div>
           </article>
         ) : null}

@@ -43,7 +43,7 @@ export function UpcomingEvents() {
                 Reserva recomendada
               </p>
               <div className="mt-5">
-                <ActionButton href={item.cta.href} newTab>{item.cta.label}</ActionButton>
+                <ActionButton href={item.cta.href} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "upcoming_events_card", event_title: item.title }}>{item.cta.label}</ActionButton>
               </div>
             </article>
           ))}
@@ -63,10 +63,10 @@ export function UpcomingEvents() {
             {upcomingEvents.reservationMicrocopy}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <ActionButton href={upcomingEvents.primaryCta.href} newTab>
+            <ActionButton href={upcomingEvents.primaryCta.href} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "upcoming_events_sidebar" }}>
               {upcomingEvents.primaryCta.label}
             </ActionButton>
-            <ActionButton href={upcomingEvents.secondaryCta.href} kind="secondary" newTab>
+            <ActionButton href={upcomingEvents.secondaryCta.href} kind="secondary" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "upcoming_events_sidebar" }}>
               {upcomingEvents.secondaryCta.label}
             </ActionButton>
           </div>

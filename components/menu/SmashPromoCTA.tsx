@@ -11,8 +11,8 @@ export function SmashPromoCTA({
   size?: "sm" | "md" | "lg";
   theme?: "dark" | "red";
   compact?: boolean;
-  primaryAction?: { label: string; href: string };
-  secondaryAction?: { label: string; href: string };
+  primaryAction?: { label: string; href: string; analyticsEvent?: string };
+  secondaryAction?: { label: string; href: string; analyticsEvent?: string };
 }) {
   const backgroundImage = promo.image?.src
     ? [
@@ -65,11 +65,21 @@ export function SmashPromoCTA({
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <ActionButton href={primaryAction?.href || siteConfig.contact.bookingUrl} newTab>
+          <ActionButton
+            href={primaryAction?.href || siteConfig.contact.bookingUrl}
+            newTab
+            analyticsEvent={primaryAction?.analyticsEvent || "click_reserva_qamarero"}
+            analyticsPayload={{ location: "smash_promo" }}
+          >
             {primaryAction?.label || "Pedir ahora"}
           </ActionButton>
 
-          <ActionButton href={secondaryAction?.href || "/ubicacion-ogijares"} kind="secondary">
+          <ActionButton
+            href={secondaryAction?.href || "/ubicacion-ogijares"}
+            kind="secondary"
+            analyticsEvent={secondaryAction?.analyticsEvent || "click_como_llegar"}
+            analyticsPayload={{ location: "smash_promo" }}
+          >
             {secondaryAction?.label || "Cómo llegar"}
           </ActionButton>
         </div>

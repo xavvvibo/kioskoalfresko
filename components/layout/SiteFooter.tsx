@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { seoLandings, siteConfig } from "@/content/site";
+import { trackEvent } from "@/lib/analytics";
 
 export function SiteFooter() {
   return (
@@ -16,10 +19,10 @@ export function SiteFooter() {
         <div>
           <h4 className="text-sm font-black uppercase tracking-[0.16em] text-[#efb7a8]">Enlaces útiles</h4>
           <div className="mt-4 space-y-2 text-sm text-stone-300">
-            <Link className="block hover:text-white" href="/carta">Carta</Link>
+            <Link className="block hover:text-white" href="/carta" onClick={() => trackEvent("click_ver_carta", { location: "footer" })}>Carta</Link>
             <Link className="block hover:text-white" href="/horarios">Horarios</Link>
-            <a className="block hover:text-white" href={siteConfig.contact.bookingUrl} target="_blank" rel="noreferrer">Reservas y contacto</a>
-            <Link className="block hover:text-white" href="/ubicacion-ogijares">Ubicación</Link>
+            <a className="block hover:text-white" href={siteConfig.contact.bookingUrl} target="_blank" rel="noreferrer" onClick={() => trackEvent("click_reserva_qamarero", { location: "footer" })}>Reservas y contacto</a>
+            <Link className="block hover:text-white" href="/ubicacion-ogijares" onClick={() => trackEvent("click_como_llegar", { location: "footer" })}>Ubicación</Link>
           </div>
         </div>
         <div>

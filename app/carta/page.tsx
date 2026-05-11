@@ -40,8 +40,8 @@ export default function CartaPage() {
             promo={smashPromo}
             size="lg"
             theme="dark"
-            primaryAction={{ label: "Pedir ahora", href: siteConfig.contact.bookingUrl }}
-            secondaryAction={{ label: "Cómo llegar", href: "/ubicacion-ogijares" }}
+            primaryAction={{ label: "Pedir ahora", href: siteConfig.contact.bookingUrl, analyticsEvent: "click_reserva_qamarero" }}
+            secondaryAction={{ label: "Cómo llegar", href: "/ubicacion-ogijares", analyticsEvent: "click_como_llegar" }}
           />
 
           <MenuSectionBlock

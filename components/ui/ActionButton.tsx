@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { trackEvent } from "@/lib/analytics";
 
 function isPendingHref(href: string) {
   return !href || href.includes("[PENDIENTE_");
@@ -9,11 +12,15 @@ export function ActionButton({
   children,
   kind = "primary",
   newTab = false,
+  analyticsEvent,
+  analyticsPayload,
 }: {
   href: string;
   children: React.ReactNode;
   kind?: "primary" | "secondary" | "ghost";
   newTab?: boolean;
+  analyticsEvent?: string;
+  analyticsPayload?: Record<string, string | number | boolean | null | undefined>;
 }) {
   const className =
     kind === "primary"
@@ -39,6 +46,14 @@ export function ActionButton({
   const external =
     href.startsWith("http") || href.startsWith("tel:") || href.startsWith("mailto:");
 
+  function handleClick() {
+    if (!analyticsEvent) return;
+    trackEvent(analyticsEvent, {
+      href,
+      ...analyticsPayload,
+    });
+  }
+
   if (external) {
     return (
       <a
@@ -46,11 +61,12 @@ export function ActionButton({
         className={sharedClassName}
         target={newTab ? "_blank" : undefined}
         rel={newTab ? "noreferrer noopener" : undefined}
+        onClick={handleClick}
       >
         {children}
       </a>
     );
   }
 
-  return <Link href={href} className={sharedClassName}>{children}</Link>;
+  return <Link href={href} className={sharedClassName} onClick={handleClick}>{children}</Link>;
 }

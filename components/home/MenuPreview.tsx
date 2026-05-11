@@ -28,7 +28,7 @@ export function MenuPreview() {
               </span>
             ))}
           </div>
-          <div className="mt-6"><ActionButton href="/carta">Ver carta</ActionButton></div>
+          <div className="mt-6"><ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "menu_preview" }}>Ver carta</ActionButton></div>
         </div>
         <SmashPromoCTA
           promo={smashPromo}
