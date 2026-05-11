@@ -5,7 +5,7 @@ export const menuHero = {
   title: "No es un kiosko. Es el plan.",
   subtitle: "Pide rápido. Comparte. Alárgalo.",
   supportingText:
-    "Carta en bloques claros, precios visibles y el foco donde tiene que estar: smash burgers, parrilla y cosas para quedarse más de la cuenta.",
+    "Todo claro y a tiro: smash burgers, parrilla y cosas para quedarse más de la cuenta.",
 };
 
 export const smashPromo: MenuPromo = {

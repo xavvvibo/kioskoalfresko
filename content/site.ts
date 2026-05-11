@@ -117,11 +117,27 @@ export const upcomingEvents = {
   secondaryCta: { label: "Ver Instagram", href: "https://instagram.com/alfresko.granada" },
   items: [
     {
-      title: "Evento de sábado",
-      date: "Sábado · pendiente de confirmación",
-      status: "Sujeto a climatología",
+      title: "Ciclo Indoor",
+      date: "Sábado 16",
+      status: "Plazas limitadas",
       description:
-        "Si se confirma, será uno de esos días de terraza llena, música y más ritmo en el parque.",
+        "Ambiente deportivo, terraza y tarde de parque en Ogíjares.",
+      cta: { label: "Reservar mesa", href: QAMARERO_BOOKING_URL },
+    },
+    {
+      title: "Feria del Ocio",
+      date: "Sábado 23",
+      status: "Recomendado reservar",
+      description:
+        "Música, actividades y terraza llena durante toda la jornada.",
+      cta: { label: "Reservar mesa", href: QAMARERO_BOOKING_URL },
+    },
+    {
+      title: "Paella solidaria",
+      date: "Domingo 24",
+      status: "Plazas limitadas",
+      description:
+        "Domingo de parque, paella y terraceo en San Sebastián.",
       cta: { label: "Reservar mesa", href: QAMARERO_BOOKING_URL },
     },
   ],

@@ -14,7 +14,7 @@ export function SiteFooter() {
           <p className="mt-3 text-sm font-semibold text-white">Aquí no se viene a comer. Se viene a quedarse.</p>
         </div>
         <div>
-          <h4 className="text-sm font-black uppercase tracking-[0.16em] text-[#efb7a8]">Accesos</h4>
+          <h4 className="text-sm font-black uppercase tracking-[0.16em] text-[#efb7a8]">Enlaces útiles</h4>
           <div className="mt-4 space-y-2 text-sm text-stone-300">
             <Link className="block hover:text-white" href="/carta">Carta</Link>
             <Link className="block hover:text-white" href="/horarios">Horarios</Link>
@@ -23,7 +23,7 @@ export function SiteFooter() {
           </div>
         </div>
         <div>
-          <h4 className="text-sm font-black uppercase tracking-[0.16em] text-[#efb7a8]">SEO local</h4>
+          <h4 className="text-sm font-black uppercase tracking-[0.16em] text-[#efb7a8]">También nos buscan por</h4>
           <div className="mt-4 space-y-2 text-sm text-stone-300">
             {seoLandings.map((page) => (
               <Link key={page.slug} className="block hover:text-white" href={`/${page.slug}`}>{page.shortTitle}</Link>
@@ -31,7 +31,7 @@ export function SiteFooter() {
           </div>
         </div>
         <div>
-          <h4 className="text-sm font-black uppercase tracking-[0.16em] text-[#efb7a8]">Legal</h4>
+          <h4 className="text-sm font-black uppercase tracking-[0.16em] text-[#efb7a8]">Información legal</h4>
           <div className="mt-4 space-y-2 text-sm text-stone-300">
             <Link className="block hover:text-white" href="/aviso-legal">Aviso legal</Link>
             <Link className="block hover:text-white" href="/privacidad">Privacidad</Link>

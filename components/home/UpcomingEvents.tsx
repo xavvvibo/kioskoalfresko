@@ -39,6 +39,9 @@ export function UpcomingEvents() {
               <p className="mt-4 text-sm leading-6 text-stone-700">
                 {item.description}
               </p>
+              <p className="mt-4 text-[11px] font-black uppercase tracking-[0.18em] text-[#d94b2b]">
+                Reserva recomendada
+              </p>
               <div className="mt-5">
                 <ActionButton href={item.cta.href} newTab>{item.cta.label}</ActionButton>
               </div>

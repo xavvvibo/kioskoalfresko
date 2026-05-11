@@ -16,10 +16,10 @@ export default function HomePage() {
   return (
     <main>
       <Hero />
-      <Section title="CTA rápidos" description="Tres formas de decidirlo en segundos.">
+      <Section title="Elige tu plan" description="Lo tienes fácil.">
         <QuickDecision />
       </Section>
-      <Section eyebrow="Marca" title="Lo que hay aquí">
+      <Section eyebrow="Lo que te espera" title="Qué puedes pedir">
         <div className="rounded-[2rem] border border-stone-950 bg-white p-8 shadow-[0_18px_40px_rgba(0,0,0,0.06)]">
           <div className="flex flex-wrap gap-3">
             {[

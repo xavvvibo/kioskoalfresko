@@ -5,7 +5,7 @@ export function LocalLanding({ page }: { page: SeoLanding }) {
   return (
     <main className="bg-[#fffaf4]">
       <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 md:py-24">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">SEO local</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">También nos buscan por</p>
         <h1 className="mt-3 text-4xl font-semibold tracking-tight text-stone-950 md:text-5xl">{page.h1}</h1>
         <p className="mt-5 max-w-3xl text-lg leading-8 text-stone-600">{page.intro}</p>
         <div className="mt-8 grid gap-4 md:grid-cols-3">
