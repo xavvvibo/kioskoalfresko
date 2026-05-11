@@ -34,7 +34,7 @@ export function Hero() {
           </p>
           <h1 className="mt-7 max-w-4xl text-[3.3rem] font-black uppercase leading-[0.88] tracking-[-0.07em] text-stone-950 sm:text-[4.3rem] md:max-w-3xl md:text-[6.25rem]">{siteConfig.positioning.headline}</h1>
           <p className="mt-5 max-w-lg text-base font-semibold leading-7 text-stone-800 md:text-xl md:leading-8">{siteConfig.positioning.subheadline}</p>
-          <p className="mt-4 text-sm font-semibold text-stone-800">Café + tostadas + terraza al sol.</p>
+          <p className="mt-4 text-sm font-semibold text-stone-800">Café + tostadas al sol, smash 180g y terraza con ambiente.</p>
           <div className="mt-5 flex max-w-2xl flex-wrap gap-2.5">
             {siteConfig.positioning.support.map((item) => (
               <span key={item} className="rounded-full border border-stone-950/90 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-stone-950 shadow-[0_8px_20px_rgba(0,0,0,0.05)]">{item}</span>
