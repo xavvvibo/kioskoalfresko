@@ -10,10 +10,10 @@ export function Hero() {
   const isServiceDay = day === 4 || day === 5 || day === 6 || day === 0;
   const isOpenBySchedule = isServiceDay && minutes >= opensAt && minutes < closesAt;
   const statusBadge = isOpenBySchedule ? "🟢 Abierto ahora" : "⚫ Próxima apertura: jueves 10:00";
-  const statusHeadline = isOpenBySchedule ? "🔥 Hoy hay ambiente" : "⚫ Próxima apertura: jueves 10:00";
+  const statusHeadline = isOpenBySchedule ? "🔥 Hoy hay ambiente" : "Te esperamos para café, tostadas y terraza al sol.";
   const statusSupport = isOpenBySchedule
     ? "Café, tapas, cerveza fría y smash burgers."
-    : "Café, tostadas y terraza desde primera hora.";
+    : "Jueves a domingo desde las 10:00.";
 
   return (
     <section className="relative overflow-hidden border-b border-stone-950 bg-[radial-gradient(circle_at_85%_14%,rgba(217,75,43,0.28),transparent_19%),radial-gradient(circle_at_20%_10%,rgba(17,17,17,0.06),transparent_28%),linear-gradient(180deg,#f5efe5_0%,#eadfce_100%)]">
