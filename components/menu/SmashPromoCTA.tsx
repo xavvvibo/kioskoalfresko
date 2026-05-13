@@ -1,6 +1,6 @@
 import type { MenuPromo } from "@/types/site";
 import { ActionButton } from "@/components/ui/ActionButton";
-import { siteConfig } from "@/content/site";
+import { getQamareroReservationUrl } from "@/lib/integrations/qamarero";
 
 export function SmashPromoCTA({
   promo,
@@ -66,7 +66,7 @@ export function SmashPromoCTA({
 
         <div className="mt-8 flex flex-wrap gap-3">
           <ActionButton
-            href={primaryAction?.href || siteConfig.contact.bookingUrl}
+            href={primaryAction?.href || getQamareroReservationUrl("menu")}
             newTab
             analyticsEvent={primaryAction?.analyticsEvent || "click_reserva_qamarero"}
             analyticsPayload={{ location: "smash_promo" }}

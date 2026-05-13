@@ -1,6 +1,6 @@
 import { buildMetadata } from "@/lib/metadata";
 import { siteConfig } from "@/content/site";
-import { getReservationEntryPoint } from "@/lib/integrations/qamarero";
+import { getQamareroReservationUrl, getReservationEntryPoint } from "@/lib/integrations/qamarero";
 import { ActionButton } from "@/components/ui/ActionButton";
 
 export const metadata = buildMetadata({
@@ -11,7 +11,7 @@ export const metadata = buildMetadata({
 });
 
 export default function ReservasContactoPage() {
-  const reservation = getReservationEntryPoint();
+  const reservation = getReservationEntryPoint("contact_page");
   return (
     <main className="bg-[#fffaf4]">
       <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 md:py-24">
@@ -44,7 +44,7 @@ export default function ReservasContactoPage() {
             <div className="mt-6 flex flex-wrap gap-3">
               <ActionButton href={siteConfig.contact.phoneHref} analyticsEvent="click_llamar" analyticsPayload={{ location: "reservas_contacto" }}>Llamar</ActionButton>
               <ActionButton href={siteConfig.contact.whatsappUrl} kind="secondary" newTab analyticsEvent="click_whatsapp" analyticsPayload={{ location: "reservas_contacto" }}>WhatsApp</ActionButton>
-              <ActionButton href={siteConfig.contact.bookingUrl} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "reservas_contacto" }}>Reservar mesa</ActionButton>
+              <ActionButton href={getQamareroReservationUrl("contact_page")} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "reservas_contacto" }}>Reservar mesa</ActionButton>
               <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab analyticsEvent="click_como_llegar" analyticsPayload={{ location: "reservas_contacto" }}>📍 Llegar ahora</ActionButton>
               <ActionButton href="/carta" kind="secondary" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "reservas_contacto" }}>Ver carta</ActionButton>
             </div>

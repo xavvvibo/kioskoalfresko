@@ -4,8 +4,8 @@ import { useState } from "react";
 import Image from "next/image";
 import type { MenuPromo } from "@/types/site";
 import { smashPromo } from "@/content/menu";
-import { siteConfig } from "@/content/site";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { getQamareroReservationUrl } from "@/lib/integrations/qamarero";
 
 type SmashBarScreenProps = {
   promo?: MenuPromo;
@@ -132,7 +132,7 @@ export function SmashBarScreen({
           </ul>
 
           <div className={`mt-7 ${styles.actions}`}>
-            <ActionButton href={siteConfig.contact.bookingUrl} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "smash_bar_screen" }}>Pedir ahora</ActionButton>
+            <ActionButton href={getQamareroReservationUrl("menu")} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "smash_bar_screen" }}>Pedir ahora</ActionButton>
             {showSecondaryAction ? (
               <ActionButton href="/carta" kind="secondary" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "smash_bar_screen" }}>
                 Ver carta

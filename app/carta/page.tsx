@@ -4,7 +4,7 @@ import { MenuHero } from "@/components/menu/MenuHero";
 import { MenuSectionBlock } from "@/components/menu/MenuSectionBlock";
 import { SmashPromoCTA } from "@/components/menu/SmashPromoCTA";
 import { menuHero, foodSections, drinksSections, smashPromo, menuFooter } from "@/content/menu";
-import { siteConfig } from "@/content/site";
+import { getQamareroReservationUrl } from "@/lib/integrations/qamarero";
 
 export default function CartaPage() {
   const smashSection = foodSections.find((section) => section.id === "smash-burgers")!;
@@ -40,7 +40,7 @@ export default function CartaPage() {
             promo={smashPromo}
             size="lg"
             theme="dark"
-            primaryAction={{ label: "Pedir ahora", href: siteConfig.contact.bookingUrl, analyticsEvent: "click_reserva_qamarero" }}
+            primaryAction={{ label: "Pedir ahora", href: getQamareroReservationUrl("menu"), analyticsEvent: "click_reserva_qamarero" }}
             secondaryAction={{ label: "Cómo llegar", href: "/ubicacion-ogijares", analyticsEvent: "click_como_llegar" }}
           />
 

@@ -1,5 +1,5 @@
 import type { ActionLink, MenuCategory, ScheduleEvent, SeasonalScheduleItem, SeoLanding } from "@/types/site";
-import { QAMARERO_BOOKING_URL } from "@/lib/integrations/qamarero";
+import { QAMARERO_BOOKING_URL, getQamareroReservationUrl } from "@/lib/integrations/qamarero";
 
 export const siteConfig = {
   name: "Kiosko Alfresko",
@@ -34,7 +34,7 @@ export const siteConfig = {
     primary: { label: "Cómo llegar ahora", href: "/ubicacion-ogijares" },
     secondary: { label: "Ver carta rápida", href: "/carta" },
     call: { label: "Llamar ahora", href: "tel:696320465" },
-    booking: { label: "Reservar mesa", href: QAMARERO_BOOKING_URL },
+    booking: { label: "Reservar mesa", href: getQamareroReservationUrl("hero") },
   },
   positioning: {
     headline: "Aquí no se viene a comer. Se viene a quedarse.",
@@ -113,7 +113,7 @@ export const upcomingEvents = {
     "Te atendemos mejor, más rápido y con servicio completo durante los eventos.",
   reservationMicrocopy:
     "En días de mucha afluencia, sin reserva podremos activar barra rápida de bebida.",
-  primaryCta: { label: "Reservar mesa", href: QAMARERO_BOOKING_URL },
+  primaryCta: { label: "Reservar mesa", href: getQamareroReservationUrl("events") },
   secondaryCta: { label: "Ver Instagram", href: "https://instagram.com/alfresko.granada" },
   items: [
     {
@@ -122,7 +122,7 @@ export const upcomingEvents = {
       status: "Plazas limitadas",
       description:
         "Ambiente deportivo, terraza y tarde de parque en Ogíjares.",
-      cta: { label: "Reservar mesa", href: QAMARERO_BOOKING_URL },
+      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
     },
     {
       title: "Feria del Ocio",
@@ -130,7 +130,7 @@ export const upcomingEvents = {
       status: "Recomendado reservar",
       description:
         "Música, actividades y terraza llena durante toda la jornada.",
-      cta: { label: "Reservar mesa", href: QAMARERO_BOOKING_URL },
+      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
     },
     {
       title: "Paella solidaria",
@@ -138,7 +138,7 @@ export const upcomingEvents = {
       status: "Plazas limitadas",
       description:
         "Domingo de parque, paella y terraceo en San Sebastián.",
-      cta: { label: "Reservar mesa", href: QAMARERO_BOOKING_URL },
+      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
     },
   ],
 };

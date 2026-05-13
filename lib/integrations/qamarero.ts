@@ -20,6 +20,14 @@ export type ReservationRequest = {
 export const QAMARERO_BOOKING_URL =
   "https://booking.qamarero.com/new-reservation/kiosko-alfresko";
 
+export function getQamareroReservationUrl(source: string) {
+  const url = new URL(QAMARERO_BOOKING_URL);
+  url.searchParams.set("utm_source", "website");
+  url.searchParams.set("utm_medium", source);
+  url.searchParams.set("utm_campaign", "reservas");
+  return url.toString();
+}
+
 export function getQamareroConfig(): QamareroConfig {
   return {
     mode: (process.env.NEXT_PUBLIC_QAMARERO_MODE as QamareroMode) || "external_url",
@@ -31,10 +39,15 @@ export function getQamareroConfig(): QamareroConfig {
   };
 }
 
-export function getReservationEntryPoint() {
+export function getReservationEntryPoint(source = "contact_page") {
   const config = getQamareroConfig();
   if (config.mode === "iframe" && config.iframeUrl) return { type: "iframe" as const, url: config.iframeUrl };
-  if (config.publicUrl) return { type: "external" as const, url: config.publicUrl };
+  if (config.publicUrl) {
+    return {
+      type: "external" as const,
+      url: config.publicUrl === QAMARERO_BOOKING_URL ? getQamareroReservationUrl(source) : config.publicUrl,
+    };
+  }
   return { type: "pending" as const, url: null };
 }
 
