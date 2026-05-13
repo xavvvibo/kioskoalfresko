@@ -40,12 +40,39 @@ cp .env.example .env.local
 Variables preparadas:
 
 - `NEXT_PUBLIC_SITE_URL`
+- `NEXT_PUBLIC_GA_ID`
+- `NEXT_PUBLIC_GTM_ID`
 - `NEXT_PUBLIC_QAMARERO_MODE`
 - `NEXT_PUBLIC_QAMARERO_PUBLIC_URL`
 - `NEXT_PUBLIC_QAMARERO_IFRAME_URL`
 - `QAMARERO_API_BASE_URL`
 - `QAMARERO_VENUE_ID`
 - `QAMARERO_API_KEY`
+
+## Analytics
+
+La carga de analítica es condicional y no rompe la web si no hay IDs configurados.
+
+- `NEXT_PUBLIC_GA_ID`
+  - ejemplo: `G-XXXXXXXXXX`
+- `NEXT_PUBLIC_GTM_ID`
+  - ejemplo: `GTM-XXXXXXX`
+
+En Vercel:
+
+1. Abre `Project Settings`
+2. Entra en `Environment Variables`
+3. Añade `NEXT_PUBLIC_GA_ID` y/o `NEXT_PUBLIC_GTM_ID`
+4. Redeploy del proyecto
+
+Eventos ya preparados:
+
+- `click_reserva_qamarero`
+- `click_whatsapp`
+- `click_como_llegar`
+- `click_ver_carta`
+- `click_instagram`
+- `click_llamar`
 
 ## Estructura
 

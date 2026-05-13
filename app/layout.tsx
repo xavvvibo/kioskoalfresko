@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { siteConfig } from "@/content/site";
+import { AnalyticsNoScript, AnalyticsScripts } from "@/components/analytics/AnalyticsScripts";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { StickyMobileActions } from "@/components/layout/StickyMobileActions";
@@ -15,6 +16,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="es">
       <body className="min-h-screen bg-[#fffaf4] text-stone-950 antialiased">
+        <AnalyticsNoScript />
+        <AnalyticsScripts />
         <SiteHeader />
         {children}
         <SiteFooter />
