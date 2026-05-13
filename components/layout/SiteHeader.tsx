@@ -10,7 +10,8 @@ const links = [
   { href: "/carta", label: "Carta", analyticsEvent: "click_ver_carta" },
   { href: "/horarios", label: "Horarios" },
   { href: "/ubicacion-ogijares", label: "Ubicación", analyticsEvent: "click_como_llegar" },
-  { href: siteConfig.contact.bookingUrl, label: "Reservas / contacto", external: true, analyticsEvent: "click_reserva_qamarero" },
+  { href: siteConfig.contact.bookingUrl, label: "Reservar", external: true, analyticsEvent: "click_reserva_qamarero" },
+  { href: "/reservas-contacto", label: "Contacto" },
 ];
 
 export function SiteHeader() {
