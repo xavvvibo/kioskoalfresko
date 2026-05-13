@@ -2,12 +2,14 @@ import Script from "next/script";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID;
+const CLARITY_PROJECT_ID = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
 
 export function AnalyticsScripts() {
   const hasGA = Boolean(GA_ID);
   const hasGTM = Boolean(GTM_ID);
+  const hasClarity = Boolean(CLARITY_PROJECT_ID);
 
-  if (!hasGA && !hasGTM) {
+  if (!hasGA && !hasGTM && !hasClarity) {
     return null;
   }
 
@@ -50,6 +52,22 @@ export function AnalyticsScripts() {
             }}
           />
         </>
+      ) : null}
+
+      {hasClarity ? (
+        <Script
+          id="microsoft-clarity-base"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(c,l,a,r,i,t,y){
+                c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+                t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+                y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+              })(window, document, "clarity", "script", "${CLARITY_PROJECT_ID}");
+            `,
+          }}
+        />
       ) : null}
     </>
   );

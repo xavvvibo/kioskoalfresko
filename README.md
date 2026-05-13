@@ -42,6 +42,7 @@ Variables preparadas:
 - `NEXT_PUBLIC_SITE_URL`
 - `NEXT_PUBLIC_GA_ID`
 - `NEXT_PUBLIC_GTM_ID`
+- `NEXT_PUBLIC_CLARITY_PROJECT_ID`
 - `NEXT_PUBLIC_QAMARERO_MODE`
 - `NEXT_PUBLIC_QAMARERO_PUBLIC_URL`
 - `NEXT_PUBLIC_QAMARERO_IFRAME_URL`
@@ -57,13 +58,30 @@ La carga de analítica es condicional y no rompe la web si no hay IDs configurad
   - ejemplo: `G-XXXXXXXXXX`
 - `NEXT_PUBLIC_GTM_ID`
   - ejemplo: `GTM-XXXXXXX`
+- `NEXT_PUBLIC_CLARITY_PROJECT_ID`
+  - ejemplo: `abcd1234efgh`
 
 En Vercel:
 
 1. Abre `Project Settings`
 2. Entra en `Environment Variables`
-3. Añade `NEXT_PUBLIC_GA_ID` y/o `NEXT_PUBLIC_GTM_ID`
+3. Añade `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_GTM_ID` y/o `NEXT_PUBLIC_CLARITY_PROJECT_ID`
 4. Redeploy del proyecto
+
+Para Microsoft Clarity:
+
+1. Crea o abre el proyecto en [Microsoft Clarity](https://clarity.microsoft.com/)
+2. Entra en `Settings`
+3. Copia el `Project ID`
+4. Guárdalo en Vercel como `NEXT_PUBLIC_CLARITY_PROJECT_ID`
+
+Con Clarity configurado podrás analizar:
+
+- heatmaps
+- scroll
+- clicks
+- grabaciones de sesión
+- comportamiento móvil
 
 Eventos ya preparados:
 
