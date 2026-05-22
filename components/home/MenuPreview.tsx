@@ -12,7 +12,7 @@ export function MenuPreview() {
             Smash Burgers 180G 🔥
           </p>
           <p className="mt-3 text-base font-medium leading-6 text-stone-800 sm:text-lg sm:leading-7">
-            Doble smash + patatas. Las burgers más bestias del parque.
+            Doble smash + patatas. El bocado más pedido para comer en terraza en Ogíjares.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             {[
@@ -28,7 +28,7 @@ export function MenuPreview() {
               </span>
             ))}
           </div>
-          <div className="mt-6"><ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "menu_preview" }}>Ver carta</ActionButton></div>
+          <div className="mt-6"><ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "menu_preview" }}>Ver smash burgers</ActionButton></div>
         </div>
         <SmashPromoCTA
           promo={smashPromo}

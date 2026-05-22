@@ -32,52 +32,52 @@ export const siteConfig = {
   },
   ctas: {
     primary: { label: "Cómo llegar ahora", href: "/ubicacion-ogijares" },
-    secondary: { label: "Ver carta rápida", href: "/carta" },
+    secondary: { label: "Ver carta", href: "/carta" },
     call: { label: "Llamar ahora", href: "tel:696320465" },
     booking: { label: "Reservar mesa", href: getQamareroReservationUrl("hero") },
   },
   positioning: {
     headline: "Aquí no se viene a comer. Se viene a quedarse.",
-    subheadline: "Desayunos jueves a domingo desde las 10:00, café + tostadas al sol, tapas, cervezas frías y smash burgers en Ogíjares.",
-    support: ["Smash 180G + patatas · 14€", "Café + tostadas desde las 10:00", "Parque San Sebastián · Ogíjares"],
+    subheadline: "Terraza en Ogíjares, al sur de Granada, con café y tostadas desde las 10:00, tapas, cerveza fría y smash burgers para alargar el plan.",
+    support: ["Smash 180G + patatas · 14€", "Café + tostadas desde las 10:00", "Ogíjares · Granada sur"],
   },
   schedule: {
     currentLabel: "Horario actual",
-    currentSummary: "Jueves a domingo · 10:00 a 17:00. Desayunos desde las 10:00 y confirmación en Instagram si cambia algo por clima o evento.",
-    note: "Junio, julio, agosto y septiembre se actualizarán aquí en cuanto se cierre el horario definitivo.",
+    currentSummary: "Jueves a domingo · 10:00 a 17:00. Desayunos desde las 10:00, terraza, tapas y confirmación en Instagram si hubiera algún cambio puntual.",
+    note: "Si hubiera algún ajuste puntual por clima, servicio o evento privado, lo actualizamos aquí y en Instagram.",
   },
 };
 
 export const seasonalSchedule: SeasonalScheduleItem[] = [
-  { month: "Mayo", status: "confirmed", summary: "Jueves a domingo · 10:00 a 17:00", note: "Seguimos activos en el parque y confirmamos cualquier cambio puntual en Instagram.", highlight: true },
-  { month: "Junio", status: "pending", summary: "Horario especial pendiente de actualizar", note: "Bloque listo para cargar el horario real en cuanto quede cerrado." },
-  { month: "Julio", status: "pending", summary: "Horario especial pendiente de actualizar", note: "Mes fuerte de terraza. Pendiente de confirmación final." },
-  { month: "Agosto", status: "pending", summary: "Horario especial pendiente de actualizar", note: "Mes fuerte de terraza. Pendiente de confirmación final." },
-  { month: "Septiembre", status: "special", summary: "Horario especial por fiestas patronales, pendiente de actualizar", note: "Preparado para reflejar el tramo especial sin rehacer el bloque." },
+  { month: "Mayo", status: "confirmed", summary: "Jueves a domingo · 10:00 a 17:00", note: "Desayunos, terraza y servicio habitual en Ogíjares.", highlight: true },
+  { month: "Junio", status: "pending", summary: "Actualización pendiente", note: "Publicaremos aquí el horario real en cuanto quede confirmado." },
+  { month: "Julio", status: "pending", summary: "Actualización pendiente", note: "Consulta Instagram si buscas la versión más reciente del horario." },
+  { month: "Agosto", status: "pending", summary: "Actualización pendiente", note: "Consulta Instagram si buscas la versión más reciente del horario." },
+  { month: "Septiembre", status: "special", summary: "Se comunicará aquí si hay horario especial", note: "Si hay cambios, se anunciarán también en Instagram." },
 ];
 
 export const maySchedule = {
   normalLabel: "☕ Desayunos ALFRESKO",
   normalHours: "JUEVES A DOMINGO · DESDE LAS 10:00",
-  normalSummary: "Jueves a domingo desde las 10:00, con desayunos, café + tostadas, tapas, cerveza fría y terraza al sol.",
-  weekendNotice: "Próximo evento sujeto a climatología. Confirmamos en Instagram.",
-  weekendLead: "Desayunos, café, tostadas, tapas, cerveza fría y smash burgers.",
+  normalSummary: "Jueves a domingo desde las 10:00, con desayunos, café y tostadas, tapas, cerveza fría y terraza al sol en Ogíjares.",
+  weekendNotice: "Reserva recomendada en horas punta. Confirmaciones en Instagram.",
+  weekendLead: "Café, tostadas, tapas, cerveza fría y smash burgers para venir sin pensarlo demasiado.",
 };
 
 export const maySpecialEvents: ScheduleEvent[] = [
   {
-    date: "Este sábado",
-    title: "🎶 Evento pendiente de confirmación",
-    hours: "Pendiente por lluvia",
-    note: "El evento previsto para este sábado está pendiente de confirmación debido a la previsión de lluvia. 👉 Consulta nuestro Instagram para confirmación en tiempo real.",
+    date: "Antes de venir",
+    title: "Instagram actualizado",
+    hours: "NOVEDADES DEL DÍA",
+    note: "Publicamos por Instagram cualquier cambio puntual de horario, ambiente o servicio para que vengas sobre seguro.",
     highlight: true,
   },
 ];
 
 export const maySalesFocus = {
   title: "☕ Desayunos ALFRESKO",
-  body: "Café + tostadas desde las 10:00, tapas + cerveza y smash burgers Granada en la terraza de Ogíjares.",
-  extra: "Instagram en directo para confirmar el evento del sábado y el ambiente real del día.",
+  body: "Café y tostadas desde las 10:00, tapas, cerveza fría y smash burgers en terraza en Ogíjares, Granada sur.",
+  extra: "Instagram en directo para confirmar ambiente, horarios y cualquier novedad del día.",
   microcopy: [
     "Parque San Sebastián · Ogíjares",
     "Smash 180G + patatas",
@@ -88,7 +88,7 @@ export const maySalesFocus = {
 
 export const springHighlights = [
   {
-    date: "Mayo",
+    date: "Hoy",
     title: "🔥 Hoy hay ambiente en ALFRESKO",
     detail: "Café + tostadas desde las 10:00, cervezas frías, tapas y terraza en el parque.",
   },
@@ -98,47 +98,47 @@ export const springHighlights = [
     detail: "Café + tostadas + terraza al sol. Jueves a domingo desde las 10:00.",
   },
   {
-    date: "Sábado",
-    title: "🎶 Próximo evento sujeto a climatología",
-    detail: "Confirmamos siempre en Instagram antes de darlo por seguro.",
+    date: "Instagram",
+    title: "📲 Novedades en tiempo real",
+    detail: "Si cambia algo, lo confirmamos primero en Instagram.",
   },
 ];
 
 export const upcomingEvents = {
-  eyebrow: "Plazas limitadas en eventos",
-  title: "Próximos eventos ALFRESKO",
-  intro: "Música, terraza, smash burgers y ambiente en el Parque San Sebastián.",
+  eyebrow: "Reserva tu mesa",
+  title: "Planes para venir con hambre, sed y ganas de terraza",
+  intro: "Desayunos, tapas, cerveza fría y smash burgers en el Parque San Sebastián de Ogíjares, al sur de Granada.",
   reservationTitle: "¿Vienes con mesa reservada?",
   reservationBody:
-    "Te atendemos mejor, más rápido y con servicio completo durante los eventos.",
+    "Si ya sabes que venís, reserva y llega con el plan cerrado: mejor sitio, menos espera y todo más fácil.",
   reservationMicrocopy:
-    "En días de mucha afluencia, sin reserva podremos activar barra rápida de bebida.",
+    "Instagram te sirve para confirmar ambiente y novedades; la reserva te asegura la visita.",
   primaryCta: { label: "Reservar mesa", href: getQamareroReservationUrl("events") },
   secondaryCta: { label: "Ver Instagram", href: "https://instagram.com/alfresko.granada" },
   items: [
     {
-      title: "Ciclo Indoor",
-      date: "Sábado 16",
-      status: "Plazas limitadas",
+      title: "Desayuno en terraza",
+      date: "Desde las 10:00",
+      status: "Ideal para venir pronto",
       description:
-        "Ambiente deportivo, terraza y tarde de parque en Ogíjares.",
+        "Café, tostadas y terraza al sol para empezar el día en Ogíjares sin complicarte.",
       cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
     },
     {
-      title: "Feria del Ocio",
-      date: "Sábado 23",
+      title: "Ronda con tapa",
+      date: "Mediodía y tarde",
       status: "Recomendado reservar",
       description:
-        "Música, actividades y terraza llena durante toda la jornada.",
+        "Cerveza fría, bebida con tapa y terraza para quedarse un rato más en Granada sur.",
       cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
     },
     {
-      title: "Paella solidaria",
-      date: "Domingo 24",
-      status: "Plazas limitadas",
+      title: "Smash burger plan",
+      date: "Carta todo el servicio",
+      status: "Las más pedidas",
       description:
-        "Domingo de parque, paella y terraceo en San Sebastián.",
-      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
+        "Nuestras smash burgers 180G con patatas incluidas son el plan rápido para comer bien y seguir.",
+      cta: { label: "Ver carta y reservar", href: getQamareroReservationUrl("event_card") },
     },
   ],
 };

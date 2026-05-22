@@ -12,7 +12,7 @@ export function Hero() {
   const statusBadge = isOpenBySchedule ? "🟢 Abierto ahora" : "⚫ Próxima apertura: jueves 10:00";
   const statusHeadline = isOpenBySchedule ? "🔥 Hoy hay ambiente" : "Te esperamos para café, tostadas y terraza al sol.";
   const statusSupport = isOpenBySchedule
-    ? "Café, tapas, cerveza fría y smash burgers."
+    ? "Café, tapas, cerveza fría y smash burgers en Ogíjares."
     : "Jueves a domingo desde las 10:00.";
 
   return (
@@ -59,9 +59,9 @@ export function Hero() {
             ))}
             <ActionButton href={siteConfig.contact.instagramUrl} kind="ghost" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "hero_primary" }}>Ver Instagram ahora</ActionButton>
           </div>
-          <p className="mt-5 text-sm font-semibold text-stone-700">👉 Vienes por una… te quedas por todo</p>
-          <p className="mt-2 text-sm font-semibold text-stone-700">👉 En 5 minutos estás aquí con una cerveza</p>
-          <p className="mt-2 text-sm font-semibold text-stone-700">👉 Aquí siempre cae otra 😉</p>
+          <p className="mt-5 text-sm font-semibold text-stone-700">👉 Terraza, café y tostadas para empezar bien el día</p>
+          <p className="mt-2 text-sm font-semibold text-stone-700">👉 Cerveza fría, tapas y smash burgers para alargarlo</p>
+          <p className="mt-2 text-sm font-semibold text-stone-700">👉 Si vienes desde Granada sur, te plantas aquí en nada</p>
         </div>
         <div className="relative grid gap-4 self-end md:pl-6">
           <div className="absolute -left-5 top-10 hidden h-[78%] w-px bg-stone-950/14 md:block" />
@@ -79,7 +79,7 @@ export function Hero() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-[1.8rem] border border-stone-950 bg-white p-5 shadow-[0_12px_28px_rgba(0,0,0,0.06)]">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d94b2b]">Horario mayo</div>
+              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d94b2b]">Horario actual</div>
               <div className="mt-3 text-lg font-black uppercase leading-tight text-stone-950 md:text-[1.35rem]">{maySchedule.normalSummary}</div>
             </div>
             <div className="rounded-[1.8rem] border border-stone-950 bg-[#d94b2b] p-5 text-white shadow-[0_16px_34px_rgba(217,75,43,0.22)]">

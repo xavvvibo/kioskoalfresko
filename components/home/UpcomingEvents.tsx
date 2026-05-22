@@ -40,7 +40,7 @@ export function UpcomingEvents() {
                 {item.description}
               </p>
               <p className="mt-4 text-[11px] font-black uppercase tracking-[0.18em] text-[#d94b2b]">
-                Reserva recomendada
+                Cierra el plan
               </p>
               <div className="mt-5">
                 <ActionButton href={item.cta.href} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "upcoming_events_card", event_title: item.title }}>{item.cta.label}</ActionButton>
@@ -51,7 +51,7 @@ export function UpcomingEvents() {
 
         <article className="rounded-[1.8rem] border border-stone-950 bg-[#f8f1e7] p-6 shadow-[0_14px_34px_rgba(0,0,0,0.06)]">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#d94b2b]">
-            Reserva recomendada
+            Reserva directa
           </p>
           <h4 className="mt-3 text-[2rem] font-black uppercase leading-[0.94] tracking-[-0.04em] text-stone-950">
             {upcomingEvents.reservationTitle}

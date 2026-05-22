@@ -30,10 +30,10 @@ export default function CartaPage() {
         <section className="mt-8 space-y-5 md:mt-10">
           <div className="flex flex-wrap items-center gap-3">
             <div className="inline-flex rounded-full border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#fff8ef] shadow-[0_10px_24px_rgba(217,75,43,0.12)]">
-              🔥 Rápido y sin complicarse
+              🔥 Smash, tapas y cerveza fría
             </div>
             <div className="inline-flex rounded-full border border-white/12 bg-white/6 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-[#fff8ef]">
-              👉 Si dudas: Baiconera
+              👉 Si dudas: smash + patatas
             </div>
           </div>
           <SmashPromoCTA
@@ -59,7 +59,7 @@ export default function CartaPage() {
                 Pide rápido. Comparte. Alárgalo.
               </h2>
               <p className="mt-4 text-sm font-semibold leading-6 text-stone-300">
-                Las smash mandan. La parrilla remata. Y lo demás está para seguir sin complicarse.
+                Smash burgers, tapas para compartir, cerveza fría y planes para quedarse en la terraza de Ogíjares.
               </p>
             </div>
           </div>
@@ -95,7 +95,7 @@ export default function CartaPage() {
               </h2>
             </div>
             <p className="hidden text-sm font-semibold uppercase tracking-[0.18em] text-stone-400 md:block">
-              Bebe. Come. Quédate.
+              Cerveza fría. Tapas. Terraza.
             </p>
           </div>
 
@@ -111,7 +111,7 @@ export default function CartaPage() {
             {menuFooter.claim}
           </p>
           <p className="mt-4 text-sm font-black uppercase tracking-[0.18em] text-[#f2c6bb]">
-            Instagram y TikTok · {menuFooter.social}
+            Instagram · {menuFooter.social}
           </p>
         </footer>
       </div>

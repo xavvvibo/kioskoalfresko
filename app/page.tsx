@@ -8,7 +8,7 @@ import { ContactPanel } from "@/components/home/ContactPanel";
 
 export const metadata = buildMetadata({
   title: "Kiosko Alfresko | Terraza en Ogíjares con desayunos, tapas y smash burgers",
-  description: "Kiosko en Ogíjares con desayunos jueves a domingo desde las 10:00, terraza, tapas, cervezas frías y smash burgers en el Parque San Sebastián.",
+  description: "Terraza en Ogíjares, Granada sur, con desayunos desde las 10:00, café y tostadas, tapas, cerveza fría y smash burgers en el Parque San Sebastián.",
   path: "/",
 });
 
@@ -43,7 +43,7 @@ export default function HomePage() {
       <Section eyebrow="Smash burgers" title="SMASH BURGERS 180G 🔥">
         <MenuPreview />
       </Section>
-      <Section eyebrow="Plazas limitadas en eventos" title="Próximos eventos ALFRESKO">
+      <Section eyebrow="Reserva e Instagram" title="Elige cómo venir">
         <UpcomingEvents />
       </Section>
       <Section eyebrow="Contacto" title="Si quieres cerrar algo antes de salir.">

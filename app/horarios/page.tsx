@@ -4,7 +4,7 @@ import { ActionButton } from "@/components/ui/ActionButton";
 
 export const metadata = buildMetadata({
   title: "Horarios de Kiosko Alfresko | Ogíjares",
-  description: "Consulta el horario actual de Kiosko Alfresko en Ogíjares: desayunos desde las 10:00, terraza, tapas y confirmación en Instagram si cambia algo por clima o evento.",
+  description: "Consulta el horario actual de Kiosko Alfresko en Ogíjares, Granada sur: desayunos desde las 10:00, terraza, tapas y confirmación en Instagram si cambia algo.",
   path: "/horarios",
 });
 
@@ -16,8 +16,8 @@ export default function HorariosPage() {
         <h1 className="mt-3 text-4xl font-black uppercase tracking-[-0.04em] text-stone-950 md:text-5xl">Horario actual</h1>
         <p className="mt-5 max-w-3xl text-lg leading-8 text-stone-700">{maySchedule.normalSummary}</p>
         <div className="mt-8 rounded-[2rem] border border-stone-950 bg-white p-6 shadow-sm">
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">🔥 Hoy abierto</p>
-          <p className="mt-2 text-sm font-semibold text-stone-700">👉 Desayunos desde las 10:00, y el estado real del sábado siempre en Instagram</p>
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">🔥 Horario de referencia</p>
+          <p className="mt-2 text-sm font-semibold text-stone-700">👉 Desayunos desde las 10:00 y confirmación rápida en Instagram si hubiera cambios</p>
           <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-stone-950">{siteConfig.schedule.currentSummary}</h2>
           <p className="mt-4 text-lg font-black uppercase tracking-[-0.03em] text-stone-950">{maySchedule.normalHours}</p>
           <p className="mt-4 inline-flex rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white">
@@ -31,13 +31,13 @@ export default function HorariosPage() {
             ))}
           </div>
           <p className="mt-3 text-sm leading-6 text-stone-700">{siteConfig.schedule.note}</p>
-          <p className="mt-4 text-sm font-semibold text-stone-700">Consulta aquí antes de venir.</p>
+          <p className="mt-4 text-sm font-semibold text-stone-700">Consulta aquí antes de venir o reserva si quieres cerrar mesa.</p>
           <div className="mt-6">
             <ActionButton href={siteConfig.location.mapsUrl} newTab>Cómo llegar ahora</ActionButton>
           </div>
         </div>
         <div className="mt-8 rounded-[2rem] border border-stone-950 bg-stone-950 p-6 text-white shadow-[0_24px_60px_rgba(0,0,0,0.16)]">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#f2c6bb]">Eventos y estado del día</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#f2c6bb]">Estado del día</p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {maySpecialEvents.map((item) => (
               <article key={item.date} className="rounded-[1.6rem] border border-white/12 bg-white/6 p-5">
@@ -50,7 +50,7 @@ export default function HorariosPage() {
             <article className="rounded-[1.6rem] border border-white/12 bg-white/6 p-5">
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Instagram</p>
               <h2 className="mt-3 text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Confirmación en tiempo real</h2>
-              <p className="mt-3 text-sm leading-6 text-stone-300">Si el clima cambia o el evento del sábado se mueve, lo confirmamos en Instagram.</p>
+              <p className="mt-3 text-sm leading-6 text-stone-300">Si cambia algo en horario, servicio o ambiente, lo confirmamos primero en Instagram.</p>
               <div className="mt-5">
                 <ActionButton href={siteConfig.contact.instagramUrl} kind="secondary" newTab>Ver Instagram ahora</ActionButton>
               </div>
@@ -58,14 +58,14 @@ export default function HorariosPage() {
           </div>
         </div>
         <div className="mt-8 rounded-[2rem] border border-stone-950/12 bg-stone-100 p-6 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-stone-500">Próximamente</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-stone-500">Próximas actualizaciones</p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {seasonalSchedule
               .filter((item) => item.month !== "Mayo" && item.month !== "Abril")
               .map((item) => (
                 <article key={item.month} className="rounded-[1.7rem] border border-stone-950/10 bg-white p-6 shadow-sm">
                   <h2 className="text-xl font-black uppercase tracking-[-0.03em] text-stone-950">{item.month}</h2>
-                  <p className="mt-3 text-sm leading-6 text-stone-700">Próximamente.</p>
+                  <p className="mt-3 text-sm leading-6 text-stone-700">{item.note}</p>
                 </article>
               ))}
           </div>

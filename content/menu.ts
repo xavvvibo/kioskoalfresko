@@ -3,9 +3,9 @@ import type { MenuPromo, MenuSection } from "@/types/site";
 export const menuHero = {
   eyebrow: "Carta",
   title: "No es un kiosko. Es el plan.",
-  subtitle: "Pide rápido. Comparte. Alárgalo.",
+  subtitle: "Smash burgers, tapas y cerveza fría.",
   supportingText:
-    "Todo claro y a tiro: smash burgers, parrilla y cosas para quedarse más de la cuenta.",
+    "Todo claro y a tiro para venir a Ogíjares con hambre: smash burgers, tapas, parrilla, cerveza fría y cosas para quedarse más de la cuenta.",
 };
 
 export const smashPromo: MenuPromo = {

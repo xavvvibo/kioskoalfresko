@@ -1,9 +1,9 @@
 export function QuickDecision() {
   const items = [
-    ["El plan", "Pides una. Y te quedas."],
+    ["El plan", "Terraza, tapas y rato largo."],
     ["Dónde estamos", "Parque San Sebastián. Ogíjares."],
-    ["Qué hay", "Bebida, tapas y rato largo."],
-    ["Lo básico", "Carta, horario y cómo llegar."],
+    ["Qué hay", "Café, tostadas, cerveza y smash."],
+    ["Lo básico", "Reserva, carta y cómo llegar."],
   ];
 
   return (
