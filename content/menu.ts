@@ -2,10 +2,10 @@ import type { MenuPromo, MenuSection } from "@/types/site";
 
 export const menuHero = {
   eyebrow: "Carta",
-  title: "No es un kiosko. Es el plan.",
-  subtitle: "Smash burgers, tapas y cerveza fría.",
+  title: "Carta para compartir con calma",
+  subtitle: "Smash burgers, tapas, cerveza fría y terraza.",
   supportingText:
-    "Todo claro y a tiro para venir a Ogíjares con hambre: smash burgers, tapas, parrilla, cerveza fría y cosas para quedarse más de la cuenta.",
+    "Todo claro para venir a Ogíjares con hambre: smash burgers, tapas, parrilla, cerveza fría y opciones para alargar la sobremesa.",
 };
 
 export const smashPromo: MenuPromo = {
@@ -191,6 +191,6 @@ export const drinksSections: MenuSection[] = [
 ];
 
 export const menuFooter = {
-  claim: "Bebe. Come. Quédate.",
+  claim: "Tapas, burgers y terraza para quedarse un poco más.",
   social: "@alfresko.granada",
 };

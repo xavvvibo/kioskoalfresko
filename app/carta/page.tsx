@@ -30,10 +30,10 @@ export default function CartaPage() {
         <section className="mt-8 space-y-5 md:mt-10">
           <div className="flex flex-wrap items-center gap-3">
             <div className="inline-flex rounded-full border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#fff8ef] shadow-[0_10px_24px_rgba(217,75,43,0.12)]">
-              🔥 Smash, tapas y cerveza fría
+              Smash, tapas y cerveza fría
             </div>
             <div className="inline-flex rounded-full border border-white/12 bg-white/6 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-[#fff8ef]">
-              👉 Si dudas: smash + patatas
+              Si dudas: smash + patatas
             </div>
           </div>
           <SmashPromoCTA
@@ -55,11 +55,11 @@ export default function CartaPage() {
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#f2c6bb]">
                 Comida
               </p>
-              <h2 className="mt-3 text-[2.4rem] font-black uppercase leading-[0.88] tracking-[-0.06em] text-[#fff8ef] md:text-[3.4rem]">
-                Pide rápido. Comparte. Alárgalo.
+              <h2 className="mt-3 text-[2.2rem] font-black uppercase leading-[0.92] tracking-[-0.05em] text-[#fff8ef] md:text-[3rem]">
+                Para compartir, picar o sentarse con calma
               </h2>
-              <p className="mt-4 text-sm font-semibold leading-6 text-stone-300">
-                Smash burgers, tapas para compartir, cerveza fría y planes para quedarse en la terraza de Ogíjares.
+              <p className="mt-4 text-sm leading-6 text-stone-300">
+                Smash burgers, tapas para compartir, cerveza fría y una terraza en Ogíjares pensada para quedarse un rato.
               </p>
             </div>
           </div>
@@ -95,7 +95,7 @@ export default function CartaPage() {
               </h2>
             </div>
             <p className="hidden text-sm font-semibold uppercase tracking-[0.18em] text-stone-400 md:block">
-              Cerveza fría. Tapas. Terraza.
+              Cerveza fría, tapas y terraza
             </p>
           </div>
 

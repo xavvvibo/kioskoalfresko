@@ -12,7 +12,7 @@ export const metadata = buildMetadata({
 export default function HorariosPage() {
   return (
     <main className="bg-[#f5efe5]">
-      <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 md:py-24">
+      <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 md:py-28">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d94b2b]">Horarios</p>
         <h1 className="mt-3 text-4xl font-black uppercase tracking-[-0.04em] text-stone-950 md:text-5xl">Horario actual</h1>
         <p className="mt-5 max-w-3xl text-lg leading-8 text-stone-700">{maySchedule.normalSummary}</p>
@@ -20,10 +20,10 @@ export default function HorariosPage() {
           <CorpusClosureNotice />
         </div>
         <div className="mt-8 rounded-[2rem] border border-stone-950 bg-white p-6 shadow-sm">
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">🔥 Horario de referencia</p>
-          <p className="mt-2 text-sm font-semibold text-stone-700">👉 Desayunos desde las 10:00 y confirmación rápida en Instagram si hubiera cambios</p>
-          <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-stone-950">{siteConfig.schedule.currentSummary}</h2>
-          <p className="mt-4 text-lg font-black uppercase tracking-[-0.03em] text-stone-950">{maySchedule.normalHours}</p>
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">Horario de referencia</p>
+          <p className="mt-2 text-sm text-stone-700">Desayunos desde las 10:00 y confirmación rápida en Instagram si hubiera cambios.</p>
+          <h2 className="text-2xl font-black leading-tight tracking-[-0.03em] text-stone-950">{siteConfig.schedule.currentSummary}</h2>
+          <p className="mt-4 text-lg font-semibold tracking-[-0.02em] text-stone-950">{maySchedule.normalHours}</p>
           <p className="mt-4 inline-flex rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white">
             {maySchedule.weekendNotice}
           </p>
@@ -35,7 +35,7 @@ export default function HorariosPage() {
             ))}
           </div>
           <p className="mt-3 text-sm leading-6 text-stone-700">{siteConfig.schedule.note}</p>
-          <p className="mt-4 text-sm font-semibold text-stone-700">Consulta aquí antes de venir o reserva si quieres cerrar mesa.</p>
+          <p className="mt-4 text-sm text-stone-700">Consulta aquí antes de venir o reserva si prefieres dejar la mesa cerrada.</p>
           <div className="mt-6">
             <ActionButton href={siteConfig.location.mapsUrl} newTab>Cómo llegar ahora</ActionButton>
           </div>
@@ -46,14 +46,14 @@ export default function HorariosPage() {
             {maySpecialEvents.map((item) => (
               <article key={item.date} className="rounded-[1.6rem] border border-white/12 bg-white/6 p-5">
                 <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">{item.date}</p>
-                <h2 className="mt-3 text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">{item.title}</h2>
-                <p className="mt-4 text-lg font-black uppercase tracking-[-0.03em] text-white">{item.hours}</p>
+                <h2 className="mt-3 text-2xl font-black tracking-[-0.03em] text-[#fff8ef]">{item.title}</h2>
+                <p className="mt-4 text-lg font-semibold tracking-[-0.02em] text-white">{item.hours}</p>
                 {item.note ? <p className="mt-3 text-sm leading-6 text-stone-300">{item.note}</p> : null}
               </article>
             ))}
             <article className="rounded-[1.6rem] border border-white/12 bg-white/6 p-5">
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Instagram</p>
-              <h2 className="mt-3 text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Confirmación en tiempo real</h2>
+              <h2 className="mt-3 text-2xl font-black tracking-[-0.03em] text-[#fff8ef]">Confirmación en tiempo real</h2>
               <p className="mt-3 text-sm leading-6 text-stone-300">Si cambia algo en horario, servicio o ambiente, lo confirmamos primero en Instagram.</p>
               <div className="mt-5">
                 <ActionButton href={siteConfig.contact.instagramUrl} kind="secondary" newTab>Ver Instagram ahora</ActionButton>

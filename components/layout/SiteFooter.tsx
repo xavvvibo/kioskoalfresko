@@ -15,7 +15,7 @@ export function SiteFooter() {
             <span className="bg-[#d94b2b] px-4 py-3">Alfresko</span>
           </div>
           <p className="mt-4 text-sm leading-6 text-stone-300">{siteConfig.location.area}, {siteConfig.location.city}, {siteConfig.location.province}</p>
-          <p className="mt-3 text-sm font-semibold text-white">Terraza, café y tostadas, tapas, cerveza fría y smash burgers en Granada sur.</p>
+          <p className="mt-3 text-sm leading-6 text-white/90">Terraza, café y tostadas, tapas, cerveza fría y smash burgers en Granada sur.</p>
         </div>
         <div>
           <h4 className="text-sm font-black uppercase tracking-[0.16em] text-[#efb7a8]">Enlaces útiles</h4>

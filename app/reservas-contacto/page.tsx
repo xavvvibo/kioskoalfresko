@@ -21,7 +21,7 @@ export default function ReservasContactoPage() {
           Reservas y contacto en Kiosko Alfresko
         </h1>
         <p className="mt-5 max-w-3xl text-lg leading-8 text-stone-600">
-          Reserva mesa, escríbenos por WhatsApp o ven directo al Parque San Sebastián de Ogíjares si ya tienes claro el plan.
+          Reserva mesa, escríbenos por WhatsApp o consulta cómo llegar al Parque San Sebastián de Ogíjares si quieres organizarlo todo antes de salir.
         </p>
         <div className="mt-8">
           <CorpusClosureNotice />
@@ -56,7 +56,7 @@ export default function ReservasContactoPage() {
           <article className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
             <h2 className="text-2xl font-semibold text-stone-950">Ven directo al parque</h2>
             <p className="mt-4 text-sm leading-6 text-stone-600">
-              Estamos en {siteConfig.location.area}, {siteConfig.location.city}, {siteConfig.location.province}. Fácil para quedar si vienes desde Ogíjares o desde la zona sur de Granada.
+              Estamos en {siteConfig.location.area}, {siteConfig.location.city}, {siteConfig.location.province}. Una ubicación fácil para quedar si vienes desde Ogíjares o desde la zona sur de Granada.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <ActionButton href={siteConfig.location.mapsUrl} newTab analyticsEvent="click_como_llegar" analyticsPayload={{ location: "reservas_contacto_location" }}>📍 Llegar ahora</ActionButton>
@@ -69,7 +69,7 @@ export default function ReservasContactoPage() {
           <article className="mt-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
             <h2 className="text-2xl font-semibold text-stone-950">Carta digital y reservas online</h2>
             <p className="mt-4 max-w-3xl text-sm leading-6 text-stone-600">
-              Si prefieres cerrarlo desde el móvil, abre la carta, revisa las smash burgers y deja la reserva hecha en un minuto.
+              Si prefieres hacerlo desde el móvil, abre la carta, echa un vistazo a las smash burgers y deja la reserva lista en un minuto.
             </p>
             <div className="mt-6">
               <ActionButton href={reservation.url} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "reservas_contacto_online" }}>Abrir reservas online</ActionButton>

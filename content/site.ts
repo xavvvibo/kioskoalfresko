@@ -37,9 +37,9 @@ export const siteConfig = {
     booking: { label: "Reservar mesa", href: getQamareroReservationUrl("hero") },
   },
   positioning: {
-    headline: "Aquí no se viene a comer. Se viene a quedarse.",
-    subheadline: "Terraza en Ogíjares, al sur de Granada, con café y tostadas desde las 10:00, tapas, cerveza fría y smash burgers para alargar el plan.",
-    support: ["Smash 180G + patatas · 14€", "Café + tostadas desde las 10:00", "Ogíjares · Granada sur"],
+    headline: "Terraza, tapas y smash burgers en Ogíjares",
+    subheadline: "Café desde las 10:00 · cerveza fría · tapas · burgers · terraza al sol",
+    support: ["Ogíjares · Granada sur", "Smash 180G + patatas · 14€", "Reserva fácil"],
   },
   schedule: {
     currentLabel: "Horario actual",
@@ -58,26 +58,26 @@ export const seasonalSchedule: SeasonalScheduleItem[] = [
 
 export const maySchedule = {
   normalLabel: "☕ Desayunos ALFRESKO",
-  normalHours: "JUEVES A DOMINGO · DESDE LAS 10:00",
+  normalHours: "Jueves a domingo · desde las 10:00",
   normalSummary: "Jueves a domingo desde las 10:00, con desayunos, café y tostadas, tapas, cerveza fría y terraza al sol en Ogíjares.",
-  weekendNotice: "Reserva recomendada en horas punta. Confirmaciones en Instagram.",
-  weekendLead: "Café, tostadas, tapas, cerveza fría y smash burgers para venir sin pensarlo demasiado.",
+  weekendNotice: "Reserva recomendada en horas punta · Instagram para cambios puntuales.",
+  weekendLead: "Café, tostadas, tapas, cerveza fría y smash burgers para disfrutar la terraza con calma.",
 };
 
 export const maySpecialEvents: ScheduleEvent[] = [
   {
     date: "Antes de venir",
-    title: "Instagram actualizado",
-    hours: "NOVEDADES DEL DÍA",
-    note: "Publicamos por Instagram cualquier cambio puntual de horario, ambiente o servicio para que vengas sobre seguro.",
+    title: "Instagram al día",
+    hours: "Novedades del día",
+    note: "Si hay algún cambio puntual de horario, ambiente o servicio, lo compartimos primero en Instagram.",
     highlight: true,
   },
 ];
 
 export const maySalesFocus = {
-  title: "☕ Desayunos ALFRESKO",
+  title: "☕ Desayunos y terraza",
   body: "Café y tostadas desde las 10:00, tapas, cerveza fría y smash burgers en terraza en Ogíjares, Granada sur.",
-  extra: "Instagram en directo para confirmar ambiente, horarios y cualquier novedad del día.",
+  extra: "Instagram para confirmar ambiente, horarios y cualquier novedad del día.",
   microcopy: [
     "Parque San Sebastián · Ogíjares",
     "Smash 180G + patatas",
@@ -106,20 +106,20 @@ export const springHighlights = [
 
 export const upcomingEvents = {
   eyebrow: "Reserva tu mesa",
-  title: "Planes para venir con hambre, sed y ganas de terraza",
+  title: "Ideas para venir con calma y disfrutar la terraza",
   intro: "Desayunos, tapas, cerveza fría y smash burgers en el Parque San Sebastián de Ogíjares, al sur de Granada.",
   reservationTitle: "¿Vienes con mesa reservada?",
   reservationBody:
-    "Si ya sabes que venís, reserva y llega con el plan cerrado: mejor sitio, menos espera y todo más fácil.",
+    "Si ya sabes que venís, reservar mesa ayuda a llegar con el plan más cómodo y sin esperas innecesarias.",
   reservationMicrocopy:
-    "Instagram te sirve para confirmar ambiente y novedades; la reserva te asegura la visita.",
+    "Instagram te sirve para confirmar ambiente y novedades; la reserva te ayuda a venir con todo más claro.",
   primaryCta: { label: "Reservar mesa", href: getQamareroReservationUrl("events") },
   secondaryCta: { label: "Ver Instagram", href: "https://instagram.com/alfresko.granada" },
   items: [
     {
       title: "Desayuno en terraza",
       date: "Desde las 10:00",
-      status: "Ideal para venir pronto",
+      status: "Perfecto para la mañana",
       description:
         "Café, tostadas y terraza al sol para empezar el día en Ogíjares sin complicarte.",
       cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
@@ -127,7 +127,7 @@ export const upcomingEvents = {
     {
       title: "Ronda con tapa",
       date: "Mediodía y tarde",
-      status: "Recomendado reservar",
+      status: "Muy buen momento para venir",
       description:
         "Cerveza fría, bebida con tapa y terraza para quedarse un rato más en Granada sur.",
       cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
@@ -135,7 +135,7 @@ export const upcomingEvents = {
     {
       title: "Smash burger plan",
       date: "Carta todo el servicio",
-      status: "Las más pedidas",
+      status: "De las más pedidas",
       description:
         "Nuestras smash burgers 180G con patatas incluidas son el plan rápido para comer bien y seguir.",
       cta: { label: "Ver carta y reservar", href: getQamareroReservationUrl("event_card") },
@@ -147,7 +147,7 @@ export const specialWeekendCampaign = {
   eyebrow: "Este finde en ALFRESKO",
   title: "Feria de la Cultura y del Ocio + Paella solidaria",
   intro:
-    "Un finde con más ambiente en la terraza de Ogíjares: eventos, tapas, cerveza fría y smash burgers en Granada sur.",
+    "Un fin de semana con ambiente en la terraza de Ogíjares: eventos, tapas, cerveza fría y smash burgers en Granada sur.",
   scheduleTitle: "Horario especial",
   schedule: [
     { day: "Viernes", hours: "Tarde y noche" },
@@ -161,7 +161,7 @@ export const specialWeekendCampaign = {
     "Smash burgers 180G",
   ],
   reservationNote:
-    "Si vienes a los eventos o a la paella solidaria, mejor llegar con mesa cerrada y revisar Instagram antes de salir.",
+    "Si vienes a los eventos o a la paella solidaria, reservar mesa y revisar Instagram antes de salir puede ayudarte a venir más tranquilo.",
 };
 
 export const corpusClosureNotice = {
@@ -170,7 +170,7 @@ export const corpusClosureNotice = {
   body:
     "Kiosko Alfresko descansará del 25 de mayo al 7 de junio para recargar energía de cara al verano ☀️",
   support:
-    "Volveremos después con más terraza, más eventos, tapas, cerveza fría y smash burgers en Ogíjares, Granada sur.",
+    "Después volveremos con la terraza lista, más planes al aire libre y todo el ambiente de Ogíjares, Granada sur.",
 };
 
 export const menuCategories: MenuCategory[] = [

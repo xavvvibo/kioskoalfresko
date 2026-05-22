@@ -45,7 +45,7 @@ export function SiteHeader() {
             </div>
             <div className="hidden sm:block">
               <div className="text-[11px] font-black uppercase tracking-[0.22em] text-stone-500">{siteConfig.location.city} · {siteConfig.location.area}</div>
-              <div className="mt-1 text-sm font-black uppercase tracking-[0.06em] text-stone-950 md:text-base">Terraza, tapas y smash en Ogíjares.</div>
+              <div className="mt-1 text-sm font-semibold tracking-[0.02em] text-stone-950 md:text-base">Terraza, tapas y smash burgers en Ogíjares.</div>
             </div>
           </Link>
           <button

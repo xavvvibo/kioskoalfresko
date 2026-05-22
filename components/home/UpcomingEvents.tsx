@@ -4,11 +4,11 @@ import { ActionButton } from "@/components/ui/ActionButton";
 export function UpcomingEvents() {
   return (
     <div className="grid gap-6">
-      <div className="rounded-[2rem] border border-stone-950 bg-stone-950 p-8 text-white shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
+      <div className="rounded-[2rem] border border-stone-950/90 bg-stone-950 p-7 text-white shadow-[0_18px_44px_rgba(0,0,0,0.14)] md:p-8">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-[#f2c6bb]">
           {upcomingEvents.eyebrow}
         </p>
-        <h3 className="mt-4 text-[2.2rem] font-black uppercase leading-[0.92] tracking-[-0.05em] md:text-[3.4rem]">
+        <h3 className="mt-4 max-w-3xl text-[1.95rem] font-black uppercase leading-[0.96] tracking-[-0.04em] md:text-[2.9rem]">
           {upcomingEvents.title}
         </h3>
         <p className="mt-4 max-w-2xl text-base leading-7 text-stone-300">
@@ -40,7 +40,7 @@ export function UpcomingEvents() {
                 {item.description}
               </p>
               <p className="mt-4 text-[11px] font-black uppercase tracking-[0.18em] text-[#d94b2b]">
-                Cierra el plan
+                Si te encaja, reserva
               </p>
               <div className="mt-5">
                 <ActionButton href={item.cta.href} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "upcoming_events_card", event_title: item.title }}>{item.cta.label}</ActionButton>
@@ -51,9 +51,9 @@ export function UpcomingEvents() {
 
         <article className="rounded-[1.8rem] border border-stone-950 bg-[#f8f1e7] p-6 shadow-[0_14px_34px_rgba(0,0,0,0.06)]">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#d94b2b]">
-            Reserva directa
+            Reserva fácil
           </p>
-          <h4 className="mt-3 text-[2rem] font-black uppercase leading-[0.94] tracking-[-0.04em] text-stone-950">
+          <h4 className="mt-3 text-[1.8rem] font-black uppercase leading-[0.98] tracking-[-0.03em] text-stone-950">
             {upcomingEvents.reservationTitle}
           </h4>
           <p className="mt-4 text-sm leading-6 text-stone-700">

@@ -22,7 +22,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 md:pt-10">
         <CorpusClosureNotice />
       </section>
-      <Section title="Elige tu plan" description="Lo tienes fácil.">
+      <Section title="Elige tu plan" description="Desayunar, tapear, reservar o venir directamente.">
         <QuickDecision />
       </Section>
       <Section eyebrow="Lo que te espera" title="Qué puedes pedir">
@@ -46,13 +46,13 @@ export default function HomePage() {
           </div>
         </div>
       </Section>
-      <Section eyebrow="Smash burgers" title="SMASH BURGERS 180G 🔥">
+      <Section eyebrow="Smash burgers" title="Smash burgers 180G">
         <MenuPreview />
       </Section>
       <Section eyebrow="Reserva e Instagram" title="Elige cómo venir">
         <UpcomingEvents />
       </Section>
-      <Section eyebrow="Contacto" title="Si quieres cerrar algo antes de salir.">
+      <Section eyebrow="Contacto" title="Todo a mano antes de venir">
         <ContactPanel />
       </Section>
     </main>
