@@ -5,6 +5,8 @@ import { QuickDecision } from "@/components/home/QuickDecision";
 import { MenuPreview } from "@/components/home/MenuPreview";
 import { UpcomingEvents } from "@/components/home/UpcomingEvents";
 import { ContactPanel } from "@/components/home/ContactPanel";
+import { WeekendSpecialBlock } from "@/components/marketing/WeekendSpecialBlock";
+import { CorpusClosureNotice } from "@/components/marketing/CorpusClosureNotice";
 
 export const metadata = buildMetadata({
   title: "Kiosko Alfresko | Terraza en Ogíjares con desayunos, tapas y smash burgers",
@@ -16,6 +18,10 @@ export default function HomePage() {
   return (
     <main>
       <Hero />
+      <WeekendSpecialBlock />
+      <section className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 md:pt-10">
+        <CorpusClosureNotice />
+      </section>
       <Section title="Elige tu plan" description="Lo tienes fácil.">
         <QuickDecision />
       </Section>

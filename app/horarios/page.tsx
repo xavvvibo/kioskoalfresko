@@ -1,6 +1,7 @@
 import { maySalesFocus, maySchedule, maySpecialEvents, seasonalSchedule, siteConfig } from "@/content/site";
 import { buildMetadata } from "@/lib/metadata";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { CorpusClosureNotice } from "@/components/marketing/CorpusClosureNotice";
 
 export const metadata = buildMetadata({
   title: "Horarios de Kiosko Alfresko | Ogíjares",
@@ -15,6 +16,9 @@ export default function HorariosPage() {
         <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d94b2b]">Horarios</p>
         <h1 className="mt-3 text-4xl font-black uppercase tracking-[-0.04em] text-stone-950 md:text-5xl">Horario actual</h1>
         <p className="mt-5 max-w-3xl text-lg leading-8 text-stone-700">{maySchedule.normalSummary}</p>
+        <div className="mt-8">
+          <CorpusClosureNotice />
+        </div>
         <div className="mt-8 rounded-[2rem] border border-stone-950 bg-white p-6 shadow-sm">
           <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">🔥 Horario de referencia</p>
           <p className="mt-2 text-sm font-semibold text-stone-700">👉 Desayunos desde las 10:00 y confirmación rápida en Instagram si hubiera cambios</p>

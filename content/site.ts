@@ -143,6 +143,36 @@ export const upcomingEvents = {
   ],
 };
 
+export const specialWeekendCampaign = {
+  eyebrow: "Este finde en ALFRESKO",
+  title: "Feria de la Cultura y del Ocio + Paella solidaria",
+  intro:
+    "Un finde con más ambiente en la terraza de Ogíjares: eventos, tapas, cerveza fría y smash burgers en Granada sur.",
+  scheduleTitle: "Horario especial",
+  schedule: [
+    { day: "Viernes", hours: "Tarde y noche" },
+    { day: "Sábado", hours: "Mediodía, tarde y noche" },
+    { day: "Domingo", hours: "Plan de mediodía + paella solidaria" },
+  ],
+  highlights: [
+    "Terraza con ambiente",
+    "Reserva recomendada",
+    "Tapas y cerveza fría",
+    "Smash burgers 180G",
+  ],
+  reservationNote:
+    "Si vienes a los eventos o a la paella solidaria, mejor llegar con mesa cerrada y revisar Instagram antes de salir.",
+};
+
+export const corpusClosureNotice = {
+  eyebrow: "Aviso de servicio",
+  title: "Cierre temporal por Corpus",
+  body:
+    "Kiosko Alfresko descansará del 25 de mayo al 7 de junio para recargar energía de cara al verano ☀️",
+  support:
+    "Volveremos después con más terraza, más eventos, tapas, cerveza fría y smash burgers en Ogíjares, Granada sur.",
+};
+
 export const menuCategories: MenuCategory[] = [
   { id: "bebidas", title: "Bebidas", description: "Empieza por la ronda. Lo demás viene después.", placeholder: true },
   { id: "tapas", title: "Tapas", description: "Mira qué cae con la bebida y decide rápido.", placeholder: true },

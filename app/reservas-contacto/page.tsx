@@ -2,6 +2,7 @@ import { buildMetadata } from "@/lib/metadata";
 import { siteConfig } from "@/content/site";
 import { getQamareroReservationUrl, getReservationEntryPoint } from "@/lib/integrations/qamarero";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { CorpusClosureNotice } from "@/components/marketing/CorpusClosureNotice";
 
 export const metadata = buildMetadata({
   title: "Reservas y contacto | Kiosko Alfresko (Ogíjares, Granada)",
@@ -22,6 +23,9 @@ export default function ReservasContactoPage() {
         <p className="mt-5 max-w-3xl text-lg leading-8 text-stone-600">
           Reserva mesa, escríbenos por WhatsApp o ven directo al Parque San Sebastián de Ogíjares si ya tienes claro el plan.
         </p>
+        <div className="mt-8">
+          <CorpusClosureNotice />
+        </div>
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           <article className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
             <h2 className="text-2xl font-semibold text-stone-950">Canales directos</h2>
