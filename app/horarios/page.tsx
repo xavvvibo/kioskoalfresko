@@ -5,7 +5,7 @@ import { CorpusClosureNotice } from "@/components/marketing/CorpusClosureNotice"
 
 export const metadata = buildMetadata({
   title: "Horarios de Kiosko Alfresko | Ogíjares",
-  description: "Consulta el horario actual de Kiosko Alfresko en Ogíjares, Granada sur: desayunos desde las 10:00, terraza, tapas y confirmación en Instagram si cambia algo.",
+  description: "Kiosko Alfresko vuelve el 10 de junio con horario de verano confirmado en Ogíjares: miércoles a domingo, de 19:00 a 24:00.",
   path: "/horarios",
 });
 
@@ -14,14 +14,14 @@ export default function HorariosPage() {
     <main className="bg-[#f5efe5]">
       <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 md:py-28">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d94b2b]">Horarios</p>
-        <h1 className="mt-3 text-4xl font-black uppercase tracking-[-0.04em] text-stone-950 md:text-5xl">Horario actual</h1>
-        <p className="mt-5 max-w-3xl text-lg leading-8 text-stone-700">{maySchedule.normalSummary}</p>
+        <h1 className="mt-3 text-4xl font-black uppercase tracking-[-0.04em] text-stone-950 md:text-5xl">Horario confirmado desde el 10 de junio</h1>
+        <p className="mt-5 max-w-3xl text-lg leading-8 text-stone-700">Volvemos el miércoles 10 de junio con horario de verano: de miércoles a domingo, de 19:00 a 24:00.</p>
         <div className="mt-8">
           <CorpusClosureNotice />
         </div>
         <div className="mt-8 rounded-[2rem] border border-stone-950 bg-white p-6 shadow-sm">
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">Horario de referencia</p>
-          <p className="mt-2 text-sm text-stone-700">Desayunos desde las 10:00 y confirmación rápida en Instagram si hubiera cambios.</p>
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">Horario de verano</p>
+          <p className="mt-2 text-sm text-stone-700">Ya está confirmado para la vuelta después del Corpus.</p>
           <h2 className="text-2xl font-black leading-tight tracking-[-0.03em] text-stone-950">{siteConfig.schedule.currentSummary}</h2>
           <p className="mt-4 text-lg font-semibold tracking-[-0.02em] text-stone-950">{maySchedule.normalHours}</p>
           <p className="mt-4 inline-flex rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white">
@@ -35,13 +35,14 @@ export default function HorariosPage() {
             ))}
           </div>
           <p className="mt-3 text-sm leading-6 text-stone-700">{siteConfig.schedule.note}</p>
-          <p className="mt-4 text-sm text-stone-700">Consulta aquí antes de venir o reserva si prefieres dejar la mesa cerrada.</p>
-          <div className="mt-6">
-            <ActionButton href={siteConfig.location.mapsUrl} newTab>Cómo llegar ahora</ActionButton>
+          <p className="mt-4 text-sm text-stone-700">Ya puedes reservar tus noches ALFRESKO para la reapertura.</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <ActionButton href={siteConfig.ctas.booking.href} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "horarios_main" }}>Reservar mesa</ActionButton>
+            <ActionButton href={siteConfig.location.mapsUrl} kind="secondary" newTab>Cómo llegar</ActionButton>
           </div>
         </div>
         <div className="mt-8 rounded-[2rem] border border-stone-950 bg-stone-950 p-6 text-white shadow-[0_24px_60px_rgba(0,0,0,0.16)]">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#f2c6bb]">Estado del día</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#f2c6bb]">Vuelta confirmada</p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {maySpecialEvents.map((item) => (
               <article key={item.date} className="rounded-[1.6rem] border border-white/12 bg-white/6 p-5">
@@ -53,8 +54,8 @@ export default function HorariosPage() {
             ))}
             <article className="rounded-[1.6rem] border border-white/12 bg-white/6 p-5">
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Instagram</p>
-              <h2 className="mt-3 text-2xl font-black tracking-[-0.03em] text-[#fff8ef]">Confirmación en tiempo real</h2>
-              <p className="mt-3 text-sm leading-6 text-stone-300">Si cambia algo en horario, servicio o ambiente, lo confirmamos primero en Instagram.</p>
+              <h2 className="mt-3 text-2xl font-black tracking-[-0.03em] text-[#fff8ef]">Nos vemos el 10 de junio</h2>
+              <p className="mt-3 text-sm leading-6 text-stone-300">Síguenos para ver el ambiente de reapertura, las noches de terraza y todo lo que viene después del Corpus.</p>
               <div className="mt-5">
                 <ActionButton href={siteConfig.contact.instagramUrl} kind="secondary" newTab>Ver Instagram ahora</ActionButton>
               </div>
@@ -62,14 +63,14 @@ export default function HorariosPage() {
           </div>
         </div>
         <div className="mt-8 rounded-[2rem] border border-stone-950/12 bg-stone-100 p-6 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-stone-500">Próximas actualizaciones</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-stone-500">Horario por meses</p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {seasonalSchedule
-              .filter((item) => item.month !== "Mayo" && item.month !== "Abril")
               .map((item) => (
                 <article key={item.month} className="rounded-[1.7rem] border border-stone-950/10 bg-white p-6 shadow-sm">
                   <h2 className="text-xl font-black uppercase tracking-[-0.03em] text-stone-950">{item.month}</h2>
-                  <p className="mt-3 text-sm leading-6 text-stone-700">{item.note}</p>
+                  <p className="mt-3 text-sm font-semibold text-stone-900">{item.summary}</p>
+                  <p className="mt-2 text-sm leading-6 text-stone-700">{item.note}</p>
                 </article>
               ))}
           </div>

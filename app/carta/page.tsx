@@ -3,6 +3,7 @@
 import { MenuHero } from "@/components/menu/MenuHero";
 import { MenuSectionBlock } from "@/components/menu/MenuSectionBlock";
 import { SmashPromoCTA } from "@/components/menu/SmashPromoCTA";
+import { CorpusClosureNotice } from "@/components/marketing/CorpusClosureNotice";
 import { menuHero, foodSections, drinksSections, smashPromo, menuFooter } from "@/content/menu";
 import { getQamareroReservationUrl } from "@/lib/integrations/qamarero";
 
@@ -26,6 +27,9 @@ export default function CartaPage() {
     <main className="bg-[linear-gradient(180deg,#090909_0%,#151515_24%,#100f0f_58%,#0b0b0b_100%)] text-white">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-20">
         <MenuHero {...menuHero} />
+        <div className="mt-6">
+          <CorpusClosureNotice />
+        </div>
 
         <section className="mt-8 space-y-5 md:mt-10">
           <div className="flex flex-wrap items-center gap-3">

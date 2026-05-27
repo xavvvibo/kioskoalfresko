@@ -1,19 +1,10 @@
-import { heroActions, maySchedule, maySalesFocus, siteConfig } from "@/content/site";
+import { heroActions, maySchedule, maySalesFocus, siteConfig, summerReopening } from "@/content/site";
 import { ActionButton } from "@/components/ui/ActionButton";
 
 export function Hero() {
-  const now = new Date();
-  const day = now.getDay();
-  const minutes = now.getHours() * 60 + now.getMinutes();
-  const opensAt = 10 * 60;
-  const closesAt = 17 * 60;
-  const isServiceDay = day === 4 || day === 5 || day === 6 || day === 0;
-  const isOpenBySchedule = isServiceDay && minutes >= opensAt && minutes < closesAt;
-  const statusBadge = isOpenBySchedule ? "🟢 Abierto ahora" : "⚫ Próxima apertura: jueves 10:00";
-  const statusHeadline = isOpenBySchedule ? "Hoy apetece terraza" : "Te esperamos para café, tostadas y terraza al sol.";
-  const statusSupport = isOpenBySchedule
-    ? "Café, tapas, cerveza fría y smash burgers en Ogíjares."
-    : "Jueves a domingo desde las 10:00.";
+  const statusBadge = summerReopening.badge;
+  const statusHeadline = "Nos vemos después del Corpus";
+  const statusSupport = "Volvemos el 10 de junio con horario confirmado de verano.";
 
   return (
     <section className="relative overflow-hidden border-b border-stone-950 bg-[radial-gradient(circle_at_85%_14%,rgba(217,75,43,0.28),transparent_19%),radial-gradient(circle_at_20%_10%,rgba(17,17,17,0.06),transparent_28%),linear-gradient(180deg,#f5efe5_0%,#eadfce_100%)]">
@@ -25,13 +16,7 @@ export function Hero() {
           <p className="mt-5 inline-flex rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-white shadow-[0_14px_28px_rgba(217,75,43,0.24)]">
             {maySchedule.weekendNotice}
           </p>
-          <p
-            className={`mt-5 inline-flex rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] shadow-[0_10px_20px_rgba(0,0,0,0.08)] ${
-              isOpenBySchedule
-                ? "border-emerald-700 bg-emerald-700 text-white"
-                : "border-stone-950 bg-white text-stone-950"
-            }`}
-          >
+          <p className="mt-5 inline-flex rounded-full border border-stone-950 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-stone-950 shadow-[0_10px_20px_rgba(0,0,0,0.08)]">
             {statusBadge}
           </p>
           <p className="mt-6 text-sm font-semibold tracking-[0.08em] text-[#d94b2b]">
@@ -47,22 +32,25 @@ export function Hero() {
             ))}
           </div>
           <div className="mt-10 flex flex-wrap gap-3">
-            {heroActions.filter((action) => action.label !== "Llamar").map((action) => (
+            <ActionButton href={siteConfig.ctas.booking.href} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "hero_primary" }}>
+              Reservar mesa
+            </ActionButton>
+            {heroActions.filter((action) => action.label === "Ver carta").map((action) => (
               <ActionButton
                 key={action.label}
                 href={action.href}
                 kind={action.kind}
-                analyticsEvent={action.label.includes("Carta") ? "click_ver_carta" : "click_como_llegar"}
+                analyticsEvent="click_ver_carta"
                 analyticsPayload={{ location: "hero_primary" }}
               >
-                {action.label}
+                Ver carta
               </ActionButton>
             ))}
-            <ActionButton href={siteConfig.contact.instagramUrl} kind="ghost" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "hero_primary" }}>Ver Instagram ahora</ActionButton>
+            <ActionButton href={siteConfig.contact.instagramUrl} kind="ghost" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "hero_primary" }}>Instagram</ActionButton>
           </div>
           <div className="mt-8 space-y-2.5 text-sm text-stone-700">
-            <p>Terraza, café y tostadas para empezar bien el día.</p>
-            <p>Cerveza fría, tapas y smash burgers para quedarse un poco más.</p>
+            <p>Volvemos con noches de terraza, tapas y cerveza fría.</p>
+            <p>Las smash burgers seguirán esperando en Ogíjares.</p>
             <p>Si vienes desde Granada sur, llegar es rápido.</p>
           </div>
         </div>
@@ -74,19 +62,19 @@ export function Hero() {
             <p className="relative z-10 mt-5 text-[2rem] font-black leading-[1] tracking-[-0.05em] md:text-[3rem]">{maySchedule.normalHours}</p>
             <p className="relative z-10 mt-5 max-w-sm text-sm leading-6 text-stone-300 md:text-base">{maySchedule.weekendLead}</p>
             <div className="relative z-10 mt-6 flex flex-wrap gap-3">
-              <ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "hero_schedule" }}>Ver carta</ActionButton>
-              <ActionButton href="/ubicacion-ogijares" kind="secondary" analyticsEvent="click_como_llegar" analyticsPayload={{ location: "hero_schedule" }}>Cómo llegar ahora</ActionButton>
-              <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab analyticsEvent="click_como_llegar" analyticsPayload={{ location: "hero_schedule_maps" }}>📍 Abrir ruta</ActionButton>
+              <ActionButton href={siteConfig.ctas.booking.href} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "hero_schedule" }}>Reservar mesa</ActionButton>
+              <ActionButton href="/carta" kind="secondary" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "hero_schedule" }}>Ver carta</ActionButton>
+              <ActionButton href={siteConfig.contact.instagramUrl} kind="ghost" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "hero_schedule_instagram" }}>Instagram</ActionButton>
             </div>
-            <p className="relative z-10 mt-4 text-sm text-white/75">Abre Google Maps y ven directo.</p>
+            <p className="relative z-10 mt-4 text-sm text-white/75">{summerReopening.claim}</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-[1.8rem] border border-stone-950/90 bg-white p-5 shadow-[0_12px_28px_rgba(0,0,0,0.06)]">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d94b2b]">Horario actual</div>
+              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d94b2b]">Horario confirmado</div>
               <div className="mt-3 text-base font-semibold leading-7 text-stone-900 md:text-[1.05rem]">{maySchedule.normalSummary}</div>
             </div>
             <div className="rounded-[1.8rem] border border-stone-950/10 bg-[#cf5336] p-5 text-white shadow-[0_14px_26px_rgba(217,75,43,0.18)]">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80">Hoy</div>
+              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80">Vuelta ALFRESKO</div>
               <div className="mt-3 text-lg font-black leading-tight md:text-[1.25rem]">{maySalesFocus.title}</div>
               <p className="mt-3 text-sm leading-6 text-white/88">{maySalesFocus.extra}</p>
               <div className="mt-4 flex flex-wrap gap-2">
