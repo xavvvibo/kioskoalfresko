@@ -8,7 +8,7 @@ export const siteConfig = {
   domain: "kioskoalfresko.es",
   locale: "es_ES",
   description:
-    "Terraza en Ogíjares, Granada sur, con tapas, cerveza fría y smash burgers. Volvemos el 10 de junio con horario de verano de miércoles a domingo, de 19:00 a 24:00.",
+    "Terraza en Ogíjares, Granada sur, con tapas, smash burgers, carnes a la brasa y ambiente nocturno. Reabrimos el jueves 11 de junio para la temporada de verano 2026 con horario de miércoles a domingos, de 20:00h a 24:00h.",
   location: {
     area: "Parque San Sebastián",
     city: "Ogíjares",
@@ -37,90 +37,91 @@ export const siteConfig = {
     booking: { label: "Reservar mesa", href: getQamareroReservationUrl("hero") },
   },
   positioning: {
-    headline: "Terraza, tapas y smash burgers en Ogíjares",
-    subheadline: "Volvemos después del Corpus con noches de terraza, tapas, cerveza fría y smash burgers.",
-    support: ["Volvemos el 10 de junio", "Miércoles a domingo · 19:00 a 24:00", "Reserva fácil"],
+    headline: "Volvemos a Alfresko",
+    subheadline:
+      "Después del descanso de Corpus, reabrimos nuestras puertas para una nueva temporada de verano llena de cenas, tapas, hamburguesas, carnes a la brasa y el mejor ambiente al aire libre.",
+    support: ["Jueves 11 de junio", "Miércoles a domingos · 20:00h a 24:00h", "Temporada de verano 2026"],
   },
   schedule: {
-    currentLabel: "Horario confirmado",
-    currentSummary: "Desde el 10 de junio · miércoles a domingo · 19:00 a 24:00.",
-    note: "Ya puedes reservar tus noches ALFRESKO para la vuelta en Ogíjares, Granada sur.",
+    currentLabel: "Abierto",
+    currentSummary: "Miércoles a domingos · 20:00h a 24:00h.",
+    note: "Te esperamos desde el jueves 11 de junio para volver a las noches ALFRESKO en Ogíjares, Granada sur.",
   },
 };
 
 export const seasonalSchedule: SeasonalScheduleItem[] = [
-  { month: "Junio", status: "confirmed", summary: "Miércoles a domingo · 19:00 a 24:00", note: "Volvemos el 10 de junio con horario de verano confirmado.", highlight: true },
-  { month: "Julio", status: "confirmed", summary: "Miércoles a domingo · 19:00 a 24:00", note: "Noches de terraza, tapas, cerveza fría y smash burgers en Ogíjares." },
-  { month: "Agosto", status: "confirmed", summary: "Miércoles a domingo · 19:00 a 24:00", note: "Reserva tus noches ALFRESKO si vienes en grupo o quieres venir con mesa cerrada." },
+  { month: "Junio", status: "confirmed", summary: "Miércoles a domingos · 20:00h a 24:00h", note: "Reapertura oficial el jueves 11 de junio para arrancar la temporada de verano 2026.", highlight: true },
+  { month: "Julio", status: "confirmed", summary: "Miércoles a domingos · 20:00h a 24:00h", note: "Noches de terraza, tapas, burgers y carnes a la brasa en Ogíjares." },
+  { month: "Agosto", status: "confirmed", summary: "Miércoles a domingos · 20:00h a 24:00h", note: "Reserva tus noches ALFRESKO si vienes en grupo o quieres asegurar mesa." },
   { month: "Septiembre", status: "special", summary: "Horario especial si aplica", note: "Si hubiera alguna actualización en septiembre, la anunciaremos también en Instagram." },
 ];
 
 export const maySchedule = {
-  normalLabel: "Verano ALFRESKO",
-  normalHours: "Miércoles a domingo · 19:00 a 24:00",
-  normalSummary: "Volvemos el 10 de junio con horario de verano: miércoles a domingo, de 19:00 a 24:00.",
-  weekendNotice: "Cerrado hasta el 10 de junio",
-  weekendLead: "Noches de terraza, tapas, cerveza fría y smash burgers para volver con ganas después del Corpus.",
+  normalLabel: "Temporada de verano 2026",
+  normalHours: "Miércoles a domingos · 20:00h a 24:00h",
+  normalSummary: "Reabrimos el jueves 11 de junio con horario de verano confirmado: miércoles a domingos, de 20:00h a 24:00h.",
+  weekendNotice: "Abierto",
+  weekendLead: "Cenas, tapas, smash burgers, carnes a la brasa y el mejor ambiente nocturno al aire libre en Ogíjares.",
 };
 
 export const maySpecialEvents: ScheduleEvent[] = [
   {
     date: "Reapertura",
-    title: "Volvemos el 10 de junio",
-    hours: "Miércoles a domingo · 19:00 a 24:00",
-    note: "Ya puedes organizar tus noches ALFRESKO en Ogíjares con horario de verano confirmado.",
+    title: "Jueves 11 de junio",
+    hours: "Miércoles a domingos · 20:00h a 24:00h",
+    note: "La temporada de verano 2026 arranca con horario confirmado y reservas abiertas.",
     highlight: true,
   },
 ];
 
 export const maySalesFocus = {
   title: "🌙 Noches ALFRESKO",
-  body: "Desde el 10 de junio vuelven las noches de terraza, tapas, cerveza fría y smash burgers en Ogíjares, Granada sur.",
-  extra: "Reserva mesa para la vuelta o síguenos en Instagram para ver el ambiente de reapertura.",
+  body: "Vuelve la temporada de verano con cenas al aire libre, tapas, cerveza fría, smash burgers y carnes a la brasa en Ogíjares, Granada sur.",
+  extra: "Reserva tu mesa para la reapertura y prepárate para volver al ambiente nocturno de ALFRESKO.",
   microcopy: [
     "Parque San Sebastián · Ogíjares",
     "Smash 180G + patatas",
-    "Miércoles a domingo",
-    "19:00 a 24:00",
+    "Miércoles a domingos",
+    "20:00h a 24:00h",
   ],
 };
 
 export const springHighlights = [
   {
-    date: "Hoy",
-    title: "🔥 Hoy hay ambiente en ALFRESKO",
-    detail: "Café + tostadas desde las 10:00, cervezas frías, tapas y terraza en el parque.",
+    date: "Reapertura",
+    title: "🔥 Vuelve el ambiente de noche en ALFRESKO",
+    detail: "Cenas al aire libre, tapas, cerveza fría y terraza en el parque para arrancar el verano.",
   },
   {
-    date: "Desayunos",
-    title: "☕ Desayunos ALFRESKO",
-    detail: "Café + tostadas + terraza al sol. Jueves a domingo desde las 10:00.",
+    date: "Verano 2026",
+    title: "🌙 Temporada de noches ALFRESKO",
+    detail: "Miércoles a domingos de 20:00h a 24:00h con ambiente nocturno, burgers y carnes a la brasa.",
   },
   {
     date: "Instagram",
     title: "📲 Novedades en tiempo real",
-    detail: "Si cambia algo, lo confirmamos primero en Instagram.",
+    detail: "Síguenos para ver el ambiente de reapertura y las noches de verano en Ogíjares.",
   },
 ];
 
 export const upcomingEvents = {
   eyebrow: "Reserva tu mesa",
   title: "Planes para volver a las noches de terraza",
-  intro: "Desde el 10 de junio vuelven las noches de tapas, cerveza fría y smash burgers en el Parque San Sebastián de Ogíjares, al sur de Granada.",
+  intro: "Desde el jueves 11 de junio vuelve la temporada de verano con tapas, smash burgers, carnes a la brasa y terraza en el Parque San Sebastián de Ogíjares.",
   reservationTitle: "¿Vienes con mesa reservada?",
   reservationBody:
-    "Si ya sabes que venís, reservar mesa ayuda a llegar con el plan más cómodo y sin esperas innecesarias.",
+    "Si ya sabes que venís, reservar mesa ayuda a llegar con el plan más cómodo y empezar la noche sin esperas innecesarias.",
   reservationMicrocopy:
-    "Instagram te sirve para confirmar ambiente y novedades; la reserva te ayuda a venir con todo más claro.",
+    "Instagram te enseña el ambiente; la reserva te deja lista la parte importante.",
   primaryCta: { label: "Reservar mesa", href: getQamareroReservationUrl("events") },
   secondaryCta: { label: "Ver Instagram", href: "https://instagram.com/alfresko.granada" },
   items: [
     {
       title: "Noche de terraza",
-      date: "Desde las 19:00",
-      status: "Ideal para la vuelta",
+      date: "Desde las 20:00h",
+      status: "Ideal para la reapertura",
       description:
-        "La vuelta viene con terraza al aire libre, tapas y ambiente de verano en Ogíjares.",
+        "La reapertura llega con terraza al aire libre, tapas y ambiente de verano en Ogíjares.",
       cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
     },
     {
@@ -133,7 +134,7 @@ export const upcomingEvents = {
     },
     {
       title: "Smash burger plan",
-      date: "De miércoles a domingo",
+      date: "De miércoles a domingos",
       status: "De las más pedidas",
       description:
         "Nuestras smash burgers 180G con patatas incluidas son el plan rápido para comer bien y seguir.",
@@ -164,19 +165,19 @@ export const specialWeekendCampaign = {
 };
 
 export const corpusClosureNotice = {
-  eyebrow: "Cerrado",
-  title: "Estamos de vacaciones",
+  eyebrow: "Abierto",
+  title: "¡Volvemos después del descanso de Corpus!",
   body:
-    "Cerrado hasta el 10 de junio. Recargamos energía para volver con más ganas después del Corpus.",
+    "Reabrimos el jueves 11 de junio para arrancar la temporada de verano 2026 con cenas, tapas, hamburguesas, carnes a la brasa y el mejor ambiente al aire libre.",
   support:
-    "Reserva tus noches ALFRESKO y prepárate para volver a la terraza de Ogíjares con tapas, cerveza fría y smash burgers.",
+    "Te esperamos en el Parque San Sebastián de Ogíjares. Reserva tu mesa y vuelve a vivir la experiencia ALFRESKO.",
 };
 
 export const summerReopening = {
-  badge: "Cerrado hasta el 10 de junio",
-  returnTitle: "Volvemos el 10 de junio",
-  days: "Miércoles a domingo",
-  hours: "19:00 a 24:00",
+  badge: "Abierto",
+  returnTitle: "Volvemos el 11 de junio",
+  days: "Miércoles a domingos",
+  hours: "20:00h a 24:00h",
   claim: "Reserva tus noches ALFRESKO",
 };
 

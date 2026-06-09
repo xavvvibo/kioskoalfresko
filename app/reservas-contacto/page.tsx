@@ -7,7 +7,7 @@ import { CorpusClosureNotice } from "@/components/marketing/CorpusClosureNotice"
 export const metadata = buildMetadata({
   title: "Reservas y contacto | Kiosko Alfresko (Ogíjares, Granada)",
   description:
-    "Reserva tus noches ALFRESKO para la vuelta del 10 de junio en Ogíjares, Granada sur. Terraza, tapas, cerveza fría y smash burgers.",
+    "Reserva tus noches ALFRESKO para la reapertura del 11 de junio en Ogíjares, Granada sur. Terraza, tapas, smash burgers y carnes a la brasa.",
   path: "/reservas-contacto",
 });
 
@@ -21,7 +21,7 @@ export default function ReservasContactoPage() {
           Reservas y contacto en Kiosko Alfresko
         </h1>
         <p className="mt-5 max-w-3xl text-lg leading-8 text-stone-600">
-          Ya puedes reservar tus noches ALFRESKO para la vuelta: terraza, tapas, cerveza fría y smash burgers en Ogíjares.
+          Ya puedes reservar tus noches ALFRESKO para la reapertura: terraza, tapas, smash burgers y carnes a la brasa en Ogíjares.
         </p>
         <div className="mt-8">
           <CorpusClosureNotice />
@@ -42,8 +42,8 @@ export default function ReservasContactoPage() {
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
               <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Parque San Sebastián · Ogíjares</span>
-              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Volvemos el 10 de junio</span>
-              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">19:00 a 24:00</span>
+              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Jueves 11 de junio</span>
+              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">20:00h a 24:00h</span>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <ActionButton href={getQamareroReservationUrl("contact_page")} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "reservas_contacto" }}>Reservar mesa</ActionButton>
@@ -56,7 +56,7 @@ export default function ReservasContactoPage() {
           <article className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
             <h2 className="text-2xl font-semibold text-stone-950">Ven directo al parque</h2>
             <p className="mt-4 text-sm leading-6 text-stone-600">
-              Estamos en {siteConfig.location.area}, {siteConfig.location.city}, {siteConfig.location.province}. Una ubicación fácil para quedar si vienes desde Ogíjares o desde la zona sur de Granada cuando volvamos después del Corpus.
+              Estamos en {siteConfig.location.area}, {siteConfig.location.city}, {siteConfig.location.province}. Una ubicación fácil para quedar si vienes desde Ogíjares o desde la zona sur de Granada para las noches de verano ALFRESKO.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <ActionButton href={siteConfig.location.mapsUrl} newTab analyticsEvent="click_como_llegar" analyticsPayload={{ location: "reservas_contacto_location" }}>📍 Llegar ahora</ActionButton>
@@ -69,7 +69,7 @@ export default function ReservasContactoPage() {
           <article className="mt-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
             <h2 className="text-2xl font-semibold text-stone-950">Carta digital y reservas online</h2>
             <p className="mt-4 max-w-3xl text-sm leading-6 text-stone-600">
-              Si prefieres hacerlo desde el móvil, abre la carta, echa un vistazo a las smash burgers y deja lista tu mesa para la vuelta.
+              Si prefieres hacerlo desde el móvil, abre la carta, echa un vistazo a las smash burgers y deja lista tu mesa para la reapertura.
             </p>
             <div className="mt-6">
               <ActionButton href={reservation.url} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "reservas_contacto_online" }}>Abrir reservas online</ActionButton>

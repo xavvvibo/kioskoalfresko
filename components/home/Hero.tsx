@@ -3,8 +3,8 @@ import { ActionButton } from "@/components/ui/ActionButton";
 
 export function Hero() {
   const statusBadge = summerReopening.badge;
-  const statusHeadline = "Nos vemos después del Corpus";
-  const statusSupport = "Volvemos el 10 de junio con horario confirmado de verano.";
+  const statusHeadline = "¡Volvemos después del descanso de Corpus!";
+  const statusSupport = "Te esperamos desde el jueves 11 de junio con horario confirmado de verano.";
 
   return (
     <section className="relative overflow-hidden border-b border-stone-950 bg-[radial-gradient(circle_at_85%_14%,rgba(217,75,43,0.28),transparent_19%),radial-gradient(circle_at_20%_10%,rgba(17,17,17,0.06),transparent_28%),linear-gradient(180deg,#f5efe5_0%,#eadfce_100%)]">
@@ -24,7 +24,7 @@ export function Hero() {
           </p>
           <h1 className="mt-7 max-w-2xl text-[2.45rem] font-black uppercase leading-[0.92] tracking-[-0.05em] text-stone-950 sm:text-[3.15rem] md:text-[4.55rem]">{siteConfig.positioning.headline}</h1>
           <p className="mt-6 max-w-xl text-base font-medium leading-7 text-stone-800 md:text-lg md:leading-8">{siteConfig.positioning.subheadline}</p>
-          <p className="mt-4 text-base font-medium italic text-stone-700">Aquí se viene a alargar la sobremesa.</p>
+          <p className="mt-4 text-base font-medium italic text-stone-700">Reserva tu mesa y vuelve a vivir la experiencia Alfresko.</p>
           <p className="mt-5 text-sm font-medium text-stone-700">{statusSupport}</p>
           <div className="mt-6 flex max-w-xl flex-wrap gap-2.5">
             {siteConfig.positioning.support.map((item) => (
@@ -49,9 +49,9 @@ export function Hero() {
             <ActionButton href={siteConfig.contact.instagramUrl} kind="ghost" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "hero_primary" }}>Instagram</ActionButton>
           </div>
           <div className="mt-8 space-y-2.5 text-sm text-stone-700">
-            <p>Volvemos con noches de terraza, tapas y cerveza fría.</p>
-            <p>Las smash burgers seguirán esperando en Ogíjares.</p>
-            <p>Si vienes desde Granada sur, llegar es rápido.</p>
+            <p>Reabrimos para una nueva temporada de verano con ambiente nocturno al aire libre.</p>
+            <p>Tapas, smash burgers y carnes a la brasa vuelven a la terraza de Ogíjares.</p>
+            <p>Si vienes desde Granada sur, llegar al Parque San Sebastián sigue siendo rápido.</p>
           </div>
         </div>
         <div className="relative grid gap-5 self-end md:pl-6">
@@ -70,11 +70,11 @@ export function Hero() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-[1.8rem] border border-stone-950/90 bg-white p-5 shadow-[0_12px_28px_rgba(0,0,0,0.06)]">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d94b2b]">Horario confirmado</div>
+              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d94b2b]">Horario actual</div>
               <div className="mt-3 text-base font-semibold leading-7 text-stone-900 md:text-[1.05rem]">{maySchedule.normalSummary}</div>
             </div>
             <div className="rounded-[1.8rem] border border-stone-950/10 bg-[#cf5336] p-5 text-white shadow-[0_14px_26px_rgba(217,75,43,0.18)]">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80">Vuelta ALFRESKO</div>
+              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80">Reapertura ALFRESKO</div>
               <div className="mt-3 text-lg font-black leading-tight md:text-[1.25rem]">{maySalesFocus.title}</div>
               <p className="mt-3 text-sm leading-6 text-white/88">{maySalesFocus.extra}</p>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -91,7 +91,7 @@ export function Hero() {
       <div className="px-4 pb-10 sm:px-6 md:pb-14">
         <div className="mx-auto max-w-6xl">
           <p className="text-center text-sm font-medium tracking-[0.08em] text-stone-700">
-            Terraza, tapas y un plan fácil para cualquier momento del día.
+            Terraza, tapas y un plan de noche fácil para volver a Ogíjares este verano.
           </p>
         </div>
       </div>

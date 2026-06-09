@@ -37,7 +37,7 @@ export function CorpusClosureNotice() {
 
         <div className="border-t border-white/12 p-6 lg:border-l lg:border-t-0 md:p-8">
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/75">
-            Nos vemos después del Corpus
+            Temporada de verano 2026
           </p>
           <div className="mt-5 rounded-[1.7rem] border border-white/14 bg-black/14 p-5 shadow-[0_10px_22px_rgba(0,0,0,0.14)]">
             <p className="text-sm font-black uppercase tracking-[0.18em] text-white/75">

@@ -34,10 +34,10 @@ export default function CartaPage() {
         <section className="mt-8 space-y-5 md:mt-10">
           <div className="flex flex-wrap items-center gap-3">
             <div className="inline-flex rounded-full border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#fff8ef] shadow-[0_10px_24px_rgba(217,75,43,0.12)]">
-              Smash, tapas y cerveza fría
+              Temporada de verano 2026
             </div>
             <div className="inline-flex rounded-full border border-white/12 bg-white/6 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-[#fff8ef]">
-              Si dudas: smash + patatas
+              Cenas, tapas y smash burgers
             </div>
           </div>
           <SmashPromoCTA
