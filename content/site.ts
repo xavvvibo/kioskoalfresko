@@ -57,7 +57,7 @@ export const seasonalSchedule: SeasonalScheduleItem[] = [
 ];
 
 export const maySchedule = {
-  normalLabel: "Temporada de verano 2026",
+  normalLabel: "Horario actual",
   normalHours: "Miércoles, jueves y domingo · 20:00h a 24:00h · Viernes y sábado · 21:00h a 01:00h",
   normalSummary: "Horario actual: lunes y martes descanso. Miércoles y jueves de 20:00h a 24:00h. Viernes y sábado de 21:00h a 01:00h. Domingo de 20:00h a 24:00h.",
   weekendNotice: "Horario actual",
@@ -88,9 +88,8 @@ export const maySalesFocus = {
   microcopy: [
     "Parque San Sebastián · Ogíjares",
     "Smash 180G + patatas",
-    "Lunes y martes descanso",
-    "Miércoles, jueves y domingo 20:00h a 24:00h",
-    "Viernes y sábado 21:00h a 01:00h",
+    "Tapas y terraza",
+    "Reserva recomendada",
   ],
 };
 

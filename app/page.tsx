@@ -5,7 +5,6 @@ import { QuickDecision } from "@/components/home/QuickDecision";
 import { MenuPreview } from "@/components/home/MenuPreview";
 import { UpcomingEvents } from "@/components/home/UpcomingEvents";
 import { ContactPanel } from "@/components/home/ContactPanel";
-import { CorpusClosureNotice } from "@/components/marketing/CorpusClosureNotice";
 
 export const metadata = buildMetadata({
   title: "Kiosko Alfresko | Terraza en Ogíjares con tapas y smash burgers",
@@ -16,9 +15,6 @@ export const metadata = buildMetadata({
 export default function HomePage() {
   return (
     <main>
-      <section className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 md:pt-10">
-        <CorpusClosureNotice />
-      </section>
       <Hero />
       <Section title="Elige tu plan" description="Reservar, ver la carta o preparar tu noche ALFRESKO en Ogíjares.">
         <QuickDecision />
@@ -30,8 +26,7 @@ export default function HomePage() {
               "Noches de terraza",
               "Smash burgers 180G",
               "Tapas y brasas",
-              "Mié, jue y dom · 20:00h a 24:00h",
-              "Vie y sáb · 21:00h a 01:00h",
+              "Reservas online",
               "Ogíjares · Granada sur",
             ].map((item) => (
               <span
