@@ -13,7 +13,7 @@ export function SchedulePanel() {
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d94b2b]">{siteConfig.schedule.currentLabel}</p>
-          <p className="mt-3 text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">🔥 Hoy abierto</p>
+          <p className="mt-3 text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">Horario oficial</p>
           <p className="mt-2 text-sm font-semibold text-stone-700">👉 Consulta aquí el estado real de horarios y eventos</p>
           <h3 className="mt-3 text-4xl font-black uppercase leading-none tracking-[-0.04em] text-stone-950 md:text-5xl">{siteConfig.schedule.currentSummary}</h3>
           <p className="mt-5 text-lg font-black uppercase tracking-[-0.03em] text-stone-950">{maySchedule.normalHours}</p>
@@ -27,7 +27,7 @@ export function SchedulePanel() {
               </span>
             ))}
           </div>
-          <p className="mt-4 text-sm font-black uppercase tracking-[0.14em] text-stone-950">👉 Vente antes de que se llene</p>
+          <p className="mt-4 text-sm font-black uppercase tracking-[0.14em] text-stone-950">👉 Reserva si vienes en grupo</p>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-stone-700">{siteConfig.schedule.note}</p>
           <p className="mt-4 text-sm font-semibold text-stone-700">Consulta aquí antes de venir.</p>
         </div>
@@ -48,7 +48,7 @@ export function SchedulePanel() {
         <article className="rounded-[1.5rem] border border-stone-950 bg-stone-950 p-5 text-white shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Instagram</p>
           <h4 className="mt-3 text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Confirmación en tiempo real</h4>
-          <p className="mt-3 text-sm leading-6 text-stone-300">Si cambia el clima o el evento del sábado, lo confirmamos primero en Instagram.</p>
+          <p className="mt-3 text-sm leading-6 text-stone-300">Si hay algún ajuste puntual por clima, lo confirmamos primero en Instagram.</p>
           <div className="mt-5">
             <ActionButton href={siteConfig.contact.instagramUrl} kind="secondary" newTab>Instagram en directo</ActionButton>
           </div>

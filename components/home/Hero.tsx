@@ -3,8 +3,8 @@ import { ActionButton } from "@/components/ui/ActionButton";
 
 export function Hero() {
   const statusBadge = summerReopening.badge;
-  const statusHeadline = "¡Volvemos después del descanso de Corpus!";
-  const statusSupport = "Te esperamos desde el jueves 11 de junio con horario confirmado de verano.";
+  const statusHeadline = "Horario actual de verano";
+  const statusSupport = "Lunes y martes descanso. Miércoles, jueves y domingo de 20:00h a 24:00h. Viernes y sábado de 21:00h a 01:00h.";
 
   return (
     <section className="relative overflow-hidden border-b border-stone-950 bg-[radial-gradient(circle_at_85%_14%,rgba(217,75,43,0.28),transparent_19%),radial-gradient(circle_at_20%_10%,rgba(17,17,17,0.06),transparent_28%),linear-gradient(180deg,#f5efe5_0%,#eadfce_100%)]">
@@ -49,8 +49,8 @@ export function Hero() {
             <ActionButton href={siteConfig.contact.instagramUrl} kind="ghost" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "hero_primary" }}>Instagram</ActionButton>
           </div>
           <div className="mt-8 space-y-2.5 text-sm text-stone-700">
-            <p>Reabrimos para una nueva temporada de verano con ambiente nocturno al aire libre.</p>
-            <p>Tapas, smash burgers y carnes a la brasa vuelven a la terraza de Ogíjares.</p>
+            <p>Temporada de verano con ambiente nocturno al aire libre.</p>
+            <p>Tapas, smash burgers y carnes a la brasa en la terraza de Ogíjares.</p>
             <p>Si vienes desde Granada sur, llegar al Parque San Sebastián sigue siendo rápido.</p>
           </div>
         </div>
@@ -74,7 +74,7 @@ export function Hero() {
               <div className="mt-3 text-base font-semibold leading-7 text-stone-900 md:text-[1.05rem]">{maySchedule.normalSummary}</div>
             </div>
             <div className="rounded-[1.8rem] border border-stone-950/10 bg-[#cf5336] p-5 text-white shadow-[0_14px_26px_rgba(217,75,43,0.18)]">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80">Reapertura ALFRESKO</div>
+              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80">Noche ALFRESKO</div>
               <div className="mt-3 text-lg font-black leading-tight md:text-[1.25rem]">{maySalesFocus.title}</div>
               <p className="mt-3 text-sm leading-6 text-white/88">{maySalesFocus.extra}</p>
               <div className="mt-4 flex flex-wrap gap-2">

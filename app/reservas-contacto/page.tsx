@@ -7,7 +7,7 @@ import { CorpusClosureNotice } from "@/components/marketing/CorpusClosureNotice"
 export const metadata = buildMetadata({
   title: "Reservas y contacto | Kiosko Alfresko (Ogíjares, Granada)",
   description:
-    "Reserva tus noches ALFRESKO para la reapertura del 11 de junio en Ogíjares, Granada sur. Terraza, tapas, smash burgers y carnes a la brasa.",
+    "Reserva tus noches ALFRESKO en Ogíjares, Granada sur. Terraza, tapas, smash burgers y carnes a la brasa.",
   path: "/reservas-contacto",
 });
 
@@ -21,7 +21,7 @@ export default function ReservasContactoPage() {
           Reservas y contacto en Kiosko Alfresko
         </h1>
         <p className="mt-5 max-w-3xl text-lg leading-8 text-stone-600">
-          Ya puedes reservar tus noches ALFRESKO para la reapertura: terraza, tapas, smash burgers y carnes a la brasa en Ogíjares.
+          Ya puedes reservar tus noches ALFRESKO: terraza, tapas, smash burgers y carnes a la brasa en Ogíjares.
         </p>
         <div className="mt-8">
           <CorpusClosureNotice />
@@ -42,8 +42,9 @@ export default function ReservasContactoPage() {
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
               <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Parque San Sebastián · Ogíjares</span>
-              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Jueves 11 de junio</span>
-              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">20:00h a 24:00h</span>
+              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Lunes y martes descanso</span>
+              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Mié, jue y dom · 20:00h a 24:00h</span>
+              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Vie y sáb · 21:00h a 01:00h</span>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <ActionButton href={getQamareroReservationUrl("contact_page")} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "reservas_contacto" }}>Reservar mesa</ActionButton>
@@ -69,7 +70,7 @@ export default function ReservasContactoPage() {
           <article className="mt-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
             <h2 className="text-2xl font-semibold text-stone-950">Carta digital y reservas online</h2>
             <p className="mt-4 max-w-3xl text-sm leading-6 text-stone-600">
-              Si prefieres hacerlo desde el móvil, abre la carta, echa un vistazo a las smash burgers y deja lista tu mesa para la reapertura.
+              Si prefieres hacerlo desde el móvil, abre la carta, echa un vistazo a las smash burgers y deja lista tu mesa.
             </p>
             <div className="mt-6">
               <ActionButton href={reservation.url} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "reservas_contacto_online" }}>Abrir reservas online</ActionButton>
