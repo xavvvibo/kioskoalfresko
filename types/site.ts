@@ -39,6 +39,13 @@ export type ActionLink = {
   kind?: "primary" | "secondary" | "ghost";
 };
 
+export type InternalAdminLink = {
+  title: string;
+  description: string;
+  href: string;
+  category: "sanitario" | "operativo" | "documentacion";
+};
+
 export type MenuItem = {
   name: string;
   price: string;

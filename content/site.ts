@@ -1,4 +1,4 @@
-import type { ActionLink, MenuCategory, ScheduleEvent, SeasonalScheduleItem, SeoLanding } from "@/types/site";
+import type { ActionLink, InternalAdminLink, MenuCategory, ScheduleEvent, SeasonalScheduleItem, SeoLanding } from "@/types/site";
 import { QAMARERO_BOOKING_URL, getQamareroReservationUrl } from "@/lib/integrations/qamarero";
 
 export const siteConfig = {
@@ -246,4 +246,133 @@ export const ownerSections = [
   { title: "Horarios estacionales", items: ["Lunes y martes descanso", "Miércoles y jueves 20:00–24:00", "Viernes y sábado 21:00–01:00", "Domingo 20:00–24:00"] },
   { title: "Carta y categorías", items: ["Bebidas", "Tapas", "Raciones", "Para compartir", "Opciones para niños"] },
   { title: "SEO local", items: ["Tomar algo en Ogíjares", "Tapas en Ogíjares", "Terraza en Ogíjares", "Bar en Ogíjares"] },
+];
+
+export const internalAdminSections: Array<{ title: string; description: string; items: InternalAdminLink[] }> = [
+  {
+    title: "Registros sanitarios diarios",
+    description: "Controles recurrentes para dejar constancia diaria de seguridad alimentaria.",
+    items: [
+      {
+        title: "Registro de temperaturas",
+        description: "Cámaras, congeladores y control diario.",
+        href: "#",
+        category: "sanitario",
+      },
+      {
+        title: "Control de aceite de freidora",
+        description: "Revisión de estado, cambios y observaciones.",
+        href: "#",
+        category: "sanitario",
+      },
+      {
+        title: "Registro de limpieza diaria",
+        description: "Zonas, turnos y tareas completadas.",
+        href: "#",
+        category: "sanitario",
+      },
+      {
+        title: "Control de recepción de mercancía",
+        description: "Entrada de productos, temperatura y conformidad.",
+        href: "#",
+        category: "sanitario",
+      },
+      {
+        title: "Control de trazabilidad",
+        description: "Lotes, fechas y seguimiento de producto.",
+        href: "#",
+        category: "sanitario",
+      },
+      {
+        title: "Registro de incidencias sanitarias",
+        description: "Anotación y seguimiento de incidencias.",
+        href: "#",
+        category: "sanitario",
+      },
+    ],
+  },
+  {
+    title: "Checklists operativos",
+    description: "Apertura, cierre y revisión rápida por zonas de trabajo.",
+    items: [
+      {
+        title: "Apertura de cocina",
+        description: "Preparación inicial, equipos y mise en place.",
+        href: "#",
+        category: "operativo",
+      },
+      {
+        title: "Cierre de cocina",
+        description: "Limpieza, apagado y control final de equipos.",
+        href: "#",
+        category: "operativo",
+      },
+      {
+        title: "Apertura de barra",
+        description: "Caja, bebidas, hielo, TPV y zona de servicio.",
+        href: "#",
+        category: "operativo",
+      },
+      {
+        title: "Cierre de barra",
+        description: "Reposición, limpieza, caja y cierre de servicio.",
+        href: "#",
+        category: "operativo",
+      },
+      {
+        title: "Revisión de terraza",
+        description: "Mesas, sillas, orden, seguridad y limpieza.",
+        href: "#",
+        category: "operativo",
+      },
+      {
+        title: "Revisión de baños",
+        description: "Limpieza, consumibles y estado general.",
+        href: "#",
+        category: "operativo",
+      },
+    ],
+  },
+  {
+    title: "Documentación importante",
+    description: "Accesos preparados para documentación de consulta interna.",
+    items: [
+      {
+        title: "APPCC / Plan sanitario",
+        description: "Plan de autocontrol y documentación sanitaria.",
+        href: "#",
+        category: "documentacion",
+      },
+      {
+        title: "Fichas técnicas de producto",
+        description: "Información técnica de ingredientes y elaboraciones.",
+        href: "#",
+        category: "documentacion",
+      },
+      {
+        title: "Alérgenos",
+        description: "Consulta interna de alérgenos por producto.",
+        href: "#",
+        category: "documentacion",
+      },
+      {
+        title: "Proveedores",
+        description: "Contactos, datos y documentación de proveedores.",
+        href: "#",
+        category: "documentacion",
+      },
+      {
+        title: "Mantenimiento de maquinaria",
+        description: "Revisiones, incidencias y mantenimiento preventivo.",
+        href: "#",
+        category: "documentacion",
+      },
+      {
+        title: "Contratos y revisiones",
+        description: "Documentación administrativa y revisiones periódicas.",
+        href: "#",
+        category: "documentacion",
+      },
+    ],
+  },
 ];
