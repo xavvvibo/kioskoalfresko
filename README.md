@@ -49,6 +49,24 @@ Variables preparadas:
 - `QAMARERO_API_BASE_URL`
 - `QAMARERO_VENUE_ID`
 - `QAMARERO_API_KEY`
+- `ADMIN_KIOSKO_PASSWORD`
+
+### Panel interno
+
+La ruta `/admin-kiosko` está preparada para uso interno y protegida con contraseña simple.
+
+En local, añade en `.env.local`:
+
+```bash
+ADMIN_KIOSKO_PASSWORD=tu-contraseña
+```
+
+En Vercel:
+
+1. Abre `Project Settings`
+2. Entra en `Environment Variables`
+3. Añade `ADMIN_KIOSKO_PASSWORD`
+4. Redeploy del proyecto
 
 ## Analytics
 

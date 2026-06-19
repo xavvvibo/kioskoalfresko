@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { internalAdminSections } from "@/content/site";
+import { isAdminAuthenticated } from "@/lib/admin-kiosko/auth";
+import { AdminHeader } from "./_components/AdminHeader";
+import { LoginPanel } from "./_components/LoginPanel";
 
 export const metadata: Metadata = {
   title: "Panel interno | Kiosko Alfresko",
@@ -16,33 +19,24 @@ const categoryStyles = {
   documentacion: "border-stone-950/20 bg-white text-stone-950",
 };
 
-export default function AdminKioskoPage() {
+export default async function AdminKioskoPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ error?: string }>;
+}) {
+  const isAuthenticated = await isAdminAuthenticated();
+  const params = await searchParams;
+
+  if (!isAuthenticated) {
+    return <LoginPanel hasError={params?.error === "1"} />;
+  }
+
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
-      <section className="border-b border-white/10 bg-[radial-gradient(circle_at_85%_10%,rgba(217,75,43,0.24),transparent_22%),linear-gradient(180deg,#171717_0%,#0d0d0d_100%)]">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
-          <div className="inline-flex rounded-full border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#f2c6bb]">
-            Zona interna · Acceso solo personal autorizado
-          </div>
-          <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_0.72fr] lg:items-end">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#d94b2b]">Kiosko Alfresko</p>
-              <h1 className="mt-3 max-w-3xl text-[2.6rem] font-black uppercase leading-[0.92] tracking-[-0.05em] text-[#fff8ef] sm:text-[3.4rem] md:text-[4.6rem]">
-                Panel interno Kiosko Alfresko
-              </h1>
-              <p className="mt-5 max-w-2xl text-base leading-7 text-stone-300 md:text-lg">
-                Control sanitario, registros diarios y documentación operativa.
-              </p>
-            </div>
-            <div className="rounded-[1.7rem] border border-white/12 bg-white/6 p-5 shadow-[0_22px_54px_rgba(0,0,0,0.2)]">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#f2c6bb]">Preparado para protección</p>
-              <p className="mt-3 text-sm leading-6 text-stone-300">
-                Esta ruta queda sin enlaces públicos y lista para protegerse más adelante con contraseña, middleware o auth.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <AdminHeader
+        title="Panel interno Kiosko Alfresko"
+        description="Control sanitario, registros diarios y documentación operativa."
+      />
 
       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
         <div className="grid gap-8">
