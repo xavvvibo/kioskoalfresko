@@ -112,40 +112,88 @@ export const springHighlights = [
 ];
 
 export const upcomingEvents = {
-  eyebrow: "Reserva tu mesa",
-  title: "Planes para volver a las noches de terraza",
-  intro: "Noches de verano con tapas, smash burgers, carnes a la brasa y terraza en el Parque San Sebastián de Ogíjares.",
-  reservationTitle: "¿Vienes con mesa reservada?",
+  eyebrow: "Programa de verano 2026",
+  title: "Eventos en el Parque San Sebastián — reserva imprescindible",
+  intro: "Días de evento = terraza llena. Reserva tu mesa y ven con tiempo: smash burgers, tapeo, copas y ambiente antes del espectáculo.",
+  reservationTitle: "Reserva para los días grandes",
   reservationBody:
-    "Si ya sabes que venís, reservar mesa ayuda a llegar con el plan más cómodo y empezar la noche sin esperas innecesarias.",
+    "Smash burgers, tapeo, copas y ambiente antes del espectáculo. En conciertos, humor, flamenco y feria recomendamos reservar con antelación.",
   reservationMicrocopy:
-    "Instagram te enseña el ambiente; la reserva te deja lista la parte importante.",
+    "Días de evento = terraza llena. Reserva tu mesa y ven con tiempo.",
   primaryCta: { label: "Reservar mesa", href: getQamareroReservationUrl("events") },
   secondaryCta: { label: "Ver Instagram", href: "https://instagram.com/alfresko.granada" },
   items: [
     {
-      title: "Noche de terraza",
-      date: "Miércoles, jueves y domingo",
-      status: "20:00h a 24:00h",
+      title: "Gala Reina, Damas y Mister",
+      date: "Viernes 3 de julio · 21:00h",
+      status: "Reserva recomendada",
       description:
-        "Terraza al aire libre, tapas y ambiente de verano en Ogíjares.",
+        "Parque San Sebastián (Recinto Ferial). Elección de la Reina, Damas y Mister de las Fiestas de Ogíjares 2026. Ven antes para cenar con calma.",
       cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
     },
     {
-      title: "Ronda con tapa",
-      date: "Tarde y noche",
-      status: "Perfecto para compartir",
+      title: "Tributo a Estopa A Toda Pastilla",
+      date: "Sábado 25 de julio · 22:00h",
+      status: "Reserva imprescindible",
       description:
-        "Cerveza fría, bebida con tapa y terraza para quedarse un rato más en Granada sur.",
+        "Parque San Sebastián (Recinto Ferial). Concierto con puestos de comida y bebidas. Terraza, smash burgers y tapeo antes del concierto.",
       cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
     },
     {
-      title: "Smash burger plan",
-      date: "Viernes y sábado",
-      status: "De las más pedidas",
+      title: "Planetario Mirando a las estrellas",
+      date: "Martes 28 y miércoles 29 de julio · 21:30h a 00:30h",
+      status: "Plan familiar",
       description:
-        "Nuestras smash burgers 180G con patatas incluidas son el plan rápido para comer bien y seguir hasta la 01:00h.",
-      cta: { label: "Ver carta y reservar", href: getQamareroReservationUrl("event_card") },
+        "Parque San Sebastián — Recinto Ferial. Actividad familiar: ven antes a cenar o remata el plan después con algo fresco en la terraza.",
+      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
+    },
+    {
+      title: "Noche de humor",
+      date: "Viernes 31 de julio · 22:00h",
+      status: "Reserva imprescindible",
+      description:
+        "Parque San Sebastián (Recinto Ferial). Monólogos y noche de ambiente: reserva mesa y llega con tiempo para cenar antes.",
+      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
+    },
+    {
+      title: "Cine al fresquito",
+      date: "Jueves 13 de agosto · 22:00h",
+      status: "Reserva recomendable",
+      description:
+        "Parque San Sebastián (Recinto Ferial). Proyección de Cómo entrenar a tu dragón 2025. Plan familiar con cena fácil antes de la película.",
+      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
+    },
+    {
+      title: "Romance del amor brujo",
+      date: "Viernes 14 de agosto · 22:00h",
+      status: "Reserva imprescindible",
+      description:
+        "Parque San Sebastián. Espectáculo flamenco para una noche grande: tapas, copas y terraza antes del espectáculo.",
+      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
+    },
+    {
+      title: "La dama ya no es boba",
+      date: "Viernes 28 de agosto · 22:00h",
+      status: "Reserva recomendable",
+      description:
+        "Parque San Sebastián (Recinto Ferial). Teatro familiar para cerrar agosto con cena, tapeo y ambiente al fresko.",
+      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
+    },
+    {
+      title: "XLVII Festival Nacional de Cante Flamenco",
+      date: "Sábado 5 de septiembre · 22:30h",
+      status: "Reserva imprescindible",
+      description:
+        "Parque San Sebastián (Recinto Ferial). Festival de Cante Flamenco de Ogíjares. Entrada 20 €. Reserva mesa si quieres cenar antes.",
+      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
+    },
+    {
+      title: "Fiestas Populares y Feria de Ogíjares",
+      date: "Del 10 al 14 de septiembre",
+      status: "Reserva imprescindible",
+      description:
+        "Entorno Parque San Sebastián / Recinto Ferial. Evento grande de temporada: terraza llena, smash burgers, tapeo, copas y reservas imprescindibles.",
+      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
     },
   ],
 };
