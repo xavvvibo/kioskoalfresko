@@ -35,11 +35,11 @@ export default async function AdminKioskoPage({
 
   const dashboard = await getAdminDashboardSummary();
   const summary = dashboard.ok ? dashboard.data : null;
-  const semaphore = !summary || summary.pendingAlerts > 0
-    ? { label: "Rojo", text: "Alertas pendientes o incidencias abiertas", className: "border-[#d94b2b]/40 bg-[#d94b2b]/12 text-[#f2c6bb]" }
-    : summary.inProgressAlerts > 0
-      ? { label: "Naranja", text: "Alertas técnicas en proceso", className: "border-amber-300 bg-amber-100 text-amber-950" }
-      : { label: "Verde", text: "Sin alertas pendientes ni en proceso", className: "border-emerald-300 bg-emerald-100 text-emerald-950" };
+  const semaphore = !summary || summary.pendingAlerts > 0 || summary.incidentTemperatureRecords > 0
+    ? { label: "Rojo", text: "Alertas pendientes o incidencias graves registradas", className: "border-[#d94b2b]/40 bg-[#d94b2b]/12 text-[#f2c6bb]" }
+    : summary.inProgressAlerts > 0 || summary.reviewingTemperatureRecords > 0
+      ? { label: "Naranja", text: "Alertas en proceso o registros de temperatura en revisión", className: "border-amber-300 bg-amber-100 text-amber-950" }
+      : { label: "Verde", text: "Sin alertas pendientes ni temperaturas en revisión", className: "border-emerald-300 bg-emerald-100 text-emerald-950" };
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
@@ -53,7 +53,7 @@ export default async function AdminKioskoPage({
           <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.18)] sm:p-6">
             <div className="flex flex-col gap-3 border-b border-white/10 pb-5 md:flex-row md:items-end md:justify-between">
               <div>
-                <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Resumen APPCC</h2>
+                <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Estado sanitario general</h2>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-300">Estado rápido de temperaturas, alertas técnicas y registros recientes.</p>
               </div>
               <span className={`inline-flex w-fit rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] ${semaphore.className}`}>
@@ -63,13 +63,14 @@ export default async function AdminKioskoPage({
 
             {summary ? (
               <>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {[
-                    ["Total temperaturas", String(summary.totalTemperatureRecords)],
-                    ["Registros hoy", String(summary.todayTemperatureRecords)],
+                    ["Registros de temperatura hoy", String(summary.todayTemperatureRecords)],
+                    ["Último registro de temperatura", summary.lastTemperatureRecord ? `${summary.lastTemperatureRecord.equipment} · ${summary.lastTemperatureRecord.temperature} ºC` : "Sin registros"],
+                    ["Equipos activos controlados", String(summary.activeEquipmentCount)],
                     ["Alertas pendientes", String(summary.pendingAlerts)],
                     ["Alertas en proceso", String(summary.inProgressAlerts)],
-                    ["Último registro", summary.lastTemperatureRecord ? `${summary.lastTemperatureRecord.equipment} · ${summary.lastTemperatureRecord.temperature} ºC` : "Sin registros"],
+                    ["Alertas solventadas este mes", String(summary.resolvedAlertsThisMonth)],
                   ].map(([label, value]) => (
                     <article key={label} className="rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{label}</p>
@@ -82,15 +83,28 @@ export default async function AdminKioskoPage({
                   {semaphore.text}
                 </p>
 
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  {[
+                    ["Total temperaturas", String(summary.totalTemperatureRecords)],
+                    ["Temperaturas en revisión", String(summary.reviewingTemperatureRecords)],
+                    ["Incidencias de temperatura", String(summary.incidentTemperatureRecords)],
+                  ].map(([label, value]) => (
+                    <article key={label} className="rounded-[1.3rem] border border-white/10 bg-[#0d0d0d] p-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-stone-400">{label}</p>
+                      <p className="mt-2 text-2xl font-black leading-tight text-[#fff8ef]">{value}</p>
+                    </article>
+                  ))}
+                </div>
+
                 <div className="mt-6">
                   <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Últimas temperaturas por equipo</h3>
                   <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {summary.latestByEquipment.map((record) => (
                       <article key={record.equipment} className="rounded-[1.3rem] border border-white/10 bg-[#fffaf4] p-4 text-stone-950">
                         <p className="text-sm font-black uppercase tracking-[-0.02em]">{record.equipment}</p>
-                        <p className="mt-2 text-2xl font-black">{record.temperature} ºC</p>
+                        <p className="mt-2 text-2xl font-black">{record.temperature !== null ? `${record.temperature} ºC` : "Pendiente"}</p>
                         <p className="mt-1 text-xs font-semibold text-stone-600">
-                          {record.record_date}{record.record_time ? ` · ${record.record_time.slice(0, 5)}` : ""} · {record.status || "sin estado"}
+                          {record.record_date ? `${record.record_date}${record.record_time ? ` · ${record.record_time.slice(0, 5)}` : ""} · ${record.status || "sin estado"}` : "Pendiente de registro"}
                         </p>
                       </article>
                     ))}

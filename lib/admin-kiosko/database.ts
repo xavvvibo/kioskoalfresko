@@ -37,7 +37,7 @@ export type DashboardTemperatureRecord = {
   equipment: string;
   record_date: string;
   record_time: string | null;
-  temperature: number;
+  temperature: number | null;
   status: string | null;
   responsible: string | null;
 };
@@ -45,8 +45,12 @@ export type DashboardTemperatureRecord = {
 export type AdminDashboardSummary = {
   totalTemperatureRecords: number;
   todayTemperatureRecords: number;
+  reviewingTemperatureRecords: number;
+  incidentTemperatureRecords: number;
+  activeEquipmentCount: number;
   pendingAlerts: number;
   inProgressAlerts: number;
+  resolvedAlertsThisMonth: number;
   lastTemperatureRecord: DashboardTemperatureRecord | null;
   latestByEquipment: DashboardTemperatureRecord[];
   openAlerts: EquipmentAlert[];
@@ -74,6 +78,47 @@ export type AppccRecord = {
   status: string | null;
   responsible: string | null;
   observations: string | null;
+  signed_by?: string | null;
+  signed_at?: string | null;
+  signature_note?: string | null;
+};
+
+type SignatureFields = {
+  signed_by?: string | null;
+  signed_at?: string | null;
+  signature_note?: string | null;
+};
+
+const HISTORICAL_SEED_OBSERVATION = "Registro histórico generado a partir de días de apertura.";
+const DAILY_CONTROL_OBSERVATION = "Registro de control diario.";
+
+function normalizeAppccObservation(observations: string | null) {
+  if (!observations) {
+    return observations;
+  }
+
+  return observations.includes(HISTORICAL_SEED_OBSERVATION)
+    ? observations.replaceAll(HISTORICAL_SEED_OBSERVATION, DAILY_CONTROL_OBSERVATION)
+    : observations;
+}
+
+export type MonthlyAppccReport = {
+  year: number;
+  month: number;
+  periodLabel: string;
+  generatedAt: string;
+  records: AppccRecord[];
+  temperatures: AppccRecord[];
+  alerts: EquipmentAlert[];
+  summary: {
+    totalRecords: number;
+    correctRecords: number;
+    reviewRecords: number;
+    incidentRecords: number;
+    pendingAlerts: number;
+    inProgressAlerts: number;
+    resolvedAlerts: number;
+  };
 };
 
 type TemperatureRecordInput = CommonRecordInput & {
@@ -141,6 +186,43 @@ function getMadridDate() {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+}
+
+function getMadridDateTime() {
+  return new Intl.DateTimeFormat("es-ES", {
+    timeZone: "Europe/Madrid",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date());
+}
+
+function getMadridMonthParts() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+
+  return {
+    year: Number(parts.find((part) => part.type === "year")?.value || new Date().getFullYear()),
+    month: Number(parts.find((part) => part.type === "month")?.value || new Date().getMonth() + 1),
+  };
+}
+
+function getMonthRange(year: number, month: number) {
+  const safeMonth = Math.min(Math.max(month, 1), 12);
+  const start = `${year}-${String(safeMonth).padStart(2, "0")}-01`;
+  const endDate = new Date(Date.UTC(year, safeMonth, 1));
+  const end = `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth() + 1).padStart(2, "0")}-01`;
+
+  return { start, end };
+}
+
+function getPeriodLabel(year: number, month: number) {
+  return new Intl.DateTimeFormat("es-ES", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
 function assertSupabaseConfig() {
@@ -477,9 +559,7 @@ export async function getOpenEquipmentAlerts(): Promise<DbResult<EquipmentAlert[
 }
 
 export async function getTemperatureRecordsByMonth(year: number, month: number): Promise<DbResult<DashboardTemperatureRecord[]>> {
-  const start = `${year}-${String(month).padStart(2, "0")}-01`;
-  const endDate = new Date(Date.UTC(year, month, 1));
-  const end = `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  const { start, end } = getMonthRange(year, month);
   return getRows<DashboardTemperatureRecord>(
     "admin_temperature_records",
     `?select=id,equipment,record_date,record_time,temperature,status,responsible&record_date=gte.${start}&record_date=lt.${end}&order=record_date.asc,record_time.asc`,
@@ -487,9 +567,7 @@ export async function getTemperatureRecordsByMonth(year: number, month: number):
 }
 
 export async function getEquipmentAlertsByMonth(year: number, month: number): Promise<DbResult<EquipmentAlert[]>> {
-  const start = `${year}-${String(month).padStart(2, "0")}-01`;
-  const endDate = new Date(Date.UTC(year, month, 1));
-  const end = `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  const { start, end } = getMonthRange(year, month);
   return getRows<EquipmentAlert>(
     "admin_equipment_alerts",
     `?select=id,equipment,alert_date,alert_time,temperature,alert_level,status,description,corrective_action&alert_date=gte.${start}&alert_date=lt.${end}&order=alert_date.asc,alert_time.asc`,
@@ -498,33 +576,51 @@ export async function getEquipmentAlertsByMonth(year: number, month: number): Pr
 
 export async function getAdminDashboardSummary(): Promise<DbResult<AdminDashboardSummary>> {
   const today = getMadridDate();
+  const { year, month } = getMadridMonthParts();
+  const { start, end } = getMonthRange(year, month);
   const activeEquipment = temperatureEquipment.filter((equipment) => equipment.active).map((equipment) => equipment.name);
   const [
     allTemperatures,
     todayTemperatures,
+    reviewingTemperatures,
+    incidentTemperatures,
     pendingAlerts,
     inProgressAlerts,
+    resolvedAlertsThisMonth,
     lastTemperature,
     recentTemperatures,
     openAlerts,
   ] = await Promise.all([
     getRows<{ id: string }>("admin_temperature_records", "?select=id"),
     getRows<{ id: string }>("admin_temperature_records", `?select=id&record_date=eq.${today}`),
+    getRows<{ id: string }>("admin_temperature_records", "?select=id&status=eq.revisar"),
+    getRows<{ id: string }>("admin_temperature_records", "?select=id&status=eq.incidencia"),
     getRows<{ id: string }>("admin_equipment_alerts", "?select=id&status=eq.pendiente"),
     getRows<{ id: string }>("admin_equipment_alerts", "?select=id&status=eq.en_proceso"),
+    getRows<{ id: string }>("admin_equipment_alerts", `?select=id&status=eq.solventado&resolved_at=gte.${start}&resolved_at=lt.${end}`),
     getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&order=record_date.desc,record_time.desc,created_at.desc&limit=1"),
     getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&order=record_date.desc,record_time.desc,created_at.desc&limit=100"),
     getOpenEquipmentAlerts(),
   ]);
 
-  const results = [allTemperatures, todayTemperatures, pendingAlerts, inProgressAlerts, lastTemperature, recentTemperatures, openAlerts];
+  const results = [allTemperatures, todayTemperatures, reviewingTemperatures, incidentTemperatures, pendingAlerts, inProgressAlerts, resolvedAlertsThisMonth, lastTemperature, recentTemperatures, openAlerts];
   const failed = results.find((result) => !result.ok);
   if (failed && !failed.ok) {
     return failed;
   }
 
   const latestByEquipment = activeEquipment
-    .map((equipment) => (recentTemperatures.ok ? recentTemperatures.data.find((record) => record.equipment === equipment) : undefined))
+    .map((equipment) => recentTemperatures.ok
+      ? recentTemperatures.data.find((record) => record.equipment === equipment) || {
+          id: `missing-${equipment}`,
+          equipment,
+          record_date: "",
+          record_time: null,
+          temperature: null,
+          status: null,
+          responsible: null,
+        }
+      : undefined)
     .filter((record): record is DashboardTemperatureRecord => Boolean(record));
 
   return {
@@ -532,8 +628,12 @@ export async function getAdminDashboardSummary(): Promise<DbResult<AdminDashboar
     data: {
       totalTemperatureRecords: allTemperatures.ok ? allTemperatures.data.length : 0,
       todayTemperatureRecords: todayTemperatures.ok ? todayTemperatures.data.length : 0,
+      reviewingTemperatureRecords: reviewingTemperatures.ok ? reviewingTemperatures.data.length : 0,
+      incidentTemperatureRecords: incidentTemperatures.ok ? incidentTemperatures.data.length : 0,
+      activeEquipmentCount: activeEquipment.length,
       pendingAlerts: pendingAlerts.ok ? pendingAlerts.data.length : 0,
       inProgressAlerts: inProgressAlerts.ok ? inProgressAlerts.data.length : 0,
+      resolvedAlertsThisMonth: resolvedAlertsThisMonth.ok ? resolvedAlertsThisMonth.data.length : 0,
       lastTemperatureRecord: lastTemperature.ok ? lastTemperature.data[0] || null : null,
       latestByEquipment,
       openAlerts: openAlerts.ok ? openAlerts.data : [],
@@ -660,7 +760,7 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
         status: string | null;
         responsible: string | null;
         observations: string | null;
-      }>("admin_temperature_records", commonRecordQuery(filters, "id,record_date,record_time,equipment,temperature,status,responsible,observations"))
+      } & SignatureFields>("admin_temperature_records", commonRecordQuery(filters, "id,record_date,record_time,equipment,temperature,status,responsible,observations,signed_by,signed_at,signature_note"))
         .then((result) => result.ok
           ? {
               ok: true as const,
@@ -674,7 +774,10 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
                 main: `${record.temperature} ºC`,
                 status: record.status,
                 responsible: record.responsible,
-                observations: record.observations,
+                observations: normalizeAppccObservation(record.observations),
+                signed_by: record.signed_by,
+                signed_at: record.signed_at,
+                signature_note: record.signature_note,
               })),
             }
           : result),
@@ -693,7 +796,7 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
         status: string | null;
         responsible: string | null;
         observations: string | null;
-      }>("admin_cleaning_records", commonRecordQuery(filters, "id,record_date,record_time,area,cleaning_done,products_used,status,responsible,observations"))
+      } & SignatureFields>("admin_cleaning_records", commonRecordQuery(filters, "id,record_date,record_time,area,cleaning_done,products_used,status,responsible,observations,signed_by,signed_at,signature_note"))
         .then((result) => result.ok
           ? {
               ok: true as const,
@@ -707,7 +810,10 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
                 main: `${record.cleaning_done ? "Realizada" : "Sin marcar"}${record.products_used ? ` · ${record.products_used}` : ""}`,
                 status: record.status,
                 responsible: record.responsible,
-                observations: record.observations,
+                observations: normalizeAppccObservation(record.observations),
+                signed_by: record.signed_by,
+                signed_at: record.signed_at,
+                signature_note: record.signature_note,
               })),
             }
           : result),
@@ -726,7 +832,7 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
         status: string | null;
         responsible: string | null;
         observations: string | null;
-      }>("admin_fryer_oil_records", commonRecordQuery(filters, "id,record_date,record_time,fryer,oil_status,oil_changed,status,responsible,observations"))
+      } & SignatureFields>("admin_fryer_oil_records", commonRecordQuery(filters, "id,record_date,record_time,fryer,oil_status,oil_changed,status,responsible,observations,signed_by,signed_at,signature_note"))
         .then((result) => result.ok
           ? {
               ok: true as const,
@@ -740,7 +846,10 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
                 main: `${record.oil_status}${record.oil_changed ? " · Aceite cambiado" : ""}`,
                 status: record.status,
                 responsible: record.responsible,
-                observations: record.observations,
+                observations: normalizeAppccObservation(record.observations),
+                signed_by: record.signed_by,
+                signed_at: record.signed_at,
+                signature_note: record.signature_note,
               })),
             }
           : result),
@@ -760,7 +869,7 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
         status: string | null;
         responsible: string | null;
         observations: string | null;
-      }>("admin_goods_reception_records", commonRecordQuery(filters, "id,record_date,record_time,supplier,product,delivery_temperature,accepted,status,responsible,observations"))
+      } & SignatureFields>("admin_goods_reception_records", commonRecordQuery(filters, "id,record_date,record_time,supplier,product,delivery_temperature,accepted,status,responsible,observations,signed_by,signed_at,signature_note"))
         .then((result) => result.ok
           ? {
               ok: true as const,
@@ -774,7 +883,10 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
                 main: `${record.supplier} · ${record.accepted ? "Aceptado" : "Rechazado"}${record.delivery_temperature !== null ? ` · ${record.delivery_temperature} ºC` : ""}`,
                 status: record.status,
                 responsible: record.responsible,
-                observations: record.observations,
+                observations: normalizeAppccObservation(record.observations),
+                signed_by: record.signed_by,
+                signed_at: record.signed_at,
+                signature_note: record.signature_note,
               })),
             }
           : result),
@@ -792,7 +904,7 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
         status: string | null;
         responsible: string | null;
         observations: string | null;
-      }>("admin_incident_records", commonRecordQuery(filters, "id,record_date,record_time,incident_type,severity,status,responsible,observations"))
+      } & SignatureFields>("admin_incident_records", commonRecordQuery(filters, "id,record_date,record_time,incident_type,severity,status,responsible,observations,signed_by,signed_at,signature_note"))
         .then((result) => result.ok
           ? {
               ok: true as const,
@@ -806,7 +918,10 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
                 main: record.severity || "Sin gravedad",
                 status: record.status,
                 responsible: record.responsible,
-                observations: record.observations,
+                observations: normalizeAppccObservation(record.observations),
+                signed_by: record.signed_by,
+                signed_at: record.signed_at,
+                signature_note: record.signature_note,
               })),
             }
           : result),
@@ -824,7 +939,7 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
         status: string | null;
         responsible: string | null;
         observations: string | null;
-      }>("admin_checklist_records", commonRecordQuery(filters, "id,record_date,record_time,checklist_type,completed,status,responsible,observations"))
+      } & SignatureFields>("admin_checklist_records", commonRecordQuery(filters, "id,record_date,record_time,checklist_type,completed,status,responsible,observations,signed_by,signed_at,signature_note"))
         .then((result) => result.ok
           ? {
               ok: true as const,
@@ -838,7 +953,10 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
                 main: record.completed ? "Completado" : "Pendiente",
                 status: record.status,
                 responsible: record.responsible,
-                observations: record.observations,
+                observations: normalizeAppccObservation(record.observations),
+                signed_by: record.signed_by,
+                signed_at: record.signed_at,
+                signature_note: record.signature_note,
               })),
             }
           : result),
@@ -857,6 +975,68 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
     .sort((a, b) => `${b.record_date} ${b.record_time || ""}`.localeCompare(`${a.record_date} ${a.record_time || ""}`));
 
   return { ok: true, data: records };
+}
+
+export async function getMonthlyAppccReport(filters: AppccRecordFilters & { year?: number; month?: number }): Promise<DbResult<MonthlyAppccReport>> {
+  const current = getMadridMonthParts();
+  const year = filters.year || current.year;
+  const month = filters.month || current.month;
+  const { start } = getMonthRange(year, month);
+  const dateTo = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+
+  const [records, alerts] = await Promise.all([
+    getAppccRecords({
+      ...filters,
+      dateFrom: start,
+      dateTo,
+    }),
+    getEquipmentAlertsByMonth(year, month),
+  ]);
+
+  if (!records.ok) {
+    return records;
+  }
+
+  if (!alerts.ok) {
+    return alerts;
+  }
+
+  const filteredAlerts = alerts.data
+    .filter((alert) => !filters.status || alert.status === filters.status)
+    .filter((alert) => matchesEquipmentFilter({
+      id: alert.id,
+      type: "temperaturas",
+      typeLabel: "Alerta técnica",
+      record_date: alert.alert_date,
+      record_time: alert.alert_time,
+      subject: alert.equipment,
+      main: `${alert.temperature ?? ""}`,
+      status: alert.status,
+      responsible: null,
+      observations: alert.description,
+    }, filters.equipment));
+
+  return {
+    ok: true,
+    data: {
+      year,
+      month,
+      periodLabel: getPeriodLabel(year, month),
+      generatedAt: getMadridDateTime(),
+      records: records.data,
+      temperatures: records.data.filter((record) => record.type === "temperaturas"),
+      alerts: filteredAlerts,
+      summary: {
+        totalRecords: records.data.length,
+        correctRecords: records.data.filter((record) => record.status === "correcto").length,
+        reviewRecords: records.data.filter((record) => record.status === "revisar").length,
+        incidentRecords: records.data.filter((record) => record.status === "incidencia").length,
+        pendingAlerts: filteredAlerts.filter((alert) => alert.status === "pendiente").length,
+        inProgressAlerts: filteredAlerts.filter((alert) => alert.status === "en_proceso").length,
+        resolvedAlerts: filteredAlerts.filter((alert) => alert.status === "solventado").length,
+      },
+    },
+  };
 }
 
 export function appccRecordsToCsv(records: AppccRecord[]) {

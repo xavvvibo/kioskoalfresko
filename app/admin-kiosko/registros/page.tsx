@@ -18,6 +18,19 @@ const recordTypes: Array<{ value: AppccRecordType | "todos"; label: string }> = 
   { value: "checklists", label: "Checklists" },
 ];
 
+function getMadridMonthDefaults() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+
+  return {
+    year: parts.find((part) => part.type === "year")?.value || String(new Date().getFullYear()),
+    month: parts.find((part) => part.type === "month")?.value || String(new Date().getMonth() + 1).padStart(2, "0"),
+  };
+}
+
 function parseFilters(params?: { [key: string]: string | string[] | undefined }): AppccRecordFilters {
   const value = (key: string) => {
     const raw = params?.[key];
@@ -36,6 +49,11 @@ function parseFilters(params?: { [key: string]: string | string[] | undefined })
   };
 }
 
+function getParam(params: { [key: string]: string | string[] | undefined } | undefined, key: string) {
+  const raw = params?.[key];
+  return Array.isArray(raw) ? raw[0] || "" : raw || "";
+}
+
 function buildDownloadHref(filters: AppccRecordFilters) {
   const params = new URLSearchParams();
 
@@ -48,6 +66,30 @@ function buildDownloadHref(filters: AppccRecordFilters) {
   return `/admin-kiosko/registros/descargar?${params.toString()}`;
 }
 
+function buildReportHref(filters: AppccRecordFilters, month: string, year: string) {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value);
+    }
+  });
+
+  if (month) {
+    params.set("month", month);
+  }
+
+  if (year) {
+    params.set("year", year);
+  }
+
+  return `/admin-kiosko/registros/informe?${params.toString()}`;
+}
+
+function buildPdfHref(filters: AppccRecordFilters, month: string, year: string) {
+  return buildReportHref(filters, month, year).replace("/registros/informe", "/registros/pdf");
+}
+
 export default async function RegistrosAppccPage({
   searchParams,
 }: {
@@ -56,6 +98,9 @@ export default async function RegistrosAppccPage({
   await requireAdminSession();
   const params = await searchParams;
   const filters = parseFilters(params);
+  const monthDefaults = getMadridMonthDefaults();
+  const reportMonth = getParam(params, "month") || monthDefaults.month;
+  const reportYear = getParam(params, "year") || monthDefaults.year;
   const records = await getAppccRecords(filters);
   const rows = records.ok ? records.data : [];
 
@@ -72,15 +117,18 @@ export default async function RegistrosAppccPage({
             <div className="flex flex-col gap-3 border-b border-white/10 pb-5 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Filtros</h2>
-                <p className="mt-2 text-sm leading-6 text-stone-300">Usa los filtros y descarga el CSV con el mismo resultado.</p>
+                <p className="mt-2 text-sm leading-6 text-stone-300">Usa los filtros para consultar registros, descargar CSV o preparar el informe mensual APPCC.</p>
               </div>
               <div className="flex flex-wrap gap-3">
                 <a href={buildDownloadHref(filters)} className="inline-flex items-center justify-center rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-stone-950">
                   Descargar CSV
                 </a>
-                <button type="button" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">
-                  PDF mensual próximamente
-                </button>
+                <a href={buildReportHref(filters, reportMonth, reportYear)} className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12">
+                  Ver informe mensual
+                </a>
+                <a href={buildPdfHref(filters, reportMonth, reportYear)} className="inline-flex items-center justify-center rounded-full border border-[#f2c6bb] bg-[#fff8ef] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-stone-950 transition hover:bg-white">
+                  Generar PDF APPCC
+                </a>
               </div>
             </div>
 
@@ -117,6 +165,18 @@ export default async function RegistrosAppccPage({
               <label className="grid gap-2 text-sm font-semibold text-stone-200">
                 Responsable
                 <input name="responsible" defaultValue={filters.responsible} placeholder="Javi..." className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-stone-200">
+                Mes informe
+                <select name="month" defaultValue={reportMonth} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30">
+                  {Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0")).map((month) => (
+                    <option key={month} value={month}>{month}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-stone-200">
+                Año informe
+                <input name="year" type="number" min="2026" defaultValue={reportYear} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
               </label>
               <div className="flex gap-3 md:col-span-2 xl:col-span-6">
                 <button type="submit" className="inline-flex flex-1 items-center justify-center rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-stone-950">
