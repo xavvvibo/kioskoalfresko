@@ -51,6 +51,16 @@ function statusClass(status: string | null) {
   return "bg-stone-100 text-stone-700";
 }
 
+function parseTemperature(value: string) {
+  const normalized = value.replace(",", ".").replace(/[^\d.-]/g, "");
+  const temperature = Number(normalized);
+  return Number.isFinite(temperature) ? temperature : null;
+}
+
+function formatMetric(value: number | null, suffix = "") {
+  return value === null ? "-" : `${value.toFixed(1)}${suffix}`;
+}
+
 export default async function InformeMensualAppccPage({
   searchParams,
 }: {
@@ -77,10 +87,66 @@ export default async function InformeMensualAppccPage({
 
   const data = report.data;
   const signedRecords = data.records.filter((record) => record.signed_by || record.signed_at || record.signature_note);
+  const temperatureValues = data.temperatures
+    .map((record) => parseTemperature(record.main))
+    .filter((value): value is number => value !== null);
+  const minTemperature = temperatureValues.length ? Math.min(...temperatureValues) : null;
+  const maxTemperature = temperatureValues.length ? Math.max(...temperatureValues) : null;
+  const avgTemperature = temperatureValues.length
+    ? temperatureValues.reduce((total, value) => total + value, 0) / temperatureValues.length
+    : null;
+  const controlledEquipment = new Set(data.temperatures.map((record) => record.subject)).size;
+  const outOfRangeRecords = data.temperatures.filter((record) => record.status === "revisar" || record.status === "incidencia");
+  const incidentRecords = data.temperatures.filter((record) => record.status === "incidencia");
 
   return (
     <main className="min-h-screen bg-[#ece5da] px-4 py-8 text-stone-950 print:bg-white print:px-0 print:py-0">
-      <section className="mx-auto max-w-6xl bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)] print:max-w-none print:shadow-none md:p-10">
+      <style>{`
+        @page {
+          size: A4;
+          margin: 14mm 12mm;
+        }
+
+        @media print {
+          html,
+          body {
+            background: #ffffff !important;
+          }
+
+          .print-page {
+            width: 100%;
+            padding: 0 !important;
+          }
+
+          .print-section {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+
+          .print-page-break {
+            break-before: page;
+            page-break-before: always;
+          }
+
+          table {
+            page-break-inside: auto;
+          }
+
+          thead {
+            display: table-header-group;
+          }
+
+          tfoot {
+            display: table-footer-group;
+          }
+
+          tr {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+        }
+      `}</style>
+      <section className="print-page mx-auto max-w-6xl bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)] print:max-w-none print:shadow-none md:p-10">
         <div className="mb-6 flex flex-col gap-3 border-b border-stone-200 pb-6 print:hidden md:flex-row md:items-center md:justify-between">
           <a href="/admin-kiosko/registros" className="inline-flex w-fit rounded-full border border-stone-950/10 bg-stone-100 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-stone-950">
             Volver a registros
@@ -88,7 +154,7 @@ export default async function InformeMensualAppccPage({
           <PrintButton />
         </div>
 
-        <header className="min-h-[34rem] border-b border-stone-300 pb-10 print:min-h-[23rem]">
+        <header className="print-section min-h-[34rem] border-b border-stone-300 pb-10 print:min-h-[20rem]">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-[#d94b2b]">Panel interno · Control sanitario</p>
           <h1 className="mt-8 text-5xl font-black uppercase leading-[0.95] tracking-[-0.05em] md:text-7xl">
             Kiosko Alfresko
@@ -108,17 +174,17 @@ export default async function InformeMensualAppccPage({
           </dl>
         </header>
 
-        <section className="break-inside-avoid border-b border-stone-300 py-8">
-          <h2 className="text-2xl font-black uppercase tracking-[-0.03em]">Resumen</h2>
+        <section className="print-section border-b border-stone-300 py-8">
+          <h2 className="text-2xl font-black uppercase tracking-[-0.03em]">Resumen ejecutivo</h2>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               ["Total registros", data.summary.totalRecords],
-              ["Registros correctos", data.summary.correctRecords],
-              ["Registros en revisión", data.summary.reviewRecords],
-              ["Incidencias", data.summary.incidentRecords],
-              ["Alertas pendientes", data.summary.pendingAlerts],
-              ["Alertas en proceso", data.summary.inProgressAlerts],
-              ["Alertas solventadas", data.summary.resolvedAlerts],
+              ["Equipos controlados", controlledEquipment],
+              ["Temperatura mínima", formatMetric(minTemperature, " ºC")],
+              ["Temperatura máxima", formatMetric(maxTemperature, " ºC")],
+              ["Temperatura media", formatMetric(avgTemperature, " ºC")],
+              ["Incidencias detectadas", incidentRecords.length + data.summary.pendingAlerts],
+              ["Registros fuera de rango", outOfRangeRecords.length],
             ].map(([label, value]) => (
               <article key={label} className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-stone-500">{label}</p>
@@ -128,8 +194,8 @@ export default async function InformeMensualAppccPage({
           </div>
         </section>
 
-        <section className="border-b border-stone-300 py-8">
-          <h2 className="text-2xl font-black uppercase tracking-[-0.03em]">Temperaturas</h2>
+        <section className="border-b border-stone-300 py-8 print-page-break">
+          <h2 className="text-2xl font-black uppercase tracking-[-0.03em]">Tabla completa de temperaturas</h2>
           <div className="mt-5 overflow-x-auto">
             <table className="w-full min-w-[56rem] border-collapse text-left text-xs">
               <thead>
@@ -161,7 +227,41 @@ export default async function InformeMensualAppccPage({
           </div>
         </section>
 
-        <section className="border-b border-stone-300 py-8">
+        <section className="print-section border-b border-stone-300 py-8">
+          <h2 className="text-2xl font-black uppercase tracking-[-0.03em]">Resumen de incidencias</h2>
+          <p className="mt-2 text-sm leading-6 text-stone-600">Registros con alerta o fuera de rango durante el periodo seleccionado.</p>
+          <div className="mt-5 overflow-x-auto">
+            <table className="w-full min-w-[56rem] border-collapse text-left text-xs">
+              <thead>
+                <tr className="border-b border-stone-300 text-[10px] uppercase tracking-[0.14em] text-stone-500">
+                  <th className="py-2 pr-3">Fecha</th>
+                  <th className="py-2 pr-3">Hora</th>
+                  <th className="py-2 pr-3">Equipo</th>
+                  <th className="py-2 pr-3">Temperatura</th>
+                  <th className="py-2 pr-3">Estado</th>
+                  <th className="py-2 pr-3">Responsable</th>
+                  <th className="py-2 pr-3">Observaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {outOfRangeRecords.map((record) => (
+                  <tr key={`incident-${record.type}-${record.id}`} className="border-b border-stone-100 align-top">
+                    <td className="py-3 pr-3 font-semibold">{record.record_date}</td>
+                    <td className="py-3 pr-3">{time(record.record_time)}</td>
+                    <td className="py-3 pr-3">{record.subject}</td>
+                    <td className="py-3 pr-3 font-black">{record.main}</td>
+                    <td className="py-3 pr-3"><span className={`rounded-full px-2 py-1 font-black uppercase ${statusClass(record.status)}`}>{record.status || "-"}</span></td>
+                    <td className="py-3 pr-3">{record.responsible || "-"}</td>
+                    <td className="py-3 pr-3 text-stone-700">{record.observations || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!outOfRangeRecords.length ? <p className="py-6 text-sm text-stone-600">No hay registros con alerta en este periodo.</p> : null}
+          </div>
+        </section>
+
+        <section className="print-section border-b border-stone-300 py-8">
           <h2 className="text-2xl font-black uppercase tracking-[-0.03em]">Alertas técnicas</h2>
           <div className="mt-5 overflow-x-auto">
             <table className="w-full min-w-[52rem] border-collapse text-left text-xs">
@@ -192,7 +292,14 @@ export default async function InformeMensualAppccPage({
           </div>
         </section>
 
-        <section className="break-inside-avoid py-8">
+        <section className="print-section border-b border-stone-300 py-8">
+          <h2 className="text-2xl font-black uppercase tracking-[-0.03em]">Declaración final</h2>
+          <p className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 p-5 text-base font-semibold leading-7 text-stone-800">
+            Se revisan los registros APPCC del periodo indicado y se consideran válidos para el control sanitario interno.
+          </p>
+        </section>
+
+        <section className="print-section py-8">
           <h2 className="text-2xl font-black uppercase tracking-[-0.03em]">Firma responsable</h2>
           {signedRecords.length ? (
             <div className="mt-4 grid gap-3">
@@ -204,12 +311,15 @@ export default async function InformeMensualAppccPage({
               ))}
             </div>
           ) : (
-            <div className="mt-5 grid gap-8 sm:grid-cols-2">
+            <div className="mt-6 grid gap-8 sm:grid-cols-3">
               <div className="border-b border-stone-400 pb-10">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-stone-500">Responsable</p>
+                <p className="text-sm font-black uppercase tracking-[0.12em] text-stone-700">Responsable:</p>
               </div>
               <div className="border-b border-stone-400 pb-10">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-stone-500">Fecha y firma</p>
+                <p className="text-sm font-black uppercase tracking-[0.12em] text-stone-700">Fecha:</p>
+              </div>
+              <div className="border-b border-stone-400 pb-10">
+                <p className="text-sm font-black uppercase tracking-[0.12em] text-stone-700">Firma:</p>
               </div>
             </div>
           )}
