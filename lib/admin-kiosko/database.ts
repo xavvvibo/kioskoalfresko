@@ -1,4 +1,4 @@
-import { evaluateTemperature } from "./temperature-rules";
+import { evaluateTemperature, getTemperatureEquipment, temperatureEquipment } from "./temperature-rules";
 
 type DbResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -30,6 +30,26 @@ export type EquipmentAlert = {
   status: "pendiente" | "en_proceso" | "solventado";
   description: string | null;
   corrective_action: string | null;
+};
+
+export type DashboardTemperatureRecord = {
+  id: string;
+  equipment: string;
+  record_date: string;
+  record_time: string | null;
+  temperature: number;
+  status: string | null;
+  responsible: string | null;
+};
+
+export type AdminDashboardSummary = {
+  totalTemperatureRecords: number;
+  todayTemperatureRecords: number;
+  pendingAlerts: number;
+  inProgressAlerts: number;
+  lastTemperatureRecord: DashboardTemperatureRecord | null;
+  latestByEquipment: DashboardTemperatureRecord[];
+  openAlerts: EquipmentAlert[];
 };
 
 type TemperatureRecordInput = CommonRecordInput & {
@@ -88,6 +108,15 @@ function hasRequiredText(value: unknown) {
 
 function cleanText(value: string | undefined) {
   return value?.trim() || undefined;
+}
+
+function getMadridDate() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 function assertSupabaseConfig() {
@@ -186,6 +215,13 @@ async function getRecentRows<T>(table: string, select: string) {
   );
 }
 
+async function getRows<T>(table: string, query: string) {
+  return supabaseRequest<T[]>(table, {
+    method: "GET",
+    query,
+  });
+}
+
 function basePayload(data: CommonRecordInput) {
   return {
     record_date: data.record_date,
@@ -245,6 +281,11 @@ async function upsertEquipmentAlert(data: TemperatureRecordInput, alertLevel: "a
 export async function createTemperatureRecord(data: TemperatureRecordInput) {
   if (!hasRequiredText(data.record_date) || !hasRequiredText(data.equipment) || !Number.isFinite(data.temperature) || !hasRequiredText(data.status)) {
     return { ok: false, error: "Faltan campos obligatorios." };
+  }
+
+  const equipment = getTemperatureEquipment(data.equipment);
+  if (!equipment?.active) {
+    return { ok: false, error: "Equipo no registrable. Selecciona un equipo activo del listado oficial." };
   }
 
   const evaluation = evaluateTemperature(data.equipment, data.temperature);
@@ -375,6 +416,71 @@ export async function getOpenEquipmentAlerts(): Promise<DbResult<EquipmentAlert[
     method: "GET",
     query: "?select=id,equipment,alert_date,alert_time,temperature,alert_level,status,description,corrective_action&status=in.(pendiente,en_proceso)&order=created_at.desc&limit=10",
   });
+}
+
+export async function getTemperatureRecordsByMonth(year: number, month: number): Promise<DbResult<DashboardTemperatureRecord[]>> {
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const endDate = new Date(Date.UTC(year, month, 1));
+  const end = `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  return getRows<DashboardTemperatureRecord>(
+    "admin_temperature_records",
+    `?select=id,equipment,record_date,record_time,temperature,status,responsible&record_date=gte.${start}&record_date=lt.${end}&order=record_date.asc,record_time.asc`,
+  );
+}
+
+export async function getEquipmentAlertsByMonth(year: number, month: number): Promise<DbResult<EquipmentAlert[]>> {
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const endDate = new Date(Date.UTC(year, month, 1));
+  const end = `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  return getRows<EquipmentAlert>(
+    "admin_equipment_alerts",
+    `?select=id,equipment,alert_date,alert_time,temperature,alert_level,status,description,corrective_action&alert_date=gte.${start}&alert_date=lt.${end}&order=alert_date.asc,alert_time.asc`,
+  );
+}
+
+export async function getAdminDashboardSummary(): Promise<DbResult<AdminDashboardSummary>> {
+  const today = getMadridDate();
+  const activeEquipment = temperatureEquipment.filter((equipment) => equipment.active).map((equipment) => equipment.name);
+  const [
+    allTemperatures,
+    todayTemperatures,
+    pendingAlerts,
+    inProgressAlerts,
+    lastTemperature,
+    recentTemperatures,
+    openAlerts,
+  ] = await Promise.all([
+    getRows<{ id: string }>("admin_temperature_records", "?select=id"),
+    getRows<{ id: string }>("admin_temperature_records", `?select=id&record_date=eq.${today}`),
+    getRows<{ id: string }>("admin_equipment_alerts", "?select=id&status=eq.pendiente"),
+    getRows<{ id: string }>("admin_equipment_alerts", "?select=id&status=eq.en_proceso"),
+    getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&order=record_date.desc,record_time.desc,created_at.desc&limit=1"),
+    getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&order=record_date.desc,record_time.desc,created_at.desc&limit=100"),
+    getOpenEquipmentAlerts(),
+  ]);
+
+  const results = [allTemperatures, todayTemperatures, pendingAlerts, inProgressAlerts, lastTemperature, recentTemperatures, openAlerts];
+  const failed = results.find((result) => !result.ok);
+  if (failed && !failed.ok) {
+    return failed;
+  }
+
+  const latestByEquipment = activeEquipment
+    .map((equipment) => (recentTemperatures.ok ? recentTemperatures.data.find((record) => record.equipment === equipment) : undefined))
+    .filter((record): record is DashboardTemperatureRecord => Boolean(record));
+
+  return {
+    ok: true,
+    data: {
+      totalTemperatureRecords: allTemperatures.ok ? allTemperatures.data.length : 0,
+      todayTemperatureRecords: todayTemperatures.ok ? todayTemperatures.data.length : 0,
+      pendingAlerts: pendingAlerts.ok ? pendingAlerts.data.length : 0,
+      inProgressAlerts: inProgressAlerts.ok ? inProgressAlerts.data.length : 0,
+      lastTemperatureRecord: lastTemperature.ok ? lastTemperature.data[0] || null : null,
+      latestByEquipment,
+      openAlerts: openAlerts.ok ? openAlerts.data : [],
+    },
+  };
 }
 
 export async function updateEquipmentAlertStatus(data: {

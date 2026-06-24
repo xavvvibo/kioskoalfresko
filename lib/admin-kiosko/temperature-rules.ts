@@ -44,7 +44,7 @@ export function evaluateTemperature(equipmentName: string, temperature: number):
       status: "incidencia",
       alertLevel: "incidencia",
       acceptableRange,
-      message: "Equipo fuera de servicio o no registrable.",
+      message: "Incidencia: posible fallo de equipo",
     };
   }
 
@@ -54,7 +54,7 @@ export function evaluateTemperature(equipmentName: string, temperature: number):
         status: "incidencia",
         alertLevel: "incidencia",
         acceptableRange,
-        message: "Incidencia grave: congelador por encima de -15 ºC.",
+        message: "Incidencia: posible fallo de equipo",
       };
     }
 
@@ -63,14 +63,14 @@ export function evaluateTemperature(equipmentName: string, temperature: number):
         status: "revisar",
         alertLevel: "aviso",
         acceptableRange,
-        message: "Aviso: congelador por encima de -18 ºC.",
+        message: "Revisar temperatura",
       };
     }
 
     return {
       status: "correcto",
       acceptableRange,
-      message: "Temperatura correcta para congelador.",
+      message: "Correcto",
     };
   }
 
@@ -79,7 +79,7 @@ export function evaluateTemperature(equipmentName: string, temperature: number):
       status: "incidencia",
       alertLevel: "incidencia",
       acceptableRange,
-      message: "Incidencia grave: equipo refrigerado por encima de 8 ºC.",
+      message: "Incidencia: posible fallo de equipo",
     };
   }
 
@@ -88,7 +88,7 @@ export function evaluateTemperature(equipmentName: string, temperature: number):
       status: "revisar",
       alertLevel: "aviso",
       acceptableRange,
-      message: "Aviso: equipo refrigerado por encima de 5 ºC.",
+      message: "Revisar temperatura",
     };
   }
 
@@ -97,13 +97,13 @@ export function evaluateTemperature(equipmentName: string, temperature: number):
       status: "revisar",
       alertLevel: "aviso",
       acceptableRange,
-      message: "Aviso: equipo refrigerado por debajo de 0 ºC.",
+      message: "Revisar temperatura",
     };
   }
 
   return {
     status: "correcto",
     acceptableRange,
-    message: "Temperatura correcta para refrigeración.",
+    message: "Correcto",
   };
 }

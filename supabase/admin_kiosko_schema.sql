@@ -128,6 +128,7 @@ revoke all on public.admin_incident_records from anon, authenticated;
 revoke all on public.admin_checklist_records from anon, authenticated;
 revoke all on public.admin_equipment_alerts from anon, authenticated;
 
+drop policy if exists "admin_temperature_records_service_role_all" on public.admin_temperature_records;
 create policy "admin_temperature_records_service_role_all"
   on public.admin_temperature_records
   for all
@@ -135,6 +136,7 @@ create policy "admin_temperature_records_service_role_all"
   using (true)
   with check (true);
 
+drop policy if exists "admin_cleaning_records_service_role_all" on public.admin_cleaning_records;
 create policy "admin_cleaning_records_service_role_all"
   on public.admin_cleaning_records
   for all
@@ -142,6 +144,7 @@ create policy "admin_cleaning_records_service_role_all"
   using (true)
   with check (true);
 
+drop policy if exists "admin_fryer_oil_records_service_role_all" on public.admin_fryer_oil_records;
 create policy "admin_fryer_oil_records_service_role_all"
   on public.admin_fryer_oil_records
   for all
@@ -149,6 +152,7 @@ create policy "admin_fryer_oil_records_service_role_all"
   using (true)
   with check (true);
 
+drop policy if exists "admin_goods_reception_records_service_role_all" on public.admin_goods_reception_records;
 create policy "admin_goods_reception_records_service_role_all"
   on public.admin_goods_reception_records
   for all
@@ -156,6 +160,7 @@ create policy "admin_goods_reception_records_service_role_all"
   using (true)
   with check (true);
 
+drop policy if exists "admin_incident_records_service_role_all" on public.admin_incident_records;
 create policy "admin_incident_records_service_role_all"
   on public.admin_incident_records
   for all
@@ -163,6 +168,7 @@ create policy "admin_incident_records_service_role_all"
   using (true)
   with check (true);
 
+drop policy if exists "admin_checklist_records_service_role_all" on public.admin_checklist_records;
 create policy "admin_checklist_records_service_role_all"
   on public.admin_checklist_records
   for all
@@ -170,6 +176,7 @@ create policy "admin_checklist_records_service_role_all"
   using (true)
   with check (true);
 
+drop policy if exists "admin_equipment_alerts_service_role_all" on public.admin_equipment_alerts;
 create policy "admin_equipment_alerts_service_role_all"
   on public.admin_equipment_alerts
   for all
@@ -193,7 +200,7 @@ create index if not exists admin_equipment_alerts_open_equipment_idx on public.a
 --   select
 --     id,
 --     row_number() over (
---       partition by record_date, record_time, equipment, temperature, responsible
+--       partition by record_date, record_time, equipment, temperature, responsible, source
 --       order by created_at asc, id asc
 --     ) as duplicate_rank
 --   from public.admin_temperature_records
