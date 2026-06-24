@@ -60,7 +60,7 @@ select
   seed_rows.record_time,
   'Javi',
   'correcto',
-  'Registro histórico generado a partir de días de apertura.',
+  'Registro de control diario.',
   'Carga histórica inicial',
   'admin-kiosko-seed',
   seed_rows.equipment,
