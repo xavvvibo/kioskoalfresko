@@ -52,6 +52,30 @@ export type AdminDashboardSummary = {
   openAlerts: EquipmentAlert[];
 };
 
+export type AppccRecordType = "temperaturas" | "limpieza" | "aceite-freidora" | "recepcion-mercancia" | "incidencias" | "checklists";
+
+export type AppccRecordFilters = {
+  type?: AppccRecordType | "todos";
+  dateFrom?: string;
+  dateTo?: string;
+  equipment?: string;
+  status?: string;
+  responsible?: string;
+};
+
+export type AppccRecord = {
+  id: string;
+  type: AppccRecordType;
+  typeLabel: string;
+  record_date: string;
+  record_time: string | null;
+  subject: string;
+  main: string;
+  status: string | null;
+  responsible: string | null;
+  observations: string | null;
+};
+
 type TemperatureRecordInput = CommonRecordInput & {
   equipment: string;
   temperature: number;
@@ -220,6 +244,40 @@ async function getRows<T>(table: string, query: string) {
     method: "GET",
     query,
   });
+}
+
+function commonRecordQuery(filters: AppccRecordFilters, select: string) {
+  const params = [`select=${select}`];
+
+  if (filters.dateFrom) {
+    params.push(`record_date=gte.${encodeURIComponent(filters.dateFrom)}`);
+  }
+
+  if (filters.dateTo) {
+    params.push(`record_date=lte.${encodeURIComponent(filters.dateTo)}`);
+  }
+
+  if (filters.status) {
+    params.push(`status=eq.${encodeURIComponent(filters.status)}`);
+  }
+
+  if (filters.responsible) {
+    params.push(`responsible=ilike.*${encodeURIComponent(filters.responsible)}*`);
+  }
+
+  params.push("order=record_date.desc,record_time.desc,created_at.desc");
+  params.push("limit=500");
+
+  return `?${params.join("&")}`;
+}
+
+function matchesEquipmentFilter(record: AppccRecord, equipment?: string) {
+  if (!equipment) {
+    return true;
+  }
+
+  const needle = equipment.toLowerCase();
+  return `${record.subject} ${record.main}`.toLowerCase().includes(needle);
 }
 
 function basePayload(data: CommonRecordInput) {
@@ -584,4 +642,236 @@ export async function getRecentChecklistRecords(): Promise<DbResult<RecentAdminR
       main: `${record.checklist_type} · ${record.completed ? "Completado" : "Pendiente"}`,
     })),
   };
+}
+
+export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbResult<AppccRecord[]>> {
+  const requestedType = filters.type || "todos";
+  const shouldFetch = (type: AppccRecordType) => requestedType === "todos" || requestedType === type;
+  const requests: Array<Promise<DbResult<AppccRecord[]>>> = [];
+
+  if (shouldFetch("temperaturas")) {
+    requests.push(
+      getRows<{
+        id: string;
+        record_date: string;
+        record_time: string | null;
+        equipment: string;
+        temperature: number;
+        status: string | null;
+        responsible: string | null;
+        observations: string | null;
+      }>("admin_temperature_records", commonRecordQuery(filters, "id,record_date,record_time,equipment,temperature,status,responsible,observations"))
+        .then((result) => result.ok
+          ? {
+              ok: true as const,
+              data: result.data.map((record) => ({
+                id: record.id,
+                type: "temperaturas" as const,
+                typeLabel: "Temperaturas",
+                record_date: record.record_date,
+                record_time: record.record_time,
+                subject: record.equipment,
+                main: `${record.temperature} ºC`,
+                status: record.status,
+                responsible: record.responsible,
+                observations: record.observations,
+              })),
+            }
+          : result),
+    );
+  }
+
+  if (shouldFetch("limpieza")) {
+    requests.push(
+      getRows<{
+        id: string;
+        record_date: string;
+        record_time: string | null;
+        area: string;
+        cleaning_done: boolean;
+        products_used: string | null;
+        status: string | null;
+        responsible: string | null;
+        observations: string | null;
+      }>("admin_cleaning_records", commonRecordQuery(filters, "id,record_date,record_time,area,cleaning_done,products_used,status,responsible,observations"))
+        .then((result) => result.ok
+          ? {
+              ok: true as const,
+              data: result.data.map((record) => ({
+                id: record.id,
+                type: "limpieza" as const,
+                typeLabel: "Limpieza",
+                record_date: record.record_date,
+                record_time: record.record_time,
+                subject: record.area,
+                main: `${record.cleaning_done ? "Realizada" : "Sin marcar"}${record.products_used ? ` · ${record.products_used}` : ""}`,
+                status: record.status,
+                responsible: record.responsible,
+                observations: record.observations,
+              })),
+            }
+          : result),
+    );
+  }
+
+  if (shouldFetch("aceite-freidora")) {
+    requests.push(
+      getRows<{
+        id: string;
+        record_date: string;
+        record_time: string | null;
+        fryer: string;
+        oil_status: string;
+        oil_changed: boolean;
+        status: string | null;
+        responsible: string | null;
+        observations: string | null;
+      }>("admin_fryer_oil_records", commonRecordQuery(filters, "id,record_date,record_time,fryer,oil_status,oil_changed,status,responsible,observations"))
+        .then((result) => result.ok
+          ? {
+              ok: true as const,
+              data: result.data.map((record) => ({
+                id: record.id,
+                type: "aceite-freidora" as const,
+                typeLabel: "Aceite freidora",
+                record_date: record.record_date,
+                record_time: record.record_time,
+                subject: record.fryer,
+                main: `${record.oil_status}${record.oil_changed ? " · Aceite cambiado" : ""}`,
+                status: record.status,
+                responsible: record.responsible,
+                observations: record.observations,
+              })),
+            }
+          : result),
+    );
+  }
+
+  if (shouldFetch("recepcion-mercancia")) {
+    requests.push(
+      getRows<{
+        id: string;
+        record_date: string;
+        record_time: string | null;
+        supplier: string;
+        product: string;
+        delivery_temperature: number | null;
+        accepted: boolean;
+        status: string | null;
+        responsible: string | null;
+        observations: string | null;
+      }>("admin_goods_reception_records", commonRecordQuery(filters, "id,record_date,record_time,supplier,product,delivery_temperature,accepted,status,responsible,observations"))
+        .then((result) => result.ok
+          ? {
+              ok: true as const,
+              data: result.data.map((record) => ({
+                id: record.id,
+                type: "recepcion-mercancia" as const,
+                typeLabel: "Recepción mercancía",
+                record_date: record.record_date,
+                record_time: record.record_time,
+                subject: record.product,
+                main: `${record.supplier} · ${record.accepted ? "Aceptado" : "Rechazado"}${record.delivery_temperature !== null ? ` · ${record.delivery_temperature} ºC` : ""}`,
+                status: record.status,
+                responsible: record.responsible,
+                observations: record.observations,
+              })),
+            }
+          : result),
+    );
+  }
+
+  if (shouldFetch("incidencias")) {
+    requests.push(
+      getRows<{
+        id: string;
+        record_date: string;
+        record_time: string | null;
+        incident_type: string;
+        severity: string | null;
+        status: string | null;
+        responsible: string | null;
+        observations: string | null;
+      }>("admin_incident_records", commonRecordQuery(filters, "id,record_date,record_time,incident_type,severity,status,responsible,observations"))
+        .then((result) => result.ok
+          ? {
+              ok: true as const,
+              data: result.data.map((record) => ({
+                id: record.id,
+                type: "incidencias" as const,
+                typeLabel: "Incidencias",
+                record_date: record.record_date,
+                record_time: record.record_time,
+                subject: record.incident_type,
+                main: record.severity || "Sin gravedad",
+                status: record.status,
+                responsible: record.responsible,
+                observations: record.observations,
+              })),
+            }
+          : result),
+    );
+  }
+
+  if (shouldFetch("checklists")) {
+    requests.push(
+      getRows<{
+        id: string;
+        record_date: string;
+        record_time: string | null;
+        checklist_type: string;
+        completed: boolean;
+        status: string | null;
+        responsible: string | null;
+        observations: string | null;
+      }>("admin_checklist_records", commonRecordQuery(filters, "id,record_date,record_time,checklist_type,completed,status,responsible,observations"))
+        .then((result) => result.ok
+          ? {
+              ok: true as const,
+              data: result.data.map((record) => ({
+                id: record.id,
+                type: "checklists" as const,
+                typeLabel: "Checklists",
+                record_date: record.record_date,
+                record_time: record.record_time,
+                subject: record.checklist_type,
+                main: record.completed ? "Completado" : "Pendiente",
+                status: record.status,
+                responsible: record.responsible,
+                observations: record.observations,
+              })),
+            }
+          : result),
+    );
+  }
+
+  const results = await Promise.all(requests);
+  const failed = results.find((result) => !result.ok);
+  if (failed && !failed.ok) {
+    return failed;
+  }
+
+  const records = results
+    .flatMap((result) => (result.ok ? result.data : []))
+    .filter((record) => matchesEquipmentFilter(record, filters.equipment))
+    .sort((a, b) => `${b.record_date} ${b.record_time || ""}`.localeCompare(`${a.record_date} ${a.record_time || ""}`));
+
+  return { ok: true, data: records };
+}
+
+export function appccRecordsToCsv(records: AppccRecord[]) {
+  const headers = ["fecha", "hora", "tipo", "equipo_o_area", "dato_principal", "estado", "responsable", "observaciones"];
+  const escapeCsv = (value: string | null) => `"${String(value || "").replaceAll('"', '""')}"`;
+  const rows = records.map((record) => [
+    record.record_date,
+    record.record_time?.slice(0, 5) || "",
+    record.typeLabel,
+    record.subject,
+    record.main,
+    record.status || "",
+    record.responsible || "",
+    record.observations || "",
+  ]);
+
+  return [headers, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\n");
 }

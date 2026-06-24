@@ -250,6 +250,18 @@ export const ownerSections = [
 
 export const internalAdminSections: Array<{ title: string; description: string; items: InternalAdminLink[] }> = [
   {
+    title: "Consulta APPCC",
+    description: "Búsqueda, filtros y exportación de registros sanitarios.",
+    items: [
+      {
+        title: "Consultar y descargar registros",
+        description: "Filtra registros APPCC y descarga CSV para revisión interna.",
+        href: "/admin-kiosko/registros",
+        category: "documentacion",
+      },
+    ],
+  },
+  {
     title: "Registros sanitarios diarios",
     description: "Controles recurrentes para dejar constancia diaria de seguridad alimentaria.",
     items: [
