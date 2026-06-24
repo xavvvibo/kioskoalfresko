@@ -50,6 +50,9 @@ Variables preparadas:
 - `QAMARERO_VENUE_ID`
 - `QAMARERO_API_KEY`
 - `ADMIN_KIOSKO_PASSWORD`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
 ### Panel interno
 
@@ -59,14 +62,27 @@ En local, añade en `.env.local`:
 
 ```bash
 ADMIN_KIOSKO_PASSWORD=tu-contraseña
+NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
+SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
 ```
+
+`SUPABASE_SERVICE_ROLE_KEY` solo se usa en servidor para las acciones internas del panel. No debe exponerse en componentes cliente.
 
 En Vercel:
 
 1. Abre `Project Settings`
 2. Entra en `Environment Variables`
-3. Añade `ADMIN_KIOSKO_PASSWORD`
+3. Añade `ADMIN_KIOSKO_PASSWORD`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY`
 4. Redeploy del proyecto
+
+Para crear las tablas:
+
+1. Abre Supabase
+2. Entra en `SQL Editor`
+3. Copia el contenido de `supabase/admin_kiosko_schema.sql`
+4. Ejecútalo en el proyecto de producción
+5. Verifica que las tablas `admin_*_records` existen con RLS activado
 
 ## Analytics
 
