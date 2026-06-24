@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getRecentTemperatureRecords } from "@/lib/admin-kiosko/database";
+import { getOpenEquipmentAlerts, getRecentTemperatureRecords } from "@/lib/admin-kiosko/database";
 import { saveTemperatureRecordAction } from "../actions";
+import { TemperatureAlerts } from "../_components/TemperatureAlerts";
 import { RecordPageShell } from "../_components/RecordPageShell";
 import { TemperatureForm } from "../_components/TemperatureForm";
 
@@ -17,7 +18,10 @@ export default async function TemperaturasPage({
 }) {
   await requireAdminSession();
   const params = await searchParams;
-  const records = await getRecentTemperatureRecords();
+  const [records, alerts] = await Promise.all([
+    getRecentTemperatureRecords(),
+    getOpenEquipmentAlerts(),
+  ]);
 
   return (
     <RecordPageShell
@@ -28,6 +32,7 @@ export default async function TemperaturasPage({
       records={records.ok ? records.data : []}
     >
       <TemperatureForm action={saveTemperatureRecordAction} />
+      <TemperatureAlerts alerts={alerts.ok ? alerts.data : []} />
     </RecordPageShell>
   );
 }

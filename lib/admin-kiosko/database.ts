@@ -1,3 +1,5 @@
+import { evaluateTemperature } from "./temperature-rules";
+
 type DbResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
 type CommonRecordInput = {
@@ -16,6 +18,18 @@ export type RecentAdminRecord = {
   responsible: string | null;
   status: string | null;
   main: string;
+};
+
+export type EquipmentAlert = {
+  id: string;
+  equipment: string;
+  alert_date: string;
+  alert_time: string | null;
+  temperature: number | null;
+  alert_level: string;
+  status: "pendiente" | "en_proceso" | "solventado";
+  description: string | null;
+  corrective_action: string | null;
 };
 
 type TemperatureRecordInput = CommonRecordInput & {
@@ -151,6 +165,17 @@ async function insertRecord(table: string, payload: Record<string, unknown>) {
   });
 }
 
+async function patchRecord(table: string, id: string, payload: Record<string, unknown>) {
+  return supabaseRequest<undefined>(table, {
+    method: "PATCH",
+    query: `?id=eq.${encodeURIComponent(id)}`,
+    body: JSON.stringify(payload),
+    headers: {
+      Prefer: "return=minimal",
+    },
+  });
+}
+
 async function getRecentRows<T>(table: string, select: string) {
   return supabaseRequest<T[]>(
     table,
@@ -173,16 +198,87 @@ function basePayload(data: CommonRecordInput) {
   };
 }
 
+async function findDuplicateTemperatureRecord(data: TemperatureRecordInput) {
+  const responsibleFilter = data.responsible
+    ? `&responsible=eq.${encodeURIComponent(data.responsible.trim())}`
+    : "";
+  return supabaseRequest<Array<{ id: string }>>("admin_temperature_records", {
+    method: "GET",
+    query: `?select=id&record_date=eq.${encodeURIComponent(data.record_date)}&record_time=eq.${encodeURIComponent(data.record_time || "")}&equipment=eq.${encodeURIComponent(data.equipment.trim())}&temperature=eq.${encodeURIComponent(String(data.temperature))}${responsibleFilter}&limit=1`,
+  });
+}
+
+async function getOpenAlertForEquipment(equipment: string) {
+  return supabaseRequest<Array<{ id: string; description: string | null }>>("admin_equipment_alerts", {
+    method: "GET",
+    query: `?select=id,description&equipment=eq.${encodeURIComponent(equipment)}&status=in.(pendiente,en_proceso)&order=created_at.asc&limit=1`,
+  });
+}
+
+async function upsertEquipmentAlert(data: TemperatureRecordInput, alertLevel: "aviso" | "incidencia", description: string) {
+  const existing = await getOpenAlertForEquipment(data.equipment.trim());
+
+  if (!existing.ok) {
+    return existing;
+  }
+
+  if (existing.data[0]) {
+    return patchRecord("admin_equipment_alerts", existing.data[0].id, {
+      temperature: data.temperature,
+      alert_level: alertLevel,
+      description: `${existing.data[0].description || "Seguimiento técnico pendiente."}\n${data.record_date} ${data.record_time || ""}: ${description}`,
+    });
+  }
+
+  return insertRecord("admin_equipment_alerts", {
+    equipment: data.equipment.trim(),
+    alert_date: data.record_date,
+    alert_time: cleanText(data.record_time),
+    temperature: data.temperature,
+    alert_level: alertLevel,
+    status: "pendiente",
+    description,
+    source: "admin-kiosko",
+  });
+}
+
 export async function createTemperatureRecord(data: TemperatureRecordInput) {
   if (!hasRequiredText(data.record_date) || !hasRequiredText(data.equipment) || !Number.isFinite(data.temperature) || !hasRequiredText(data.status)) {
     return { ok: false, error: "Faltan campos obligatorios." };
   }
 
-  return insertRecord("admin_temperature_records", {
+  const evaluation = evaluateTemperature(data.equipment, data.temperature);
+  const duplicate = await findDuplicateTemperatureRecord(data);
+
+  if (!duplicate.ok) {
+    return duplicate;
+  }
+
+  if (duplicate.data.length > 0) {
+    return { ok: false, error: "Registro duplicado: ya existe una temperatura con el mismo equipo, fecha, hora, responsable y valor." };
+  }
+
+  const insert = await insertRecord("admin_temperature_records", {
     ...basePayload(data),
+    status: evaluation.status,
+    observations: cleanText([data.observations, evaluation.alertLevel ? `Seguimiento técnico pendiente: ${evaluation.message}` : ""].filter(Boolean).join("\n")),
     equipment: data.equipment.trim(),
     temperature: data.temperature,
   });
+
+  if (!insert.ok) {
+    return insert;
+  }
+
+  if (evaluation.alertLevel) {
+    const alert = await upsertEquipmentAlert(data, evaluation.alertLevel, evaluation.message);
+
+    if (!alert.ok) {
+      return alert;
+    }
+  }
+
+  return insert;
 }
 
 export async function createCleaningRecord(data: CleaningRecordInput) {
@@ -272,6 +368,31 @@ export async function getRecentTemperatureRecords(): Promise<DbResult<RecentAdmi
       main: `${record.equipment} · ${record.temperature} °C`,
     })),
   };
+}
+
+export async function getOpenEquipmentAlerts(): Promise<DbResult<EquipmentAlert[]>> {
+  return supabaseRequest<EquipmentAlert[]>("admin_equipment_alerts", {
+    method: "GET",
+    query: "?select=id,equipment,alert_date,alert_time,temperature,alert_level,status,description,corrective_action&status=in.(pendiente,en_proceso)&order=created_at.desc&limit=10",
+  });
+}
+
+export async function updateEquipmentAlertStatus(data: {
+  id: string;
+  status: "pendiente" | "en_proceso" | "solventado";
+  corrective_action?: string;
+  resolved_by?: string;
+}) {
+  if (!hasRequiredText(data.id) || !hasRequiredText(data.status)) {
+    return { ok: false, error: "Faltan campos obligatorios." };
+  }
+
+  return patchRecord("admin_equipment_alerts", data.id, {
+    status: data.status,
+    corrective_action: cleanText(data.corrective_action),
+    resolved_by: data.status === "solventado" ? cleanText(data.resolved_by) : undefined,
+    resolved_at: data.status === "solventado" ? new Date().toISOString() : undefined,
+  });
 }
 
 export async function getRecentCleaningRecords(): Promise<DbResult<RecentAdminRecord[]>> {

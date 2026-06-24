@@ -10,6 +10,7 @@ import {
   createGoodsReceptionRecord,
   createIncidentRecord,
   createTemperatureRecord,
+  updateEquipmentAlertStatus,
 } from "@/lib/admin-kiosko/database";
 
 export async function loginAdminKioskoAction(formData: FormData) {
@@ -62,6 +63,20 @@ export async function saveTemperatureRecordAction(formData: FormData) {
     status: text(formData, "status"),
     observations: text(formData, "observations"),
     responsible: text(formData, "responsible"),
+  });
+
+  redirectAfterSave("/admin-kiosko/temperaturas", result);
+}
+
+export async function updateEquipmentAlertStatusAction(formData: FormData) {
+  await requireAdminSession();
+
+  const status = text(formData, "status");
+  const result = await updateEquipmentAlertStatus({
+    id: text(formData, "id"),
+    status: status === "solventado" ? "solventado" : status === "en_proceso" ? "en_proceso" : "pendiente",
+    corrective_action: text(formData, "corrective_action"),
+    resolved_by: text(formData, "resolved_by"),
   });
 
   redirectAfterSave("/admin-kiosko/temperaturas", result);

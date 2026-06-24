@@ -45,7 +45,7 @@ export function BasicRecordForm({
       </label>
       <label className="grid gap-2 text-sm font-semibold text-stone-200">
         Observaciones
-        <textarea name="notes" rows={4} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+        <textarea name="observations" rows={4} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
       </label>
       <label className="grid gap-2 text-sm font-semibold text-stone-200">
         Responsable

@@ -96,12 +96,29 @@ create table if not exists public.admin_checklist_records (
   completed boolean default false
 );
 
+create table if not exists public.admin_equipment_alerts (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz default now(),
+  equipment text not null,
+  alert_date date not null,
+  alert_time time,
+  temperature numeric,
+  alert_level text not null,
+  status text default 'pendiente',
+  description text,
+  corrective_action text,
+  resolved_at timestamptz,
+  resolved_by text,
+  source text default 'admin-kiosko'
+);
+
 alter table public.admin_temperature_records enable row level security;
 alter table public.admin_cleaning_records enable row level security;
 alter table public.admin_fryer_oil_records enable row level security;
 alter table public.admin_goods_reception_records enable row level security;
 alter table public.admin_incident_records enable row level security;
 alter table public.admin_checklist_records enable row level security;
+alter table public.admin_equipment_alerts enable row level security;
 
 revoke all on public.admin_temperature_records from anon, authenticated;
 revoke all on public.admin_cleaning_records from anon, authenticated;
@@ -109,6 +126,7 @@ revoke all on public.admin_fryer_oil_records from anon, authenticated;
 revoke all on public.admin_goods_reception_records from anon, authenticated;
 revoke all on public.admin_incident_records from anon, authenticated;
 revoke all on public.admin_checklist_records from anon, authenticated;
+revoke all on public.admin_equipment_alerts from anon, authenticated;
 
 create policy "admin_temperature_records_service_role_all"
   on public.admin_temperature_records
@@ -152,9 +170,35 @@ create policy "admin_checklist_records_service_role_all"
   using (true)
   with check (true);
 
+create policy "admin_equipment_alerts_service_role_all"
+  on public.admin_equipment_alerts
+  for all
+  to service_role
+  using (true)
+  with check (true);
+
 create index if not exists admin_temperature_records_created_at_idx on public.admin_temperature_records (created_at desc);
 create index if not exists admin_cleaning_records_created_at_idx on public.admin_cleaning_records (created_at desc);
 create index if not exists admin_fryer_oil_records_created_at_idx on public.admin_fryer_oil_records (created_at desc);
 create index if not exists admin_goods_reception_records_created_at_idx on public.admin_goods_reception_records (created_at desc);
 create index if not exists admin_incident_records_created_at_idx on public.admin_incident_records (created_at desc);
 create index if not exists admin_checklist_records_created_at_idx on public.admin_checklist_records (created_at desc);
+create index if not exists admin_equipment_alerts_created_at_idx on public.admin_equipment_alerts (created_at desc);
+create index if not exists admin_equipment_alerts_open_equipment_idx on public.admin_equipment_alerts (equipment, status) where status in ('pendiente', 'en_proceso');
+
+-- Optional duplicate cleanup for exact duplicated temperature rows.
+-- Keeps the oldest row and deletes later exact duplicates.
+--
+-- with duplicates as (
+--   select
+--     id,
+--     row_number() over (
+--       partition by record_date, record_time, equipment, temperature, responsible
+--       order by created_at asc, id asc
+--     ) as duplicate_rank
+--   from public.admin_temperature_records
+-- )
+-- delete from public.admin_temperature_records
+-- using duplicates
+-- where public.admin_temperature_records.id = duplicates.id
+--   and duplicates.duplicate_rank > 1;
