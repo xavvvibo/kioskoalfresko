@@ -105,17 +105,39 @@ async function supabaseRequest<T>(table: string, init: RequestInit & { query?: s
       cache: "no-store",
     });
 
+    const responseText = await response.text();
+
     if (!response.ok) {
-      return { ok: false, error: "Supabase ha rechazado la operación." };
+      let error = responseText || `HTTP ${response.status}`;
+
+      try {
+        const parsed = JSON.parse(responseText) as { message?: string; details?: string; hint?: string; code?: string };
+        error = [parsed.message, parsed.details, parsed.hint, parsed.code].filter(Boolean).join(" · ");
+      } catch {
+        // Supabase sometimes returns plain text or an empty body for infrastructure errors.
+      }
+
+      console.error("[admin-kiosko] Supabase request failed", {
+        table,
+        status: response.status,
+        error,
+      });
+
+      return { ok: false, error };
     }
 
-    if (response.status === 204) {
+    if (response.status === 204 || !responseText) {
       return { ok: true, data: undefined as T };
     }
 
-    return { ok: true, data: (await response.json()) as T };
-  } catch {
-    return { ok: false, error: "No se ha podido conectar con Supabase." };
+    return { ok: true, data: JSON.parse(responseText) as T };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se ha podido conectar con Supabase.";
+    console.error("[admin-kiosko] Supabase request exception", {
+      table,
+      error: message,
+    });
+    return { ok: false, error: message };
   }
 }
 

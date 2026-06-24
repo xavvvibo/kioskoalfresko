@@ -24,7 +24,7 @@ export default async function LimpiezaPage({
       title="Registro de limpieza diaria"
       description="Control de limpieza por zonas, turnos y responsable."
       saved={params?.saved === "1"}
-      error={params?.error === "1"}
+      error={params?.error}
       records={records.ok ? records.data : []}
     >
       <BasicRecordForm

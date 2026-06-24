@@ -24,7 +24,7 @@ export default async function IncidenciasPage({
       title="Registro de incidencias sanitarias"
       description="Anotación de incidencias, seguimiento y responsable."
       saved={params?.saved === "1"}
-      error={params?.error === "1"}
+      error={params?.error}
       records={records.ok ? records.data : []}
     >
       <BasicRecordForm

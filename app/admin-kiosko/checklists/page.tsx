@@ -24,7 +24,7 @@ export default async function ChecklistsPage({
       title="Checklists operativos"
       description="Apertura, cierre, revisiones de zonas y documentación interna preparada."
       saved={params?.saved === "1"}
-      error={params?.error === "1"}
+      error={params?.error}
       records={records.ok ? records.data : []}
     >
       <BasicRecordForm

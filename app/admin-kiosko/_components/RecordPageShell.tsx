@@ -15,7 +15,7 @@ export function RecordPageShell({
   title: string;
   description: string;
   saved?: boolean;
-  error?: boolean;
+  error?: string;
   records: RecentAdminRecord[];
   children: React.ReactNode;
 }) {

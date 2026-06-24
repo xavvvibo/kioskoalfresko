@@ -24,7 +24,7 @@ export default async function TemperaturasPage({
       title="Registro de temperaturas"
       description="Cámaras, congeladores, botelleros y equipos de frío."
       saved={params?.saved === "1"}
-      error={params?.error === "1"}
+      error={params?.error}
       records={records.ok ? records.data : []}
     >
       <TemperatureForm action={saveTemperatureRecordAction} />

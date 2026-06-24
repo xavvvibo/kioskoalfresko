@@ -41,9 +41,14 @@ function checkbox(formData: FormData, key: string) {
   return formData.get(key) === "on";
 }
 
-function redirectAfterSave(path: string, ok: boolean): never {
+function redirectAfterSave(path: string, result: { ok: true } | { ok: false; error: string }): never {
   revalidatePath(path);
-  redirect(`${path}?${ok ? "saved=1" : "error=1"}`);
+  if (result.ok) {
+    redirect(`${path}?saved=1`);
+  }
+
+  const error = encodeURIComponent(result.error.slice(0, 240));
+  redirect(`${path}?error=${error}`);
 }
 
 export async function saveTemperatureRecordAction(formData: FormData) {
@@ -59,7 +64,7 @@ export async function saveTemperatureRecordAction(formData: FormData) {
     responsible: text(formData, "responsible"),
   });
 
-  redirectAfterSave("/admin-kiosko/temperaturas", result.ok);
+  redirectAfterSave("/admin-kiosko/temperaturas", result);
 }
 
 export async function saveCleaningRecordAction(formData: FormData) {
@@ -77,7 +82,7 @@ export async function saveCleaningRecordAction(formData: FormData) {
     responsible: text(formData, "responsible"),
   });
 
-  redirectAfterSave("/admin-kiosko/limpieza", result.ok);
+  redirectAfterSave("/admin-kiosko/limpieza", result);
 }
 
 export async function saveFryerOilRecordAction(formData: FormData) {
@@ -96,7 +101,7 @@ export async function saveFryerOilRecordAction(formData: FormData) {
     responsible: text(formData, "responsible"),
   });
 
-  redirectAfterSave("/admin-kiosko/aceite-freidora", result.ok);
+  redirectAfterSave("/admin-kiosko/aceite-freidora", result);
 }
 
 export async function saveGoodsReceptionRecordAction(formData: FormData) {
@@ -116,7 +121,7 @@ export async function saveGoodsReceptionRecordAction(formData: FormData) {
     responsible: text(formData, "responsible"),
   });
 
-  redirectAfterSave("/admin-kiosko/recepcion-mercancia", result.ok);
+  redirectAfterSave("/admin-kiosko/recepcion-mercancia", result);
 }
 
 export async function saveIncidentRecordAction(formData: FormData) {
@@ -134,7 +139,7 @@ export async function saveIncidentRecordAction(formData: FormData) {
     responsible: text(formData, "responsible"),
   });
 
-  redirectAfterSave("/admin-kiosko/incidencias", result.ok);
+  redirectAfterSave("/admin-kiosko/incidencias", result);
 }
 
 export async function saveChecklistRecordAction(formData: FormData) {
@@ -155,5 +160,5 @@ export async function saveChecklistRecordAction(formData: FormData) {
     responsible: text(formData, "responsible"),
   });
 
-  redirectAfterSave("/admin-kiosko/checklists", result.ok);
+  redirectAfterSave("/admin-kiosko/checklists", result);
 }

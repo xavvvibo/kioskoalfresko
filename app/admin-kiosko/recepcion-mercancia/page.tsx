@@ -24,7 +24,7 @@ export default async function RecepcionMercanciaPage({
       title="Recepción de mercancía"
       description="Entrada de producto, conformidad, temperatura y trazabilidad."
       saved={params?.saved === "1"}
-      error={params?.error === "1"}
+      error={params?.error}
       records={records.ok ? records.data : []}
     >
       <BasicRecordForm

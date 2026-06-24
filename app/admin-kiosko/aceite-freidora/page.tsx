@@ -24,7 +24,7 @@ export default async function AceiteFreidoraPage({
       title="Control de aceite de freidora"
       description="Revisión del estado del aceite, cambios y observaciones."
       saved={params?.saved === "1"}
-      error={params?.error === "1"}
+      error={params?.error}
       records={records.ok ? records.data : []}
     >
       <BasicRecordForm
