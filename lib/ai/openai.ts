@@ -5,6 +5,7 @@ import OpenAI, {
   APIError,
   AuthenticationError,
 } from "openai";
+import type { OcrPageInput } from "./types";
 
 export type OpenAiServerConfig = {
   apiKey: string;
@@ -45,6 +46,38 @@ export function getOpenAiClient() {
     client: new OpenAI({ apiKey: config.apiKey }),
     model: config.model,
   };
+}
+
+function mapOpenAiError(error: unknown): never {
+  if (error instanceof AuthenticationError) {
+    throw new OcrProcessingError("OpenAI Authentication Error", "openai_request", 401);
+  }
+
+  if (error instanceof APIConnectionTimeoutError) {
+    throw new OcrProcessingError("Vision request timeout", "openai_request", 504);
+  }
+
+  if (error instanceof APIError) {
+    const status = error.status ?? 500;
+    const message = error.message || `OpenAI API Error (${status})`;
+    throw new OcrProcessingError(message, "openai_request", status);
+  }
+
+  const message = error instanceof Error ? error.message : "OpenAI request failed";
+  throw new OcrProcessingError(message, "openai_request", 500);
+}
+
+async function parseOpenAiJson<T>(outputText: string | undefined): Promise<T> {
+  if (!outputText) {
+    throw new OcrProcessingError("OpenAI response did not include output_text", "openai_response", 502);
+  }
+
+  try {
+    return JSON.parse(outputText) as T;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid JSON";
+    throw new OcrProcessingError(`JSON parse error: ${message}`, "json_parse", 502);
+  }
 }
 
 export async function createOpenAiResponseJson<T>({
@@ -88,37 +121,72 @@ export async function createOpenAiResponseJson<T>({
       },
     },
     { timeout: 60_000 },
-  ).catch((error: unknown) => {
-    if (error instanceof AuthenticationError) {
-      throw new OcrProcessingError("OpenAI Authentication Error", "openai_request", 401);
-    }
-
-    if (error instanceof APIConnectionTimeoutError) {
-      throw new OcrProcessingError("Vision request timeout", "openai_request", 504);
-    }
-
-    if (error instanceof APIError) {
-      const status = error.status ?? 500;
-      const message = error.message || `OpenAI API Error (${status})`;
-      throw new OcrProcessingError(message, "openai_request", status);
-    }
-
-    const message = error instanceof Error ? error.message : "OpenAI request failed";
-    throw new OcrProcessingError(message, "openai_request", 500);
-  });
+  ).catch(mapOpenAiError);
 
   console.info("[OCR]\nrespuesta recibida", { id: response.id, model: response.model });
 
-  const outputText = response.output_text;
+  return parseOpenAiJson<T>(response.output_text);
+}
 
-  if (!outputText) {
-    throw new OcrProcessingError("OpenAI response did not include output_text", "openai_response", 502);
+export async function createOpenAiTextResponseJson<T>({
+  systemPrompt,
+  userPrompt,
+}: {
+  systemPrompt: string;
+  userPrompt: string;
+}): Promise<T> {
+  const openai = getOpenAiClient();
+
+  if (!openai) {
+    throw new OcrProcessingError("Missing OPENAI_API_KEY", "openai_config", 500);
   }
 
-  try {
-    return JSON.parse(outputText) as T;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Invalid JSON";
-    throw new OcrProcessingError(`JSON parse error: ${message}`, "json_parse", 502);
+  console.info("[OCR]\nllamando a OpenAI...", { model: openai.model, mimeType: "text/plain" });
+
+  const response = await openai.client.responses.create(
+    {
+      model: openai.model,
+      input: [
+        {
+          role: "system",
+          content: [{ type: "input_text", text: systemPrompt }],
+        },
+        {
+          role: "user",
+          content: [{ type: "input_text", text: userPrompt }],
+        },
+      ],
+      text: {
+        format: { type: "json_object" },
+      },
+    },
+    { timeout: 60_000 },
+  ).catch(mapOpenAiError);
+
+  console.info("[OCR]\nrespuesta recibida", { id: response.id, model: response.model });
+
+  return parseOpenAiJson<T>(response.output_text);
+}
+
+export async function createOpenAiPageResponseJson<T>({
+  systemPrompt,
+  userPrompt,
+  page,
+}: {
+  systemPrompt: string;
+  userPrompt: string;
+  page: OcrPageInput;
+}): Promise<T> {
+  return createOpenAiResponseJson<T>({
+    systemPrompt,
+    userPrompt,
+    mimeType: page.mimeType,
+    base64: page.base64,
+  });
+}
+
+export function assertSupportedVisionMimeType(mimeType: string) {
+  if (mimeType === "application/pdf") {
+    throw new OcrProcessingError("unsupported MIME type application/pdf", "file_validation", 400);
   }
 }

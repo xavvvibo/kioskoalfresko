@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
-import type { OcrExtractorKind, OcrUploadResult } from "@/lib/ai/types";
+import type { OcrExtractorKind, OcrProgressEvent, OcrUploadResult } from "@/lib/ai/types";
 
 type Card = {
   kind: OcrExtractorKind;
@@ -44,8 +44,6 @@ const cards: Card[] = [
   },
 ];
 
-type ApiResponse = { ok: true; data: OcrUploadResult } | { ok: false; error: string };
-
 function labelForKind(kind: string) {
   return kind.replaceAll("_", " ");
 }
@@ -54,19 +52,6 @@ function asText(value: unknown) {
   if (value === null || value === undefined) return "";
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
   return JSON.stringify(value, null, 2);
-}
-
-async function readApiResponse(response: Response): Promise<ApiResponse> {
-  const text = await response.text();
-
-  try {
-    return JSON.parse(text) as ApiResponse;
-  } catch {
-    return {
-      ok: false,
-      error: text.trim() || `OCR request failed with HTTP ${response.status}`,
-    };
-  }
 }
 
 function EditableResult({ result }: { result: OcrUploadResult }) {
@@ -163,6 +148,8 @@ export function IaAssistantClient() {
   const [activeKind, setActiveKind] = useState<OcrExtractorKind | null>(null);
   const [result, setResult] = useState<OcrUploadResult | null>(null);
   const [error, setError] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState("");
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
   const isUploading = activeKind !== null;
 
@@ -174,6 +161,8 @@ export function IaAssistantClient() {
 
     setActiveKind(kind);
     setError("");
+    setProgress(5);
+    setProgressMessage("Subiendo...");
 
     const formData = new FormData();
     formData.append("kind", kind);
@@ -184,14 +173,27 @@ export function IaAssistantClient() {
         method: "POST",
         body: formData,
       });
-      const payload = await readApiResponse(response);
 
-      if (!payload.ok) {
-        setError(payload.error);
-        return;
+      if (!response.body) {
+        throw new Error(`OCR request failed with HTTP ${response.status}`);
       }
 
-      setResult(payload.data);
+      await readProgressStream(response.body, (event) => {
+        if (event.type === "progress") {
+          setProgress(event.progress);
+          setProgressMessage(event.message);
+          return;
+        }
+
+        if (event.type === "error") {
+          setError(event.error);
+          return;
+        }
+
+        setProgress(100);
+        setProgressMessage("Preparando revisión...");
+        setResult(event.data);
+      });
     } catch (uploadError) {
       const message = uploadError instanceof Error ? uploadError.message : "OCR upload request failed";
       setError(message);
@@ -227,9 +229,18 @@ export function IaAssistantClient() {
         ) : null}
 
         {isUploading ? (
-          <p className="mt-5 rounded-[1.3rem] border border-amber-300/30 bg-amber-100 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-amber-950">
-            Procesando: {uploadLabel}
-          </p>
+          <div className="mt-5 rounded-[1.3rem] border border-amber-300/30 bg-amber-100 px-4 py-3 text-amber-950">
+            <div className="flex items-center justify-between gap-3 text-sm font-black uppercase tracking-[0.14em]">
+              <span>{progressMessage || `Procesando: ${uploadLabel}`}</span>
+              <span>{progress}%</span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-amber-950/15">
+              <div
+                className="h-full rounded-full bg-[#d94b2b] transition-[width] duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
         ) : null}
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -270,4 +281,28 @@ export function IaAssistantClient() {
       {result ? <EditableResult result={result} /> : null}
     </>
   );
+}
+
+async function readProgressStream(stream: ReadableStream<Uint8Array>, onEvent: (event: OcrProgressEvent) => void) {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      onEvent(JSON.parse(line) as OcrProgressEvent);
+    }
+  }
+
+  if (buffer.trim()) {
+    onEvent(JSON.parse(buffer) as OcrProgressEvent);
+  }
 }

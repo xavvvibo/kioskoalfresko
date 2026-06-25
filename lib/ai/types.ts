@@ -39,21 +39,28 @@ export type OcrProduct = {
   cantidad: string;
   lote: string;
   caducidad: string;
+  importe?: string;
 };
 
 export type OcrAlbaranResult = {
   proveedor: string;
+  cif?: string;
   fecha: string;
+  numero?: string;
   productos: OcrProduct[];
-  temperatura: number | null;
+  temperaturas: string[];
   observaciones: string;
 };
 
 export type OcrFacturaResult = {
   proveedor: string;
+  cif: string;
   fecha: string;
-  importe: string;
-  productos: string[];
+  numero: string;
+  productos: OcrProduct[];
+  base_imponible: string;
+  iva: string;
+  total: string;
 };
 
 export type OcrEtiquetaResult = {
@@ -99,7 +106,9 @@ export type OcrUploadInput = {
   kind: OcrExtractorKind;
   filename: string;
   mimeType: string;
-  base64: string;
+  base64?: string;
+  pages?: OcrPageInput[];
+  extractedText?: string;
 };
 
 export type OcrUploadResult = {
@@ -109,6 +118,25 @@ export type OcrUploadResult = {
   status: "prepared" | "processed";
   result: OcrResultData;
   message: string;
+  pages?: OcrPageSummary[];
 };
 
 export type AiResult<T> = { ok: true; data: T } | { ok: false; error: string; data?: T };
+
+export type OcrPageInput = {
+  pageNumber: number;
+  totalPages: number;
+  mimeType: "image/png" | "image/jpeg" | "image/webp";
+  base64: string;
+};
+
+export type OcrPageSummary = {
+  pageNumber: number;
+  totalPages: number;
+  text: string;
+};
+
+export type OcrProgressEvent =
+  | { type: "progress"; message: string; progress: number; pageNumber?: number; totalPages?: number }
+  | { type: "done"; data: OcrUploadResult }
+  | { type: "error"; error: string };

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createOpenAiResponseJson, getOpenAiServerConfig } from "./openai";
+import { createOpenAiResponseJson, createOpenAiTextResponseJson, getOpenAiServerConfig } from "./openai";
 import { appccDocumentClassifierSystemPrompt, buildDocumentClassifierPrompt, documentClassificationPrompt } from "./prompts";
 import type { AiDocumentClassification, AiDocumentInput, AiResult } from "./types";
 
@@ -38,6 +38,15 @@ export async function classifyDocument(input: AiDocumentInput & { base64?: strin
     return { ok: true, data: classifyByName(input) };
   }
 
+  if (input.text) {
+    const response = await createOpenAiTextResponseJson<AiDocumentClassification>({
+      systemPrompt: appccDocumentClassifierSystemPrompt,
+      userPrompt: [documentClassificationPrompt, buildDocumentClassifierPrompt(input)].join("\n\n"),
+    });
+
+    return { ok: true, data: response };
+  }
+
   if (!input.base64 || !input.mimeType) {
     return { ok: true, data: classifyByName(input) };
   }
@@ -51,7 +60,7 @@ export async function classifyDocument(input: AiDocumentInput & { base64?: strin
 
   return {
     ok: true,
-    data: response || classifyByName(input),
+    data: response,
   };
 }
 

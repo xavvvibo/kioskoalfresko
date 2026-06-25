@@ -1,7 +1,7 @@
 import "server-only";
 
-import { createOpenAiResponseJson } from "../openai";
-import { appccOcrSystemPrompt } from "../prompts";
+import { createOpenAiResponseJson, createOpenAiTextResponseJson, OcrProcessingError } from "../openai";
+import { appccOcrSystemPrompt, buildTextExtractionPrompt } from "../prompts";
 import type { AiResult, OcrUploadInput } from "../types";
 
 export async function runExtractor<T>({
@@ -11,12 +11,21 @@ export async function runExtractor<T>({
   input: OcrUploadInput;
   prompt: string;
 }): Promise<AiResult<T>> {
-  const response = await createOpenAiResponseJson<T>({
-    systemPrompt: appccOcrSystemPrompt,
-    userPrompt: [`Archivo: ${input.filename}`, `Tipo MIME: ${input.mimeType}`, prompt].join("\n"),
-    mimeType: input.mimeType,
-    base64: input.base64,
-  });
+  const response = input.extractedText
+    ? await createOpenAiTextResponseJson<T>({
+        systemPrompt: appccOcrSystemPrompt,
+        userPrompt: [`Archivo: ${input.filename}`, buildTextExtractionPrompt(input.extractedText), prompt].join("\n\n"),
+      })
+    : input.base64
+      ? await createOpenAiResponseJson<T>({
+          systemPrompt: appccOcrSystemPrompt,
+          userPrompt: [`Archivo: ${input.filename}`, `Tipo MIME: ${input.mimeType}`, prompt].join("\n"),
+          mimeType: input.mimeType,
+          base64: input.base64,
+        })
+      : (() => {
+          throw new OcrProcessingError("No OCR input available", "ocr_extraction", 400);
+        })();
 
   return { ok: true, data: response };
 }
