@@ -25,8 +25,8 @@ function importError(error: unknown): Omit<ImportCheck, "ok"> {
 
 async function checkOpenAIImport(): Promise<ImportCheck> {
   try {
-    const module = await import("openai");
-    return { ok: Boolean(module.default), error: null, stack: null };
+    const openaiModule = await import("openai");
+    return { ok: Boolean(openaiModule.default), error: null, stack: null };
   } catch (error) {
     return { ok: false, ...importError(error) };
   }
@@ -34,8 +34,8 @@ async function checkOpenAIImport(): Promise<ImportCheck> {
 
 async function checkCanvasImport(): Promise<ImportCheck> {
   try {
-    const module = await import("@napi-rs/canvas");
-    return { ok: Boolean(module.createCanvas), error: null, stack: null };
+    const canvasModule = await import("@napi-rs/canvas");
+    return { ok: Boolean(canvasModule.createCanvas), error: null, stack: null };
   } catch (error) {
     return { ok: false, ...importError(error) };
   }

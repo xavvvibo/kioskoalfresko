@@ -15,14 +15,21 @@ export type OpenAiServerConfig = {
 export class OcrProcessingError extends Error {
   stage: string;
   statusCode: number;
+  rawOpenAIText?: string;
 
-  constructor(message: string, stage: string, statusCode = 500) {
+  constructor(message: string, stage: string, statusCode = 500, rawOpenAIText?: string) {
     super(message);
     this.name = "OcrProcessingError";
     this.stage = stage;
     this.statusCode = statusCode;
+    this.rawOpenAIText = rawOpenAIText;
   }
 }
+
+export type OpenAiJsonResult<T> = {
+  data: T;
+  rawText: string;
+};
 
 export function getOpenAiServerConfig(): OpenAiServerConfig | null {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -49,6 +56,24 @@ export function getOpenAiClient() {
 }
 
 function mapOpenAiError(error: unknown): never {
+  if (error instanceof APIError) {
+    const status = error.status ?? 500;
+    const details = error as APIError & {
+      code?: string | null;
+      type?: string | null;
+    };
+    const message = error.message || `OpenAI API Error (${status})`;
+
+    console.error("[OCR ERROR]", {
+      status,
+      code: details.code || null,
+      type: details.type || null,
+      message,
+    });
+
+    throw new OcrProcessingError(message, "openai_request", status);
+  }
+
   if (error instanceof AuthenticationError) {
     throw new OcrProcessingError("OpenAI Authentication Error", "openai_request", 401);
   }
@@ -57,26 +82,41 @@ function mapOpenAiError(error: unknown): never {
     throw new OcrProcessingError("Vision request timeout", "openai_request", 504);
   }
 
-  if (error instanceof APIError) {
-    const status = error.status ?? 500;
-    const message = error.message || `OpenAI API Error (${status})`;
-    throw new OcrProcessingError(message, "openai_request", status);
-  }
-
   const message = error instanceof Error ? error.message : "OpenAI request failed";
+  console.error("[OCR ERROR]", {
+    status: null,
+    code: null,
+    type: error instanceof Error ? error.name : null,
+    message,
+  });
   throw new OcrProcessingError(message, "openai_request", 500);
 }
 
-async function parseOpenAiJson<T>(outputText: string | undefined): Promise<T> {
+function getFinishReason(response: { output?: unknown }) {
+  const output = Array.isArray(response.output) ? response.output : [];
+  const message = output.find((item): item is Record<string, unknown> => typeof item === "object" && item !== null && "status" in item);
+  const status = message?.status;
+
+  return typeof status === "string" ? status : null;
+}
+
+async function parseOpenAiJson<T>(outputText: string | undefined): Promise<OpenAiJsonResult<T>> {
   if (!outputText) {
     throw new OcrProcessingError("OpenAI response did not include output_text", "openai_response", 502);
   }
 
   try {
-    return JSON.parse(outputText) as T;
+    return {
+      data: JSON.parse(outputText) as T,
+      rawText: outputText,
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid JSON";
-    throw new OcrProcessingError(`JSON parse error: ${message}`, "json_parse", 502);
+    console.error("[OCR PARSE ERROR]", {
+      message,
+      rawOpenAIText: outputText,
+    });
+    throw new OcrProcessingError(`JSON parse error: ${message}`, "json_parse", 502, outputText);
   }
 }
 
@@ -90,7 +130,7 @@ export async function createOpenAiResponseJson<T>({
   userPrompt: string;
   mimeType: string;
   base64: string;
-}): Promise<T> {
+}): Promise<OpenAiJsonResult<T>> {
   const openai = getOpenAiClient();
 
   if (!openai) {
@@ -123,7 +163,13 @@ export async function createOpenAiResponseJson<T>({
     { timeout: 60_000 },
   ).catch(mapOpenAiError);
 
-  console.info("[OCR OPENAI] response received", { id: response.id, model: response.model });
+  console.info("[OCR OPENAI RESPONSE]", {
+    id: response.id,
+    model: response.model,
+    output_text: response.output_text?.slice(0, 300) || null,
+    finish_reason: getFinishReason(response),
+    usage: response.usage || null,
+  });
 
   return parseOpenAiJson<T>(response.output_text);
 }
@@ -134,7 +180,7 @@ export async function createOpenAiTextResponseJson<T>({
 }: {
   systemPrompt: string;
   userPrompt: string;
-}): Promise<T> {
+}): Promise<OpenAiJsonResult<T>> {
   const openai = getOpenAiClient();
 
   if (!openai) {
@@ -163,7 +209,13 @@ export async function createOpenAiTextResponseJson<T>({
     { timeout: 60_000 },
   ).catch(mapOpenAiError);
 
-  console.info("[OCR OPENAI] response received", { id: response.id, model: response.model });
+  console.info("[OCR OPENAI RESPONSE]", {
+    id: response.id,
+    model: response.model,
+    output_text: response.output_text?.slice(0, 300) || null,
+    finish_reason: getFinishReason(response),
+    usage: response.usage || null,
+  });
 
   return parseOpenAiJson<T>(response.output_text);
 }
@@ -176,7 +228,7 @@ export async function createOpenAiPageResponseJson<T>({
   systemPrompt: string;
   userPrompt: string;
   page: OcrPageInput;
-}): Promise<T> {
+}): Promise<OpenAiJsonResult<T>> {
   return createOpenAiResponseJson<T>({
     systemPrompt,
     userPrompt,

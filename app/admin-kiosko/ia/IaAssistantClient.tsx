@@ -124,6 +124,18 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
           </div>
         </div>
 
+        {result.rawOpenAIText ? (
+          <div className="rounded-[1.5rem] border border-sky-300/30 bg-sky-950/40 p-4">
+            <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Respuesta bruta OpenAI</h3>
+            <textarea
+              readOnly
+              value={result.rawOpenAIText}
+              rows={8}
+              className="mt-4 w-full rounded-2xl border border-white/12 bg-white px-4 py-3 font-mono text-xs text-stone-950 outline-none"
+            />
+          </div>
+        ) : null}
+
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
           <button
             type="button"
@@ -148,6 +160,7 @@ export function IaAssistantClient() {
   const [activeKind, setActiveKind] = useState<OcrExtractorKind | null>(null);
   const [result, setResult] = useState<OcrUploadResult | null>(null);
   const [error, setError] = useState("");
+  const [rawDiagnostic, setRawDiagnostic] = useState("");
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState("");
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -161,6 +174,7 @@ export function IaAssistantClient() {
 
     setActiveKind(kind);
     setError("");
+    setRawDiagnostic("");
     setProgress(5);
     setProgressMessage("Subiendo...");
 
@@ -187,11 +201,13 @@ export function IaAssistantClient() {
 
         if (event.type === "error") {
           setError(event.error);
+          setRawDiagnostic(event.rawOpenAIText || "");
           return;
         }
 
         setProgress(100);
         setProgressMessage("Preparando revisión...");
+        setRawDiagnostic(event.data.rawOpenAIText || "");
         setResult(event.data);
       });
     } catch (uploadError) {
@@ -223,9 +239,17 @@ export function IaAssistantClient() {
         </div>
 
         {error ? (
-          <p className="mt-5 rounded-[1.3rem] border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-3 text-sm font-semibold text-[#f2c6bb]">
-            {error}
-          </p>
+          <div className="mt-5 rounded-[1.3rem] border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-3 text-sm font-semibold text-[#f2c6bb]">
+            <p>{error}</p>
+            {rawDiagnostic ? (
+              <textarea
+                readOnly
+                value={rawDiagnostic}
+                rows={8}
+                className="mt-4 w-full rounded-2xl border border-white/12 bg-white px-4 py-3 font-mono text-xs text-stone-950 outline-none"
+              />
+            ) : null}
+          </div>
         ) : null}
 
         {isUploading ? (

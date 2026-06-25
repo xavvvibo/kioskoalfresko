@@ -119,9 +119,10 @@ export type OcrUploadResult = {
   result: OcrResultData;
   message: string;
   pages?: OcrPageSummary[];
+  rawOpenAIText?: string;
 };
 
-export type AiResult<T> = { ok: true; data: T } | { ok: false; error: string; data?: T };
+export type AiResult<T> = { ok: true; data: T; rawOpenAIText?: string } | { ok: false; error: string; data?: T };
 
 export type OcrPageInput = {
   pageNumber: number;
@@ -139,4 +140,4 @@ export type OcrPageSummary = {
 export type OcrProgressEvent =
   | { type: "progress"; message: string; progress: number; pageNumber?: number; totalPages?: number }
   | { type: "done"; data: OcrUploadResult }
-  | { type: "error"; error: string };
+  | { type: "error"; error: string; rawOpenAIText?: string };

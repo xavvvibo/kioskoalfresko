@@ -87,6 +87,7 @@ export async function runAppccOcr(
     result: data,
     message: "OCR procesado desde servidor.",
     pages,
+    rawOpenAIText: result.rawOpenAIText,
   };
 }
 
@@ -118,7 +119,7 @@ export async function extractTextFromPages(
     summaries.push({
       pageNumber: page.pageNumber,
       totalPages: page.totalPages,
-      text: summary.text || "",
+      text: summary.data.text || "",
     });
   }
 

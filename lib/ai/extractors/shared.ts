@@ -27,5 +27,5 @@ export async function runExtractor<T>({
           throw new OcrProcessingError("No OCR input available", "ocr_extraction", 400);
         })();
 
-  return { ok: true, data: response };
+  return { ok: true, data: response.data, rawOpenAIText: response.rawText };
 }

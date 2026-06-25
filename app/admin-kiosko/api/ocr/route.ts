@@ -48,6 +48,10 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unexpected OCR server error";
 }
 
+function rawOpenAIText(error: unknown) {
+  return error instanceof OcrProcessingError ? error.rawOpenAIText : undefined;
+}
+
 export async function POST(request: Request) {
   console.info("[OCR REQUEST]");
   await requireAdminSession();
@@ -116,7 +120,7 @@ export async function POST(request: Request) {
 
         const result = isPdfMimeType(file.type)
           ? await processPdf({ file, buffer, kind, send })
-          : await processImage({ file, buffer, kind, send });
+          : await processImage({ file, buffer, kind, model: config.model, send });
 
         console.info("[OCR]\nextracción completada", {
           documentName: result.documentName,
@@ -130,7 +134,7 @@ export async function POST(request: Request) {
       } catch (error) {
         const message = errorMessage(error);
         logOcrError(message, error instanceof OcrProcessingError ? { stage: error.stage } : error);
-        send({ type: "error", error: message });
+        send({ type: "error", error: message, rawOpenAIText: rawOpenAIText(error) });
       } finally {
         controller.close();
       }
@@ -149,11 +153,13 @@ async function processImage({
   file,
   buffer,
   kind,
+  model,
   send,
 }: {
   file: File;
   buffer: Buffer;
   kind: OcrExtractorKind;
+  model: string;
   send: (event: OcrProgressEvent) => void;
 }) {
   if (!isAcceptedDirectImageMimeType(file.type)) {
@@ -162,6 +168,13 @@ async function processImage({
 
   send({ type: "progress", message: "Leyendo imagen...", progress: 35 });
   send({ type: "progress", message: "Extrayendo datos...", progress: 70 });
+  console.info("[OCR OPENAI REQUEST]", {
+    model,
+    imageSize: file.size,
+    mime: file.type,
+    bytes: buffer.byteLength,
+    extractor: kind,
+  });
 
   return runAppccOcr({
     kind,

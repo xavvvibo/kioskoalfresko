@@ -17,7 +17,7 @@ export async function classifyDocument(input: AiDocumentInput & { base64?: strin
       userPrompt: [documentClassificationPrompt, buildDocumentClassifierPrompt(input)].join("\n\n"),
     });
 
-    return { ok: true, data: response };
+    return { ok: true, data: response.data, rawOpenAIText: response.rawText };
   }
 
   if (!input.base64 || !input.mimeType) {
@@ -33,7 +33,8 @@ export async function classifyDocument(input: AiDocumentInput & { base64?: strin
 
   return {
     ok: true,
-    data: response,
+    data: response.data,
+    rawOpenAIText: response.rawText,
   };
 }
 
