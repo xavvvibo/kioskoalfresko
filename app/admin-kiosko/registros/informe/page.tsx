@@ -26,6 +26,7 @@ function parseFilters(params?: { [key: string]: string | string[] | undefined })
     equipment: value("equipment"),
     status: value("status"),
     responsible: value("responsible"),
+    includeArchivedEquipment: value("includeArchivedEquipment") === "1",
     year: Number.isFinite(year) && year > 0 ? year : undefined,
     month: Number.isFinite(month) && month > 0 ? month : undefined,
   };

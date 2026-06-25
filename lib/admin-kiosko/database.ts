@@ -1,4 +1,4 @@
-import { evaluateTemperature, getTemperatureEquipment, temperatureEquipment } from "./temperature-rules";
+import { evaluateTemperature, isActiveTemperatureEquipment, getTemperatureEquipment, temperatureEquipment } from "./temperature-rules";
 
 type DbResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -65,6 +65,7 @@ export type AppccRecordFilters = {
   equipment?: string;
   status?: string;
   responsible?: string;
+  includeArchivedEquipment?: boolean;
 };
 
 export type AppccRecord = {
@@ -362,6 +363,22 @@ function matchesEquipmentFilter(record: AppccRecord, equipment?: string) {
   return `${record.subject} ${record.main}`.toLowerCase().includes(needle);
 }
 
+function shouldIncludeTemperatureRecord(record: AppccRecord, includeArchivedEquipment?: boolean) {
+  if (record.type !== "temperaturas") {
+    return true;
+  }
+
+  if (includeArchivedEquipment) {
+    return true;
+  }
+
+  return isActiveTemperatureEquipment(record.subject);
+}
+
+function isActiveAlert(alert: EquipmentAlert) {
+  return isActiveTemperatureEquipment(alert.equipment);
+}
+
 function basePayload(data: CommonRecordInput) {
   return {
     record_date: data.record_date,
@@ -544,18 +561,24 @@ export async function getRecentTemperatureRecords(): Promise<DbResult<RecentAdmi
 
   return {
     ok: true,
-    data: result.data.map((record) => ({
-      ...record,
-      main: `${record.equipment} · ${record.temperature} °C`,
-    })),
+    data: result.data
+      .filter((record) => isActiveTemperatureEquipment(record.equipment))
+      .map((record) => ({
+        ...record,
+        main: `${record.equipment} · ${record.temperature} °C`,
+      })),
   };
 }
 
 export async function getOpenEquipmentAlerts(): Promise<DbResult<EquipmentAlert[]>> {
-  return supabaseRequest<EquipmentAlert[]>("admin_equipment_alerts", {
+  const result = await supabaseRequest<EquipmentAlert[]>("admin_equipment_alerts", {
     method: "GET",
     query: "?select=id,equipment,alert_date,alert_time,temperature,alert_level,status,description,corrective_action&status=in.(pendiente,en_proceso)&order=created_at.desc&limit=10",
   });
+
+  if (!result.ok) return result;
+
+  return { ok: true, data: result.data.filter(isActiveAlert) };
 }
 
 export async function getTemperatureRecordsByMonth(year: number, month: number): Promise<DbResult<DashboardTemperatureRecord[]>> {
@@ -591,14 +614,14 @@ export async function getAdminDashboardSummary(): Promise<DbResult<AdminDashboar
     recentTemperatures,
     openAlerts,
   ] = await Promise.all([
-    getRows<{ id: string }>("admin_temperature_records", "?select=id"),
-    getRows<{ id: string }>("admin_temperature_records", `?select=id&record_date=eq.${today}`),
-    getRows<{ id: string }>("admin_temperature_records", "?select=id&status=eq.revisar"),
-    getRows<{ id: string }>("admin_temperature_records", "?select=id&status=eq.incidencia"),
-    getRows<{ id: string }>("admin_equipment_alerts", "?select=id&status=eq.pendiente"),
-    getRows<{ id: string }>("admin_equipment_alerts", "?select=id&status=eq.en_proceso"),
-    getRows<{ id: string }>("admin_equipment_alerts", `?select=id&status=eq.solventado&resolved_at=gte.${start}&resolved_at=lt.${end}`),
-    getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&order=record_date.desc,record_time.desc,created_at.desc&limit=1"),
+    getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&limit=1000"),
+    getRows<DashboardTemperatureRecord>("admin_temperature_records", `?select=id,equipment,record_date,record_time,temperature,status,responsible&record_date=eq.${today}&limit=1000`),
+    getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&status=eq.revisar&limit=1000"),
+    getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&status=eq.incidencia&limit=1000"),
+    getRows<EquipmentAlert>("admin_equipment_alerts", "?select=id,equipment,alert_date,alert_time,temperature,alert_level,status,description,corrective_action&status=eq.pendiente&limit=1000"),
+    getRows<EquipmentAlert>("admin_equipment_alerts", "?select=id,equipment,alert_date,alert_time,temperature,alert_level,status,description,corrective_action&status=eq.en_proceso&limit=1000"),
+    getRows<EquipmentAlert>("admin_equipment_alerts", `?select=id,equipment,alert_date,alert_time,temperature,alert_level,status,description,corrective_action&status=eq.solventado&resolved_at=gte.${start}&resolved_at=lt.${end}&limit=1000`),
+    getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&order=record_date.desc,record_time.desc,created_at.desc&limit=100"),
     getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&order=record_date.desc,record_time.desc,created_at.desc&limit=100"),
     getOpenEquipmentAlerts(),
   ]);
@@ -609,9 +632,19 @@ export async function getAdminDashboardSummary(): Promise<DbResult<AdminDashboar
     return failed;
   }
 
+  const activeTemperatures = allTemperatures.ok ? allTemperatures.data.filter((record) => isActiveTemperatureEquipment(record.equipment)) : [];
+  const todayActiveTemperatures = todayTemperatures.ok ? todayTemperatures.data.filter((record) => isActiveTemperatureEquipment(record.equipment)) : [];
+  const reviewingActiveTemperatures = reviewingTemperatures.ok ? reviewingTemperatures.data.filter((record) => isActiveTemperatureEquipment(record.equipment)) : [];
+  const incidentActiveTemperatures = incidentTemperatures.ok ? incidentTemperatures.data.filter((record) => isActiveTemperatureEquipment(record.equipment)) : [];
+  const activePendingAlerts = pendingAlerts.ok ? pendingAlerts.data.filter(isActiveAlert) : [];
+  const activeInProgressAlerts = inProgressAlerts.ok ? inProgressAlerts.data.filter(isActiveAlert) : [];
+  const activeResolvedAlertsThisMonth = resolvedAlertsThisMonth.ok ? resolvedAlertsThisMonth.data.filter(isActiveAlert) : [];
+  const activeRecentTemperatures = recentTemperatures.ok ? recentTemperatures.data.filter((record) => isActiveTemperatureEquipment(record.equipment)) : [];
+  const lastActiveTemperature = lastTemperature.ok ? lastTemperature.data.find((record) => isActiveTemperatureEquipment(record.equipment)) || null : null;
+
   const latestByEquipment = activeEquipment
     .map((equipment) => recentTemperatures.ok
-      ? recentTemperatures.data.find((record) => record.equipment === equipment) || {
+      ? activeRecentTemperatures.find((record) => record.equipment === equipment) || {
           id: `missing-${equipment}`,
           equipment,
           record_date: "",
@@ -626,15 +659,15 @@ export async function getAdminDashboardSummary(): Promise<DbResult<AdminDashboar
   return {
     ok: true,
     data: {
-      totalTemperatureRecords: allTemperatures.ok ? allTemperatures.data.length : 0,
-      todayTemperatureRecords: todayTemperatures.ok ? todayTemperatures.data.length : 0,
-      reviewingTemperatureRecords: reviewingTemperatures.ok ? reviewingTemperatures.data.length : 0,
-      incidentTemperatureRecords: incidentTemperatures.ok ? incidentTemperatures.data.length : 0,
+      totalTemperatureRecords: activeTemperatures.length,
+      todayTemperatureRecords: todayActiveTemperatures.length,
+      reviewingTemperatureRecords: reviewingActiveTemperatures.length,
+      incidentTemperatureRecords: incidentActiveTemperatures.length,
       activeEquipmentCount: activeEquipment.length,
-      pendingAlerts: pendingAlerts.ok ? pendingAlerts.data.length : 0,
-      inProgressAlerts: inProgressAlerts.ok ? inProgressAlerts.data.length : 0,
-      resolvedAlertsThisMonth: resolvedAlertsThisMonth.ok ? resolvedAlertsThisMonth.data.length : 0,
-      lastTemperatureRecord: lastTemperature.ok ? lastTemperature.data[0] || null : null,
+      pendingAlerts: activePendingAlerts.length,
+      inProgressAlerts: activeInProgressAlerts.length,
+      resolvedAlertsThisMonth: activeResolvedAlertsThisMonth.length,
+      lastTemperatureRecord: lastActiveTemperature,
       latestByEquipment,
       openAlerts: openAlerts.ok ? openAlerts.data : [],
     },
@@ -971,6 +1004,7 @@ export async function getAppccRecords(filters: AppccRecordFilters): Promise<DbRe
 
   const records = results
     .flatMap((result) => (result.ok ? result.data : []))
+    .filter((record) => shouldIncludeTemperatureRecord(record, filters.includeArchivedEquipment))
     .filter((record) => matchesEquipmentFilter(record, filters.equipment))
     .sort((a, b) => `${b.record_date} ${b.record_time || ""}`.localeCompare(`${a.record_date} ${a.record_time || ""}`));
 
@@ -1002,6 +1036,7 @@ export async function getMonthlyAppccReport(filters: AppccRecordFilters & { year
   }
 
   const filteredAlerts = alerts.data
+    .filter((alert) => filters.includeArchivedEquipment || isActiveAlert(alert))
     .filter((alert) => !filters.status || alert.status === filters.status)
     .filter((alert) => matchesEquipmentFilter({
       id: alert.id,

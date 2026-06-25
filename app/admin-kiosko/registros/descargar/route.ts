@@ -11,6 +11,7 @@ function parseFilters(request: NextRequest): AppccRecordFilters {
     equipment: params.get("equipment") || "",
     status: params.get("status") || "",
     responsible: params.get("responsible") || "",
+    includeArchivedEquipment: params.get("includeArchivedEquipment") === "1",
   };
 }
 

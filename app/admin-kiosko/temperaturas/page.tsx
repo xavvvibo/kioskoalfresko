@@ -8,7 +8,7 @@ import { TemperatureForm } from "../_components/TemperatureForm";
 
 export const metadata: Metadata = {
   title: "Registro de temperaturas | Panel interno",
-  description: "Registro interno de temperaturas de cámaras y equipos.",
+  description: "Registro interno de temperaturas de equipos APPCC.",
 };
 
 export default async function TemperaturasPage({
@@ -26,7 +26,7 @@ export default async function TemperaturasPage({
   return (
     <RecordPageShell
       title="Registro de temperaturas"
-      description="Cámaras, congeladores, botelleros y equipos de frío."
+      description="Equipos APPCC de frío, congelación e hielo."
       saved={params?.saved === "1"}
       error={params?.error}
       records={records.ok ? records.data : []}

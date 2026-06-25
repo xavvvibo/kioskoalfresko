@@ -24,12 +24,11 @@ with open_days(record_date) as (
 ),
 active_equipment(equipment, base_temperature, variation, equipment_order) as (
   values
-    ('Botellero 1 (Fantas y energéticas)', 3.2::numeric, 0.1::numeric, 1),
-    ('Botellero 2 (Cocacola y Nestea)', 3.6::numeric, 0.2::numeric, 2),
-    ('Botellero 3 (Cervezas)', 3.0::numeric, 0.3::numeric, 3),
-    ('Botellero 4 (Desayunos)', 4.1::numeric, 0.1::numeric, 4),
-    ('Congelador', -20.0::numeric, -0.4::numeric, 5),
-    ('Refrigerador', 3.1::numeric, 0.2::numeric, 6)
+    ('Botellero desayunos', 4.1::numeric, 0.1::numeric, 1),
+    ('Arcón hielo pequeño', -20.4::numeric, -0.3::numeric, 2),
+    ('Arcón congelador', -20.0::numeric, -0.4::numeric, 3),
+    ('Arcón frío', 3.1::numeric, 0.2::numeric, 4),
+    ('Arcón hielo grande', -20.8::numeric, -0.2::numeric, 5)
 ),
 seed_rows as (
   select
@@ -70,7 +69,7 @@ seed_rows as (
     )::time as record_time,
     active_equipment.equipment,
     case
-      when active_equipment.equipment = 'Congelador'
+      when active_equipment.equipment in ('Arcón hielo pequeño', 'Arcón congelador', 'Arcón hielo grande')
         then greatest(-22.0, least(-18.0, active_equipment.base_temperature + (((extract(day from open_days.record_date)::int % 5) - 2) * active_equipment.variation)))
       else greatest(2.0, least(5.0, active_equipment.base_temperature + ((extract(day from open_days.record_date)::int % 4) * active_equipment.variation)))
     end::numeric(5,2) as temperature

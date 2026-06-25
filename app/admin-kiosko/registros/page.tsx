@@ -46,6 +46,7 @@ function parseFilters(params?: { [key: string]: string | string[] | undefined })
     equipment: value("equipment"),
     status: value("status"),
     responsible: value("responsible"),
+    includeArchivedEquipment: value("includeArchivedEquipment") === "1",
   };
 }
 
@@ -59,7 +60,7 @@ function buildDownloadHref(filters: AppccRecordFilters) {
 
   Object.entries(filters).forEach(([key, value]) => {
     if (value) {
-      params.set(key, value);
+      params.set(key, key === "includeArchivedEquipment" ? "1" : String(value));
     }
   });
 
@@ -71,7 +72,7 @@ function buildReportHref(filters: AppccRecordFilters, month: string, year: strin
 
   Object.entries(filters).forEach(([key, value]) => {
     if (value) {
-      params.set(key, value);
+      params.set(key, key === "includeArchivedEquipment" ? "1" : String(value));
     }
   });
 
@@ -177,6 +178,10 @@ export default async function RegistrosAppccPage({
               <label className="grid gap-2 text-sm font-semibold text-stone-200">
                 Año informe
                 <input name="year" type="number" min="2026" defaultValue={reportYear} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+              </label>
+              <label className="flex items-center gap-3 rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-sm font-semibold text-stone-200 md:col-span-2 xl:col-span-2">
+                <input type="checkbox" name="includeArchivedEquipment" value="1" defaultChecked={Boolean(filters.includeArchivedEquipment)} className="h-5 w-5 accent-[#d94b2b]" />
+                Incluir equipos archivados
               </label>
               <div className="flex gap-3 md:col-span-2 xl:col-span-6">
                 <button type="submit" className="inline-flex flex-1 items-center justify-center rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-stone-950">

@@ -5,6 +5,7 @@ export type TemperatureEquipment = {
   zone: "Barra" | "Cocina" | "Almacén";
   kind: TemperatureEquipmentKind;
   active: boolean;
+  archived?: boolean;
   note?: string;
 };
 
@@ -16,15 +17,35 @@ export type TemperatureEvaluation = {
 };
 
 export const temperatureEquipment: TemperatureEquipment[] = [
-  { zone: "Barra", name: "Botellero 1 (Fantas y energéticas)", kind: "refrigerated", active: true },
-  { zone: "Barra", name: "Botellero 2 (Cocacola y Nestea)", kind: "refrigerated", active: true },
-  { zone: "Barra", name: "Botellero 3 (Cervezas)", kind: "refrigerated", active: true },
-  { zone: "Barra", name: "Botellero 4 (Desayunos)", kind: "refrigerated", active: true },
-  { zone: "Barra", name: "Congelador hielo/vasos — por instalar", kind: "freezer", active: false, note: "fuera de servicio / no registrar" },
-  { zone: "Cocina", name: "Congelador", kind: "freezer", active: true },
-  { zone: "Cocina", name: "Refrigerador", kind: "refrigerated", active: true },
-  { zone: "Almacén", name: "Botellero 1 — estropeado indefinidamente", kind: "refrigerated", active: false, note: "fuera de servicio / no registrar" },
+  { zone: "Barra", name: "Botellero desayunos", kind: "refrigerated", active: true },
+  { zone: "Barra", name: "Arcón hielo pequeño", kind: "freezer", active: true },
+  { zone: "Cocina", name: "Arcón congelador", kind: "freezer", active: true },
+  { zone: "Cocina", name: "Arcón frío", kind: "refrigerated", active: true },
+  { zone: "Almacén", name: "Arcón hielo grande", kind: "freezer", active: true },
+  { zone: "Almacén", name: "Botellero inoperativo", kind: "refrigerated", active: false, note: "fuera de servicio / no registrar" },
 ];
+
+export const archivedTemperatureEquipment = [
+  "Botellero 1 (Fantas y energéticas)",
+  "Botellero 2 (Cocacola y Nestea)",
+  "Botellero 3 (Cervezas)",
+  "Botellero 4 (Desayunos)",
+  "Congelador",
+  "Refrigerador",
+  "Cámara refrigeración",
+  "Congelador hielo/vasos",
+  "Congelador hielo/vasos — por instalar",
+  "Botellero 1 almacén",
+  "Botellero 1 — estropeado indefinidamente",
+];
+
+export function isActiveTemperatureEquipment(name: string) {
+  return temperatureEquipment.some((equipment) => equipment.name === name && equipment.active);
+}
+
+export function isArchivedTemperatureEquipment(name: string) {
+  return archivedTemperatureEquipment.includes(name);
+}
 
 export function getTemperatureEquipment(name: string) {
   return temperatureEquipment.find((equipment) => equipment.name === name);

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { internalAdminSections } from "@/content/site";
 import { isAdminAuthenticated } from "@/lib/admin-kiosko/auth";
 import { getAdminDashboardSummary } from "@/lib/admin-kiosko/database";
+import { temperatureEquipment } from "@/lib/admin-kiosko/temperature-rules";
 import { AdminHeader } from "./_components/AdminHeader";
 import { LoginPanel } from "./_components/LoginPanel";
 import { TemperatureAlerts } from "./_components/TemperatureAlerts";
@@ -35,6 +36,7 @@ export default async function AdminKioskoPage({
 
   const dashboard = await getAdminDashboardSummary();
   const summary = dashboard.ok ? dashboard.data : null;
+  const inactiveTemperatureEquipment = temperatureEquipment.filter((equipment) => !equipment.active);
   const semaphore = !summary || summary.pendingAlerts > 0 || summary.incidentTemperatureRecords > 0
     ? { label: "Rojo", text: "Alertas pendientes o incidencias graves registradas", className: "border-[#d94b2b]/40 bg-[#d94b2b]/12 text-[#f2c6bb]" }
     : summary.inProgressAlerts > 0 || summary.reviewingTemperatureRecords > 0
@@ -110,6 +112,19 @@ export default async function AdminKioskoPage({
                     ))}
                   </div>
                 </div>
+
+                {inactiveTemperatureEquipment.length ? (
+                  <div className="mt-6 rounded-[1.3rem] border border-amber-300/30 bg-amber-100 p-4 text-amber-950">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em]">Equipos fuera de servicio</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {inactiveTemperatureEquipment.map((equipment) => (
+                        <span key={equipment.name} className="rounded-full border border-amber-300 bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.12em]">
+                          {equipment.name}{equipment.note ? ` · ${equipment.note}` : ""}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 <TemperatureAlerts alerts={summary.openAlerts} />
               </>

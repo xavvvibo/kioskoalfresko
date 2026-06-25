@@ -315,7 +315,7 @@ export const internalAdminSections: Array<{ title: string; description: string; 
     items: [
       {
         title: "Registro de temperaturas",
-        description: "Cámaras, congeladores y control diario.",
+        description: "Equipos APPCC de frío, congelación e hielo.",
         href: "/admin-kiosko/temperaturas",
         category: "sanitario",
       },

@@ -49,7 +49,7 @@ export function TemperatureForm({ action }: { action: (formData: FormData) => vo
         </label>
       </div>
       <label className="grid gap-2 text-sm font-semibold text-stone-200">
-        Cámara / equipo
+        Equipo APPCC
         <select
           required
           name="equipment"
