@@ -22,19 +22,52 @@ with open_days(record_date) as (
     ('2026-06-19'::date),
     ('2026-06-24'::date)
 ),
-active_equipment(equipment, base_temperature, variation) as (
+active_equipment(equipment, base_temperature, variation, equipment_order) as (
   values
-    ('Botellero 1 (Fantas y energéticas)', 3.2::numeric, 0.1::numeric),
-    ('Botellero 2 (Cocacola y Nestea)', 3.6::numeric, 0.2::numeric),
-    ('Botellero 3 (Cervezas)', 3.0::numeric, 0.3::numeric),
-    ('Botellero 4 (Desayunos)', 4.1::numeric, 0.1::numeric),
-    ('Congelador', -20.0::numeric, -0.4::numeric),
-    ('Refrigerador', 3.1::numeric, 0.2::numeric)
+    ('Botellero 1 (Fantas y energéticas)', 3.2::numeric, 0.1::numeric, 1),
+    ('Botellero 2 (Cocacola y Nestea)', 3.6::numeric, 0.2::numeric, 2),
+    ('Botellero 3 (Cervezas)', 3.0::numeric, 0.3::numeric, 3),
+    ('Botellero 4 (Desayunos)', 4.1::numeric, 0.1::numeric, 4),
+    ('Congelador', -20.0::numeric, -0.4::numeric, 5),
+    ('Refrigerador', 3.1::numeric, 0.2::numeric, 6)
 ),
 seed_rows as (
   select
     open_days.record_date,
-    '12:00'::time as record_time,
+    (
+      case
+        when open_days.record_date < '2026-06-01'::date then
+          time '12:00'
+          + (
+            (
+              ((extract(day from open_days.record_date)::int * 11 + extract(month from open_days.record_date)::int * 7) % 75)
+              + case active_equipment.equipment_order
+                  when 1 then 0
+                  when 2 then 5
+                  when 3 then 9
+                  when 4 then 16
+                  when 5 then 22
+                  else 29
+                end
+            ) * interval '1 minute'
+          )
+        else
+          time '20:00'
+          + (
+            (
+              ((extract(day from open_days.record_date)::int * 13 + extract(month from open_days.record_date)::int * 5) % 185)
+              + case active_equipment.equipment_order
+                  when 1 then 0
+                  when 2 then 4
+                  when 3 then 11
+                  when 4 then 17
+                  when 5 then 23
+                  else 31
+                end
+            ) * interval '1 minute'
+          )
+      end
+    )::time as record_time,
     active_equipment.equipment,
     case
       when active_equipment.equipment = 'Congelador'
@@ -70,7 +103,6 @@ where not exists (
   select 1
   from public.admin_temperature_records existing
   where existing.record_date = seed_rows.record_date
-    and existing.record_time = seed_rows.record_time
     and existing.equipment = seed_rows.equipment
     and existing.source = 'admin-kiosko-seed'
 );
