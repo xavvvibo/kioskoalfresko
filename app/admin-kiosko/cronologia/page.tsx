@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import {
   getAppccRecords,
+  getRecentAiProcessingLogs,
+  getRecentAiSupplierDocuments,
   getRecentInspectionRecords,
   getRecentMaintenanceRecords,
   getRecentWaterRecords,
@@ -38,11 +40,13 @@ function mapRecent(record: RecentAdminRecord, type: string): TimelineItem {
 
 export default async function CronologiaPage() {
   await requireAdminSession();
-  const [records, maintenance, inspections, water] = await Promise.all([
+  const [records, maintenance, inspections, water, aiLogs, aiDocuments] = await Promise.all([
     getAppccRecords({ type: "todos", includeArchivedEquipment: false }),
     getRecentMaintenanceRecords(),
     getRecentInspectionRecords(),
     getRecentWaterRecords(),
+    getRecentAiProcessingLogs(20),
+    getRecentAiSupplierDocuments(20),
   ]);
 
   const items: TimelineItem[] = [
@@ -58,6 +62,24 @@ export default async function CronologiaPage() {
     ...(maintenance.ok ? maintenance.data.map((record) => mapRecent(record, "Mantenimiento")) : []),
     ...(inspections.ok ? inspections.data.map((record) => mapRecent(record, "Inspecciones")) : []),
     ...(water.ok ? water.data.map((record) => mapRecent(record, "Agua")) : []),
+    ...(aiLogs.ok ? aiLogs.data.map((record) => ({
+      id: `ia-log-${record.id}`,
+      date: record.created_at.slice(0, 10),
+      time: record.created_at.slice(11, 16),
+      type: "OCR IA",
+      description: `${record.document_name || "Documento"} · ${record.summary || record.detected_type || "Procesado"}`,
+      responsible: "F. Javier Bocanegra Sanjuan",
+      status: record.status,
+    })) : []),
+    ...(aiDocuments.ok ? aiDocuments.data.map((record) => ({
+      id: `ia-doc-${record.id}`,
+      date: record.document_date || record.created_at.slice(0, 10),
+      time: record.created_at.slice(11, 16),
+      type: "Recepción IA",
+      description: `${record.supplier_name || "Proveedor"} · ${record.document_type || "Documento"}${record.document_number ? ` · ${record.document_number}` : ""}`,
+      responsible: "F. Javier Bocanegra Sanjuan",
+      status: record.ocr_status,
+    })) : []),
   ].sort((a, b) => `${b.date} ${b.time || ""}`.localeCompare(`${a.date} ${a.time || ""}`)).slice(0, 120);
 
   return (

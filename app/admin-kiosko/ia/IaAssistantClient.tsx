@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import type { OcrExtractorKind, OcrProgressEvent, OcrUploadResult } from "@/lib/ai/types";
+import { saveAiReceptionAction } from "../actions";
 
 type Card = {
   kind: OcrExtractorKind;
@@ -54,10 +55,44 @@ function asText(value: unknown) {
   return JSON.stringify(value, null, 2);
 }
 
+function firstText(data: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = data[key];
+    if (typeof value === "string" && value.trim()) return value;
+    if (typeof value === "number") return String(value);
+  }
+
+  return "";
+}
+
+function normalizedProducts(data: Record<string, unknown>) {
+  const products = Array.isArray(data.productos) ? data.productos : [];
+
+  return products.map<Record<string, unknown>>((product) => typeof product === "object" && product !== null
+    ? product as Record<string, unknown>
+    : { nombre: product });
+}
+
 function EditableResult({ result }: { result: OcrUploadResult }) {
   const data = result.result as Record<string, unknown>;
-  const products = Array.isArray(data.productos) ? data.productos : [];
-  const simpleEntries = Object.entries(data).filter(([key]) => key !== "productos");
+  const products = normalizedProducts(data);
+  const supplier = firstText(data, ["proveedor", "supplier", "supplier_name"]);
+  const cif = firstText(data, ["cif", "CIF", "supplier_tax_id"]);
+  const documentDate = firstText(data, ["fecha", "document_date"]);
+  const documentNumber = firstText(data, ["numero", "número", "document_number"]);
+  const totalAmount = firstText(data, ["total", "importe", "total_amount"]);
+  const observations = firstText(data, ["observaciones", "summary"]);
+  const temperature = Array.isArray(data.temperaturas) ? data.temperaturas.join(", ") : firstText(data, ["temperatura"]);
+  const batches = products.map((product) => asText(product.lote ?? product.batch_number)).filter(Boolean);
+  const expiries = products.map((product) => asText(product.caducidad ?? product.expiry_date)).filter(Boolean);
+  const missingNotes = [
+    !batches.length ? "Lote no visible en el documento. Revisar si aplica." : "",
+    !expiries.length ? "Caducidad no visible en el documento. Revisar si aplica." : "",
+    !temperature ? "Temperatura no visible en el documento. Revisar si aplica." : "",
+  ].filter(Boolean);
+  const reviewComplete = supplier && documentDate && products.length && batches.length && expiries.length && temperature;
+  const showTechnicalByDefault = process.env.NODE_ENV !== "production";
+  const [showTechnical, setShowTechnical] = useState(showTechnicalByDefault);
 
   return (
     <section className="mt-8 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
@@ -74,49 +109,96 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
         </span>
       </div>
 
-      <form className="mt-6 grid gap-5">
+      <div className="mt-6 grid gap-4 rounded-[1.5rem] border border-white/10 bg-[#0d0d0d] p-4 md:grid-cols-4">
+        {[
+          ["Proveedor", supplier || "No visible"],
+          ["CIF", cif || "No visible"],
+          ["Fecha documento", documentDate || "No visible"],
+          ["Número", documentNumber || "No visible"],
+          ["Productos detectados", String(products.length)],
+          ["Lotes detectados", batches.length ? batches.join(", ") : "No visibles"],
+          ["Caducidades detectadas", expiries.length ? expiries.join(", ") : "No visibles"],
+          ["Temperatura recepción", temperature || "No visible"],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-2xl border border-white/10 bg-white/6 p-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">{label}</p>
+            <p className="mt-2 text-sm font-semibold text-white">{value}</p>
+          </div>
+        ))}
+        <div className="rounded-2xl border border-white/10 bg-white/6 p-3 md:col-span-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Estado revisión</p>
+          <p className="mt-2 text-sm font-black uppercase tracking-[0.12em] text-white">
+            {reviewComplete ? "Completo" : "Revisión manual requerida"}
+          </p>
+          {missingNotes.length ? (
+            <div className="mt-3 grid gap-2">
+              {missingNotes.map((note) => (
+                <p key={note} className="rounded-xl border border-amber-300/30 bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-950">
+                  {note}
+                </p>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <form action={saveAiReceptionAction} className="mt-6 grid gap-5">
+        <input type="hidden" name="ocr_json" value={JSON.stringify(result.result)} />
+        <input type="hidden" name="original_filename" value={result.documentName} />
+        <input type="hidden" name="detected_type" value={result.detectedType} />
+        <input type="hidden" name="document_type" value={result.detectedType} />
+        <input type="hidden" name="product_count" value={products.length} />
+
         <div className="grid gap-4 md:grid-cols-2">
-          {simpleEntries.map(([key, value]) => (
-            <label key={key} className="grid gap-2 text-sm font-semibold text-stone-200">
-              {labelForKind(key)}
-              {String(key).includes("observaciones") || asText(value).length > 80 ? (
-                <textarea
-                  name={key}
-                  defaultValue={asText(value)}
-                  rows={4}
-                  className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30"
-                />
-              ) : (
-                <input
-                  name={key}
-                  defaultValue={asText(value)}
-                  className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30"
-                />
-              )}
-            </label>
-          ))}
+          <label className="grid gap-2 text-sm font-semibold text-stone-200">
+            Proveedor
+            <input name="supplier_name" defaultValue={supplier} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-stone-200">
+            CIF
+            <input name="supplier_tax_id" defaultValue={cif} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-stone-200">
+            Fecha documento
+            <input name="document_date" defaultValue={documentDate} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-stone-200">
+            Número factura/albarán
+            <input name="document_number" defaultValue={documentNumber} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-stone-200">
+            Importe total
+            <input name="total_amount" defaultValue={totalAmount} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-stone-200">
+            Temperatura recepción
+            <input name="temperature" defaultValue={temperature} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-stone-200 md:col-span-2">
+            Observaciones
+            <textarea name="observations" defaultValue={observations} rows={4} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+          </label>
         </div>
 
         <div className="rounded-[1.5rem] border border-white/10 bg-[#0d0d0d] p-4">
           <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Productos, lotes y caducidades</h3>
           <div className="mt-4 grid gap-3">
-            {products.length ? products.map((product, index) => {
-              const item: Record<string, unknown> = typeof product === "object" && product !== null ? product as Record<string, unknown> : { producto: product };
-              return (
+            {products.length ? products.map((item, index) => (
                 <div key={`${result.documentName}-${index}`} className="grid gap-3 rounded-[1.2rem] border border-white/10 bg-white/6 p-3 md:grid-cols-4">
-                  {["nombre", "cantidad", "lote", "caducidad"].map((field) => (
+                  {([
+                    ["name", "nombre", item.nombre ?? item.producto],
+                    ["quantity", "cantidad", item.cantidad],
+                    ["batch", "lote", item.lote],
+                    ["expiry", "caducidad", item.caducidad],
+                  ] as Array<[string, string, unknown]>).map(([field, label, value]) => (
                     <label key={field} className="grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-stone-300">
-                      {field}
-                      <input
-                        name={`productos_${index}_${field}`}
-                        defaultValue={asText(item[field] ?? item.producto)}
-                        className="rounded-2xl border border-white/12 bg-white px-3 py-2 text-sm font-semibold normal-case tracking-normal text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30"
-                      />
+                      {label}
+                      <input name={`product_${index}_${field}`} defaultValue={asText(value)} className="rounded-2xl border border-white/12 bg-white px-3 py-2 text-sm font-semibold normal-case tracking-normal text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
                     </label>
                   ))}
+                  <input type="hidden" name={`product_${index}_accepted`} value="true" />
                 </div>
-              );
-            }) : (
+            )) : (
               <p className="rounded-[1.2rem] border border-white/10 bg-white/6 px-4 py-3 text-sm font-semibold text-stone-300">
                 Sin productos detectados todavía. La revisión queda preparada para completar manualmente.
               </p>
@@ -126,13 +208,15 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
 
         {result.rawOpenAIText ? (
           <div className="rounded-[1.5rem] border border-sky-300/30 bg-sky-950/40 p-4">
-            <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Respuesta bruta OpenAI</h3>
-            <textarea
-              readOnly
-              value={result.rawOpenAIText}
-              rows={8}
-              className="mt-4 w-full rounded-2xl border border-white/12 bg-white px-4 py-3 font-mono text-xs text-stone-950 outline-none"
-            />
+            <button type="button" onClick={() => setShowTechnical((value) => !value)} className="rounded-full border border-white/20 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white">
+              {showTechnical ? "Ocultar datos técnicos" : "Ver datos técnicos"}
+            </button>
+            {showTechnical ? (
+              <>
+                <h3 className="mt-4 text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Respuesta bruta OpenAI</h3>
+                <textarea readOnly value={result.rawOpenAIText} rows={8} className="mt-4 w-full rounded-2xl border border-white/12 bg-white px-4 py-3 font-mono text-xs text-stone-950 outline-none" />
+              </>
+            ) : null}
           </div>
         ) : null}
 
@@ -144,8 +228,12 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
             Cancelar
           </button>
           <button
-            type="button"
-            onClick={() => window.confirm("¿Confirmas que quieres registrar esta recepción cuando se conecte con las acciones APPCC?")}
+            type="submit"
+            onClick={(event) => {
+              if (!window.confirm("¿Confirmas que quieres registrar esta recepción APPCC?")) {
+                event.preventDefault();
+              }
+            }}
             className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-stone-950"
           >
             Registrar recepción
@@ -156,7 +244,7 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
   );
 }
 
-export function IaAssistantClient() {
+export function IaAssistantClient({ saved, errorMessage }: { saved?: boolean; errorMessage?: string }) {
   const [activeKind, setActiveKind] = useState<OcrExtractorKind | null>(null);
   const [result, setResult] = useState<OcrUploadResult | null>(null);
   const [error, setError] = useState("");
@@ -221,6 +309,23 @@ export function IaAssistantClient() {
 
   return (
     <>
+      {saved ? (
+        <section className="mb-8 rounded-[2rem] border border-emerald-300/30 bg-emerald-100 p-5 text-emerald-950 sm:p-6">
+          <h2 className="text-xl font-black uppercase tracking-[-0.03em]">Recepción registrada correctamente.</h2>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <a href="/admin-kiosko/recepcion-mercancia" className="rounded-full border border-emerald-950 px-5 py-3 text-sm font-black uppercase tracking-[0.14em]">Ver recepción</a>
+            <a href="/admin-kiosko/registros" className="rounded-full border border-emerald-950 px-5 py-3 text-sm font-black uppercase tracking-[0.14em]">Ver registros</a>
+            <a href="/admin-kiosko/ia" className="rounded-full border border-emerald-950 bg-emerald-950 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Escanear otro documento</a>
+          </div>
+        </section>
+      ) : null}
+
+      {errorMessage ? (
+        <p className="mb-8 rounded-[1.3rem] border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-3 text-sm font-semibold text-[#f2c6bb]">
+          {errorMessage}
+        </p>
+      ) : null}
+
       <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.18)] sm:p-6">
         <div className="flex flex-col gap-3 border-b border-white/10 pb-5 md:flex-row md:items-end md:justify-between">
           <div>

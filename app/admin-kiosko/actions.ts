@@ -17,6 +17,10 @@ import {
   createWaterRecord,
   createIncidentRecord,
   createTemperatureRecord,
+  createAiProcessingLog,
+  createAiSupplierDocument,
+  createAiTraceabilityItem,
+  ensureSupplierRecord,
   updateEquipmentAlertStatus,
 } from "@/lib/admin-kiosko/database";
 
@@ -51,6 +55,59 @@ function checkbox(formData: FormData, key: string) {
 
 function checkboxValue(formData: FormData, key: string) {
   return formData.get(key) === "on" || formData.get(key) === "true";
+}
+
+function todayMadrid() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function timeMadrid() {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Madrid",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date());
+}
+
+function parseJson<T>(value: string, fallback: T): T {
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function optionalDate(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const match = value.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+  if (!match) return "";
+
+  const [, day, month, year] = match;
+  const fullYear = year.length === 2 ? `20${year}` : year;
+  return `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
+function optionalMoney(value: string) {
+  const normalized = value.replace(",", ".").replace(/[^\d.-]/g, "");
+  const number = normalized ? Number(normalized) : undefined;
+  return Number.isFinite(number) ? number : undefined;
+}
+
+function temperatureFromText(value: string) {
+  const match = value.replace(",", ".").match(/-?\d+(\.\d+)?/);
+  const number = match ? Number(match[0]) : undefined;
+  return Number.isFinite(number) ? number : undefined;
+}
+
+function hasCriticalObservation(value: string) {
+  return /rechaz|incidencia|cr[ií]tic|mal estado|temperatura alta|caducad[ao]|no conforme/i.test(value);
 }
 
 function redirectAfterSave(path: string, result: { ok: true } | { ok: false; error: string }): never {
@@ -148,6 +205,150 @@ export async function saveGoodsReceptionRecordAction(formData: FormData) {
   });
 
   redirectAfterSave("/admin-kiosko/recepcion-mercancia", result);
+}
+
+export async function saveAiReceptionAction(formData: FormData) {
+  await requireAdminSession();
+
+  const ocrJson = parseJson<Record<string, unknown>>(text(formData, "ocr_json"), {});
+  const productCount = Number(text(formData, "product_count")) || 0;
+  const supplier = text(formData, "supplier_name") || "Proveedor no identificado";
+  const documentDate = optionalDate(text(formData, "document_date")) || todayMadrid();
+  const recordTime = timeMadrid();
+  const observations = text(formData, "observations");
+  const temperature = temperatureFromText(text(formData, "temperature"));
+  const products = Array.from({ length: productCount }, (_, index) => ({
+    name: text(formData, `product_${index}_name`),
+    quantity: text(formData, `product_${index}_quantity`),
+    batch: text(formData, `product_${index}_batch`),
+    expiry: optionalDate(text(formData, `product_${index}_expiry`)),
+    accepted: formData.get(`product_${index}_accepted`) !== "false",
+  })).filter((product) => product.name || product.batch || product.expiry);
+  const missingBatchOrExpiry = products.some((product) => !product.batch || !product.expiry);
+  const missingTemperature = !Number.isFinite(temperature);
+  const status = missingBatchOrExpiry || missingTemperature ? "revisar" : "correcto";
+  const productSummary = `Recepción IA · ${products.length || 1} productos`;
+  const cleanSummary = [
+    `Documento: ${text(formData, "document_type") || "OCR IA"} ${text(formData, "document_number") || ""}`.trim(),
+    `Proveedor: ${supplier}`,
+    products.length ? `Productos: ${products.map((product) => product.name || "Sin nombre").join(", ")}` : "",
+    missingBatchOrExpiry ? "Revisar lotes/caducidades no visibles cuando aplique." : "",
+    missingTemperature ? "Temperatura no visible en el documento. Revisar si aplica." : "",
+    observations,
+  ].filter(Boolean).join("\n");
+
+  const supplierDocument = await createAiSupplierDocument({
+    document_type: text(formData, "document_type"),
+    document_number: text(formData, "document_number"),
+    document_date: documentDate,
+    supplier_name: supplier,
+    supplier_tax_id: text(formData, "supplier_tax_id"),
+    total_amount: optionalMoney(text(formData, "total_amount")),
+    original_filename: text(formData, "original_filename"),
+    ocr_status: status,
+    ocr_json: ocrJson,
+    reviewed_by: "F. Javier Bocanegra Sanjuan",
+  });
+
+  if (!supplierDocument.ok) {
+    await createAiProcessingLog({
+      document_name: text(formData, "original_filename"),
+      detected_type: text(formData, "detected_type"),
+      status: "error",
+      summary: "No se pudo guardar el documento OCR revisado.",
+      raw_json: ocrJson,
+      error_message: supplierDocument.error,
+    });
+    redirect(`/admin-kiosko/ia?error=${encodeURIComponent(supplierDocument.error.slice(0, 240))}`);
+  }
+
+  await ensureSupplierRecord({
+    supplier,
+    cif: text(formData, "supplier_tax_id"),
+    category: "Proveedor IA",
+    observations: "Creado desde recepción IA OCR.",
+  });
+
+  for (const product of products) {
+    const traceability = await createAiTraceabilityItem({
+      supplier_document_id: supplierDocument.data.id,
+      product_name: product.name,
+      quantity: product.quantity,
+      batch_number: product.batch,
+      expiry_date: product.expiry,
+      accepted: product.accepted,
+      observations: !product.batch || !product.expiry ? "Dato no visible en el documento. Revisar si aplica." : "",
+    });
+
+    if (!traceability.ok) {
+      redirect(`/admin-kiosko/ia?error=${encodeURIComponent(traceability.error.slice(0, 240))}`);
+    }
+  }
+
+  const goodsReception = await createGoodsReceptionRecord({
+    record_date: documentDate,
+    record_time: recordTime,
+    supplier,
+    product: productSummary,
+    delivery_temperature: temperature,
+    accepted: products.every((product) => product.accepted),
+    batch_number: products.map((product) => product.batch).filter(Boolean).join(", "),
+    expiry_date: products.find((product) => product.expiry)?.expiry || "",
+    status,
+    observations: cleanSummary,
+    responsible: "F. Javier Bocanegra Sanjuan",
+    created_by: "F. Javier Bocanegra Sanjuan",
+  });
+
+  if (!goodsReception.ok) {
+    await createAiProcessingLog({
+      document_name: text(formData, "original_filename"),
+      detected_type: text(formData, "detected_type"),
+      status: "error",
+      summary: "Documento OCR guardado, pero falló el registro de recepción APPCC.",
+      raw_json: ocrJson,
+      error_message: goodsReception.error,
+    });
+    redirect(`/admin-kiosko/ia?error=${encodeURIComponent(goodsReception.error.slice(0, 240))}`);
+  }
+
+  const expiredProducts = products.filter((product) => product.expiry && product.expiry < todayMadrid());
+  const rejectedProducts = products.filter((product) => !product.accepted);
+  const needsIncident = (Number.isFinite(temperature) && Number(temperature) > 8)
+    || expiredProducts.length > 0
+    || rejectedProducts.length > 0
+    || hasCriticalObservation(observations);
+
+  if (needsIncident) {
+    await createIncidentRecord({
+      record_date: documentDate,
+      record_time: recordTime,
+      incident_type: "recepción mercancía",
+      severity: rejectedProducts.length || hasCriticalObservation(observations) ? "incidencia" : "revisar",
+      corrective_action: "pendiente",
+      resolved: false,
+      status: "pendiente",
+      observations: [
+        Number.isFinite(temperature) && Number(temperature) > 8 ? `Temperatura recepción superior a 8 ºC: ${temperature} ºC.` : "",
+        expiredProducts.length ? `Caducidad pasada: ${expiredProducts.map((product) => product.name || product.expiry).join(", ")}.` : "",
+        rejectedProducts.length ? `Producto rechazado: ${rejectedProducts.map((product) => product.name || "Sin nombre").join(", ")}.` : "",
+        hasCriticalObservation(observations) ? observations : "",
+      ].filter(Boolean).join("\n"),
+      responsible: "F. Javier Bocanegra Sanjuan",
+      created_by: "F. Javier Bocanegra Sanjuan",
+    });
+  }
+
+  await createAiProcessingLog({
+    document_name: text(formData, "original_filename"),
+    detected_type: text(formData, "detected_type"),
+    status,
+    summary: `${supplier} · ${productSummary}`,
+    raw_json: ocrJson,
+  });
+
+  ["/admin-kiosko/ia", "/admin-kiosko/recepcion-mercancia", "/admin-kiosko/registros", "/admin-kiosko/cronologia"].forEach((path) => revalidatePath(path));
+  redirect("/admin-kiosko/ia?saved=1");
 }
 
 export async function saveIncidentRecordAction(formData: FormData) {

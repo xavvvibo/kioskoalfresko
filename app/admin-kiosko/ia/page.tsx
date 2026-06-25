@@ -12,14 +12,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function IaAppccPage() {
+export default async function IaAppccPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ saved?: string; error?: string }>;
+}) {
   await requireAdminSession();
+  const params = await searchParams;
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
       <AdminHeader title="Asistente IA APPCC" description="Subida y clasificación inteligente de documentos sanitarios, albaranes, facturas, etiquetas y registros." />
       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
-        <IaAssistantClient />
+        <IaAssistantClient saved={params?.saved === "1"} errorMessage={params?.error} />
       </section>
     </main>
   );

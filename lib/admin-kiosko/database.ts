@@ -262,6 +262,59 @@ type AnnualVerificationInput = {
   responsible?: string;
 };
 
+export type AiSupplierDocumentInput = {
+  document_type?: string;
+  document_number?: string;
+  document_date?: string;
+  supplier_name?: string;
+  supplier_tax_id?: string;
+  total_amount?: number;
+  original_filename?: string;
+  ocr_status?: string;
+  ocr_json?: unknown;
+  reviewed_by?: string;
+};
+
+export type AiTraceabilityItemInput = {
+  supplier_document_id: string;
+  product_name?: string;
+  quantity?: string;
+  batch_number?: string;
+  expiry_date?: string;
+  storage_type?: string;
+  accepted?: boolean;
+  observations?: string;
+};
+
+export type AiProcessingLogInput = {
+  document_name?: string;
+  detected_type?: string;
+  status?: string;
+  summary?: string;
+  raw_json?: unknown;
+  error_message?: string;
+};
+
+export type AiProcessingLog = {
+  id: string;
+  created_at: string;
+  document_name: string | null;
+  detected_type: string | null;
+  status: string | null;
+  summary: string | null;
+  error_message: string | null;
+};
+
+export type AiSupplierDocument = {
+  id: string;
+  created_at: string;
+  document_type: string | null;
+  document_number: string | null;
+  document_date: string | null;
+  supplier_name: string | null;
+  ocr_status: string | null;
+};
+
 function getSupabaseConfig() {
   return {
     url: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -394,6 +447,17 @@ async function insertRecord(table: string, payload: Record<string, unknown>) {
     body: JSON.stringify(payload),
     headers: {
       Prefer: "return=minimal",
+    },
+  });
+}
+
+async function insertRecordReturning<T>(table: string, payload: Record<string, unknown>, select = "*") {
+  return supabaseRequest<T[]>(table, {
+    method: "POST",
+    query: `?select=${select}`,
+    body: JSON.stringify(payload),
+    headers: {
+      Prefer: "return=representation",
     },
   });
 }
@@ -723,6 +787,91 @@ export async function createSupplierRecord(data: SupplierRecordInput) {
     category: cleanText(data.category),
     certificates: cleanText(data.certificates),
     observations: cleanText(data.observations),
+  });
+}
+
+async function findSupplierByName(supplier: string) {
+  return getRows<{ id: string; supplier: string }>(
+    "admin_supplier_records",
+    `?select=id,supplier&supplier=ilike.${encodeURIComponent(supplier.trim())}&limit=1`,
+  );
+}
+
+export async function ensureSupplierRecord(data: SupplierRecordInput) {
+  if (!hasRequiredText(data.supplier)) {
+    return { ok: true, data: null };
+  }
+
+  const existing = await findSupplierByName(data.supplier);
+
+  if (!existing.ok) {
+    return { ok: true, data: null };
+  }
+
+  if (existing.data[0]) {
+    return { ok: true, data: existing.data[0] };
+  }
+
+  const created = await insertRecordReturning<{ id: string; supplier: string }>("admin_supplier_records", {
+    supplier: data.supplier.trim(),
+    cif: cleanText(data.cif),
+    category: cleanText(data.category) || "Proveedor IA",
+    observations: cleanText(data.observations),
+  }, "id,supplier");
+
+  if (!created.ok) {
+    return { ok: true, data: null };
+  }
+
+  return { ok: true, data: created.data[0] || null };
+}
+
+export async function createAiSupplierDocument(data: AiSupplierDocumentInput) {
+  const inserted = await insertRecordReturning<{ id: string }>("admin_supplier_documents", {
+    document_type: cleanText(data.document_type),
+    document_number: cleanText(data.document_number),
+    document_date: cleanText(data.document_date),
+    supplier_name: cleanText(data.supplier_name),
+    supplier_tax_id: cleanText(data.supplier_tax_id),
+    total_amount: data.total_amount,
+    original_filename: cleanText(data.original_filename),
+    ocr_status: cleanText(data.ocr_status) || "reviewed",
+    ocr_json: data.ocr_json || {},
+    reviewed_by: cleanText(data.reviewed_by),
+    reviewed_at: new Date().toISOString(),
+    source: "admin-kiosko-ai",
+  }, "id");
+
+  if (!inserted.ok) return inserted;
+
+  return { ok: true as const, data: inserted.data[0] };
+}
+
+export async function createAiTraceabilityItem(data: AiTraceabilityItemInput) {
+  if (!hasRequiredText(data.supplier_document_id)) {
+    return { ok: false, error: "Falta documento asociado." };
+  }
+
+  return insertRecord("admin_traceability_items", {
+    supplier_document_id: data.supplier_document_id,
+    product_name: cleanText(data.product_name),
+    quantity: cleanText(data.quantity),
+    batch_number: cleanText(data.batch_number),
+    expiry_date: cleanText(data.expiry_date),
+    storage_type: cleanText(data.storage_type),
+    accepted: data.accepted !== false,
+    observations: cleanText(data.observations),
+  });
+}
+
+export async function createAiProcessingLog(data: AiProcessingLogInput) {
+  return insertRecord("admin_ai_processing_logs", {
+    document_name: cleanText(data.document_name),
+    detected_type: cleanText(data.detected_type),
+    status: cleanText(data.status),
+    summary: cleanText(data.summary),
+    raw_json: data.raw_json || {},
+    error_message: cleanText(data.error_message),
   });
 }
 
@@ -1105,6 +1254,20 @@ export async function getRecentSupplierRecords(): Promise<DbResult<RecentAdminRe
       main: `${record.supplier}${record.category ? ` · ${record.category}` : ""}`,
     })),
   };
+}
+
+export async function getRecentAiProcessingLogs(limit = 20): Promise<DbResult<AiProcessingLog[]>> {
+  return getRows<AiProcessingLog>(
+    "admin_ai_processing_logs",
+    `?select=id,created_at,document_name,detected_type,status,summary,error_message&order=created_at.desc&limit=${limit}`,
+  );
+}
+
+export async function getRecentAiSupplierDocuments(limit = 20): Promise<DbResult<AiSupplierDocument[]>> {
+  return getRows<AiSupplierDocument>(
+    "admin_supplier_documents",
+    `?select=id,created_at,document_type,document_number,document_date,supplier_name,ocr_status&order=created_at.desc&limit=${limit}`,
+  );
 }
 
 export async function getRecentEquipmentAssets(): Promise<DbResult<RecentAdminRecord[]>> {
