@@ -56,6 +56,19 @@ function asText(value: unknown) {
   return JSON.stringify(value, null, 2);
 }
 
+async function readApiResponse(response: Response): Promise<ApiResponse> {
+  const text = await response.text();
+
+  try {
+    return JSON.parse(text) as ApiResponse;
+  } catch {
+    return {
+      ok: false,
+      error: text.trim() || `OCR request failed with HTTP ${response.status}`,
+    };
+  }
+}
+
 function EditableResult({ result }: { result: OcrUploadResult }) {
   const data = result.result as Record<string, unknown>;
   const products = Array.isArray(data.productos) ? data.productos : [];
@@ -171,7 +184,7 @@ export function IaAssistantClient() {
         method: "POST",
         body: formData,
       });
-      const payload = await response.json() as ApiResponse;
+      const payload = await readApiResponse(response);
 
       if (!payload.ok) {
         setError(payload.error);
@@ -179,8 +192,9 @@ export function IaAssistantClient() {
       }
 
       setResult(payload.data);
-    } catch {
-      setError("No se ha podido completar la subida OCR.");
+    } catch (uploadError) {
+      const message = uploadError instanceof Error ? uploadError.message : "OCR upload request failed";
+      setError(message);
     } finally {
       setActiveKind(null);
       event.target.value = "";

@@ -8,6 +8,7 @@ import { extractCertificado } from "./extractors/certificados";
 import { extractTermometro } from "./extractors/termometros";
 import { extractAceite } from "./extractors/aceite";
 import { classifyDocument } from "./document-classifier";
+import { OcrProcessingError } from "./openai";
 
 export const acceptedOcrMimeTypes = [
   "image/jpeg",
@@ -33,20 +34,6 @@ function detectedTypeForKind(kind: OcrExtractorKind, result: OcrResultData): AiD
   return "otro";
 }
 
-async function fallbackClassification(input: OcrUploadInput, error: string): Promise<OcrResultData> {
-  const fallback = await classifyDocument({ filename: input.filename, mimeType: input.mimeType });
-
-  if (fallback.ok) {
-    return fallback.data;
-  }
-
-  return {
-    kind: "otro",
-    confidence: 0,
-    summary: error,
-  };
-}
-
 export async function runAppccOcr(input: OcrUploadInput): Promise<OcrUploadResult> {
   const result =
     input.kind === "albaran"
@@ -61,16 +48,20 @@ export async function runAppccOcr(input: OcrUploadInput): Promise<OcrUploadResul
               ? await extractTermometro(input)
               : input.kind === "aceite"
                 ? await extractAceite(input)
-                : await classifyDocument({ filename: input.filename, mimeType: input.mimeType });
+                : await classifyDocument({ filename: input.filename, mimeType: input.mimeType, base64: input.base64 });
 
-  const data: OcrResultData = result.ok ? result.data : result.data ?? await fallbackClassification(input, result.error);
+  if (!result.ok) {
+    throw new OcrProcessingError(result.error, "ocr_extraction", 500);
+  }
+
+  const data: OcrResultData = result.data;
 
   return {
     documentName: input.filename,
     requestedKind: input.kind,
     detectedType: detectedTypeForKind(input.kind, data),
-    status: result.ok ? "processed" : "prepared",
+    status: "processed",
     result: data,
-    message: result.ok ? "OCR procesado desde servidor." : result.error,
+    message: "OCR procesado desde servidor.",
   };
 }
