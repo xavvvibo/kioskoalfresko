@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 const checks = [
   "Basura retirada",
   "Superficies desinfectadas",
-  "Cámara cerrada",
+  "Arcón frío cerrado",
   "Freidoras apagadas",
   "Productos almacenados",
   "Incidencias registradas",

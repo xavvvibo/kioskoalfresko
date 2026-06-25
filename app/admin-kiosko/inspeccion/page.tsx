@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { adminDocuments } from "@/lib/admin-kiosko/documents";
 import { getAdminDashboardSummary, getRecentCleaningRecords, getRecentGoodsReceptionRecords, getRecentIncidentRecords, getRecentTemperatureRecords } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../_components/AdminHeader";
 import { RecentRecords } from "../_components/RecentRecords";
@@ -24,9 +25,28 @@ const quickLinks = [
   ["Agua", "/admin-kiosko/agua"],
   ["Mantenimiento", "/admin-kiosko/mantenimiento"],
   ["Proveedores", "/admin-kiosko/proveedores"],
-  ["Alérgenos", "/admin-kiosko/documentacion/alergenos"],
+  ["Alérgenos", "/admin-kiosko/documentacion/plan-alergenos"],
   ["Fichas técnicas", "/admin-kiosko/documentacion/fichas-tecnicas"],
   ["Verificación anual", "/admin-kiosko/verificacion-anual"],
+  ["Cronología APPCC", "/admin-kiosko/cronologia"],
+  ["IA APPCC", "/admin-kiosko/ia"],
+];
+
+const essentialDocumentSlugs = [
+  "memoria-tecnico-sanitaria",
+  "buenas-practicas",
+  "libros-registro-appcc",
+  "registros-appcc",
+  "informe-mensual-appcc",
+  "incidencias-acciones-correctoras",
+  "temperaturas",
+  "limpieza",
+  "aceite-freidora",
+  "agua",
+  "mantenimiento",
+  "certificados-proveedores",
+  "plan-alergenos",
+  "fichas-tecnicas",
 ];
 
 export default async function ModoInspeccionPage() {
@@ -82,6 +102,30 @@ export default async function ModoInspeccionPage() {
               {quickLinks.map(([label, href]) => (
                 <Link key={label} href={href} className="rounded-[1.1rem] border border-white/10 bg-[#fffaf4] p-4 text-sm font-black text-stone-950">{label}</Link>
               ))}
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5">
+            <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Documentación esencial</h2>
+            <div className="mt-4 overflow-x-auto">
+              <table className="min-w-[42rem] w-full border-separate border-spacing-y-2 text-left text-sm">
+                <thead className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">
+                  <tr><th className="px-3 py-2">Documento</th><th className="px-3 py-2">Estado</th><th className="px-3 py-2">Acción</th></tr>
+                </thead>
+                <tbody>
+                  {essentialDocumentSlugs.map((slug) => {
+                    const document = adminDocuments.find((item) => item.slug === slug);
+                    if (!document) return null;
+                    return (
+                      <tr key={slug} className="bg-[#fffaf4] text-stone-950">
+                        <td className="rounded-l-2xl px-3 py-3 font-black">{document.title}</td>
+                        <td className="px-3 py-3">{document.status}</td>
+                        <td className="rounded-r-2xl px-3 py-3"><Link href={document.href} className="font-black text-[#d94b2b]">Ver</Link></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </section>
 

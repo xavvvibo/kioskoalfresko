@@ -3,7 +3,7 @@ import { AdminHeader } from "./AdminHeader";
 
 export function PendingDigitalizationPage({
   title,
-  description = "Pendiente de digitalización",
+  description = "Pendiente de subir PDF",
 }: {
   title: string;
   description?: string;

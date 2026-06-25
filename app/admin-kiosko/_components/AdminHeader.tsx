@@ -7,6 +7,7 @@ const adminNav = [
   ["Registros", "/admin-kiosko/registros"],
   ["Documentación", "/admin-kiosko/documentacion"],
   ["Calendario", "/admin-kiosko/calendario"],
+  ["Cronología", "/admin-kiosko/cronologia"],
   ["Temperaturas", "/admin-kiosko/temperaturas"],
   ["Limpieza", "/admin-kiosko/limpieza"],
   ["Aceite", "/admin-kiosko/aceite-freidora"],
@@ -17,6 +18,7 @@ const adminNav = [
   ["Mantenimiento", "/admin-kiosko/mantenimiento"],
   ["Agua", "/admin-kiosko/agua"],
   ["Verificación anual", "/admin-kiosko/verificacion-anual"],
+  ["IA APPCC", "/admin-kiosko/ia"],
 ];
 
 export function AdminHeader({ title, description }: { title: string; description: string }) {

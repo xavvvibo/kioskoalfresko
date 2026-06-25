@@ -243,7 +243,7 @@ export async function saveChecklistClosingAction(formData: FormData) {
   const checks = [
     "Basura retirada",
     "Superficies desinfectadas",
-    "Cámara cerrada",
+    "Arcón frío cerrado",
     "Freidoras apagadas",
     "Productos almacenados",
     "Incidencias registradas",
