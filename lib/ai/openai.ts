@@ -98,7 +98,7 @@ export async function createOpenAiResponseJson<T>({
   }
 
   const dataUrl = `data:${mimeType};base64,${base64}`;
-  console.info("[OCR]\nllamando a OpenAI...", { model: openai.model, mimeType });
+  console.info("[OCR OPENAI] calling model", { model: openai.model, mimeType });
 
   const response = await openai.client.responses.create(
     {
@@ -123,7 +123,7 @@ export async function createOpenAiResponseJson<T>({
     { timeout: 60_000 },
   ).catch(mapOpenAiError);
 
-  console.info("[OCR]\nrespuesta recibida", { id: response.id, model: response.model });
+  console.info("[OCR OPENAI] response received", { id: response.id, model: response.model });
 
   return parseOpenAiJson<T>(response.output_text);
 }
@@ -141,7 +141,7 @@ export async function createOpenAiTextResponseJson<T>({
     throw new OcrProcessingError("Missing OPENAI_API_KEY", "openai_config", 500);
   }
 
-  console.info("[OCR]\nllamando a OpenAI...", { model: openai.model, mimeType: "text/plain" });
+  console.info("[OCR OPENAI] calling model", { model: openai.model, mimeType: "text/plain" });
 
   const response = await openai.client.responses.create(
     {
@@ -163,7 +163,7 @@ export async function createOpenAiTextResponseJson<T>({
     { timeout: 60_000 },
   ).catch(mapOpenAiError);
 
-  console.info("[OCR]\nrespuesta recibida", { id: response.id, model: response.model });
+  console.info("[OCR OPENAI] response received", { id: response.id, model: response.model });
 
   return parseOpenAiJson<T>(response.output_text);
 }

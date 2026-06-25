@@ -1,41 +1,14 @@
 import "server-only";
 
-import { createOpenAiResponseJson, createOpenAiTextResponseJson, getOpenAiServerConfig } from "./openai";
+import { createOpenAiResponseJson, createOpenAiTextResponseJson, getOpenAiServerConfig, OcrProcessingError } from "./openai";
 import { appccDocumentClassifierSystemPrompt, buildDocumentClassifierPrompt, documentClassificationPrompt } from "./prompts";
 import type { AiDocumentClassification, AiDocumentInput, AiResult } from "./types";
-
-function classifyByName(input: AiDocumentInput): AiDocumentClassification {
-  const name = `${input.filename || ""} ${input.text || ""}`.toLowerCase();
-  const kind = name.includes("manipulador")
-    ? "certificado_manipulador"
-    : name.includes("ddd") || name.includes("desinsect") || name.includes("desrat")
-      ? "certificado_ddd"
-      : name.includes("memoria")
-        ? "memoria_sanitaria"
-        : name.includes("appcc")
-          ? "appcc"
-          : name.includes("factura")
-            ? "factura"
-            : name.includes("albar")
-              ? "albaran"
-              : name.includes("mantenimiento")
-                ? "mantenimiento"
-                : name.includes("inspecci")
-                  ? "inspeccion"
-                  : "otro";
-
-  return {
-    kind,
-    confidence: 0,
-    summary: "Clasificación documental preparada para conexión IA.",
-  };
-}
 
 export async function classifyDocument(input: AiDocumentInput & { base64?: string }): Promise<AiResult<AiDocumentClassification>> {
   const config = getOpenAiServerConfig();
 
   if (!config) {
-    return { ok: true, data: classifyByName(input) };
+    throw new OcrProcessingError("Missing OPENAI_API_KEY", "openai_config", 500);
   }
 
   if (input.text) {
@@ -48,7 +21,7 @@ export async function classifyDocument(input: AiDocumentInput & { base64?: strin
   }
 
   if (!input.base64 || !input.mimeType) {
-    return { ok: true, data: classifyByName(input) };
+    throw new OcrProcessingError("No OCR input available", "ocr_extraction", 400);
   }
 
   const response = await createOpenAiResponseJson<AiDocumentClassification>({

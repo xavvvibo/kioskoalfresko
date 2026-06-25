@@ -1,7 +1,6 @@
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { isAcceptedDirectImageMimeType, isAcceptedOcrMimeType, isPdfMimeType, runAppccOcr } from "@/lib/ai/ocr";
 import { OcrProcessingError, getOpenAiServerConfig } from "@/lib/ai/openai";
-import { assertPdfSize, renderPdfToImages } from "@/lib/ai/pdf";
 import type { OcrExtractorKind, OcrProgressEvent } from "@/lib/ai/types";
 
 export const runtime = "nodejs";
@@ -33,12 +32,37 @@ function encodeEvent(event: OcrProgressEvent) {
   return new TextEncoder().encode(`${JSON.stringify(event)}\n`);
 }
 
+function ndjsonError(error: string, status: number) {
+  logOcrError(error);
+  return new Response(encodeEvent({ type: "error", error }), {
+    status,
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
 function errorMessage(error: unknown) {
   if (error instanceof OcrProcessingError) return error.message;
   return error instanceof Error ? error.message : "Unexpected OCR server error";
 }
 
 export async function POST(request: Request) {
+  console.info("[OCR REQUEST]");
+  await requireAdminSession();
+
+  const config = getOpenAiServerConfig();
+  console.info("[OCR ENV]", {
+    hasOpenAIKey: Boolean(config?.apiKey),
+    model: config?.model || process.env.OPENAI_MODEL || "gpt-4.1-mini",
+    nodeVersion: process.version,
+  });
+
+  if (!config) {
+    return ndjsonError("Missing OPENAI_API_KEY", 500);
+  }
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       function send(event: OcrProgressEvent) {
@@ -46,13 +70,6 @@ export async function POST(request: Request) {
       }
 
       try {
-        await requireAdminSession();
-
-        const config = getOpenAiServerConfig();
-        if (!config) {
-          throw new OcrProcessingError("Missing OPENAI_API_KEY", "openai_config", 500);
-        }
-
         send({ type: "progress", message: "Subiendo...", progress: 5 });
 
         let formData: FormData;
@@ -71,7 +88,7 @@ export async function POST(request: Request) {
           throw new OcrProcessingError("No se ha recibido ningún archivo.", "file_reception", 400);
         }
 
-        console.info("[OCR]\narchivo recibido", {
+        console.info("[OCR FILE]", {
           name: file.name,
           type: file.type,
           size: file.size,
@@ -165,6 +182,15 @@ async function processPdf({
   kind: OcrExtractorKind;
   send: (event: OcrProgressEvent) => void;
 }) {
+  let pdf;
+  try {
+    pdf = await import("@/lib/ai/pdf");
+  } catch (error) {
+    console.error("[OCR ERROR]\nPDF OCR dependency import failed", error);
+    throw new OcrProcessingError("PDF OCR temporalmente no disponible en producción", "pdf_dependency", 503);
+  }
+
+  const { assertPdfSize, renderPdfToImages } = pdf;
   assertPdfSize(file.size);
   send({ type: "progress", message: "Convirtiendo PDF...", progress: 20 });
   console.info("[OCR]\nconvirtiendo PDF...");
