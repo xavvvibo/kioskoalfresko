@@ -90,7 +90,7 @@ insert into public.admin_temperature_records (
 select
   seed_rows.record_date,
   seed_rows.record_time,
-  'Javi',
+  'F. Javier Bocanegra Sanjuan',
   'correcto',
   'Registro de control diario.',
   'Carga histórica inicial',

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { getMonthlyAppccReport, type AppccRecordFilters } from "@/lib/admin-kiosko/database";
+import { signMonthlyAppccReportAction } from "../../actions";
 import { PrintButton } from "./PrintButton";
 
 export const metadata: Metadata = {
@@ -87,6 +88,7 @@ export default async function InformeMensualAppccPage({
   }
 
   const data = report.data;
+  const monthlySignature = data.signature;
   const signedRecords = data.records.filter((record) => record.signed_by || record.signed_at || record.signature_note);
   const temperatureValues = data.temperatures
     .map((record) => parseTemperature(record.main))
@@ -158,12 +160,20 @@ export default async function InformeMensualAppccPage({
         <header className="print-section min-h-[34rem] border-b border-stone-300 pb-10 print:min-h-[20rem]">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-[#d94b2b]">Panel interno · Control sanitario</p>
           <h1 className="mt-8 text-5xl font-black uppercase leading-[0.95] tracking-[-0.05em] md:text-7xl">
-            Kiosko Alfresko
+            KIOSKO ALFRESKO
           </h1>
           <h2 className="mt-5 text-3xl font-black uppercase tracking-[-0.04em] text-stone-800 md:text-5xl">
             Registro APPCC mensual
           </h2>
           <dl className="mt-10 grid gap-4 text-sm sm:grid-cols-2">
+            <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+              <dt className="text-[10px] font-black uppercase tracking-[0.16em] text-stone-500">Establecimiento</dt>
+              <dd className="mt-2 text-xl font-black uppercase">KIOSKO ALFRESKO</dd>
+            </div>
+            <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+              <dt className="text-[10px] font-black uppercase tracking-[0.16em] text-stone-500">Responsable</dt>
+              <dd className="mt-2 text-xl font-black">F. Javier Bocanegra Sanjuan · DNI 75.136.778-X</dd>
+            </div>
             <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
               <dt className="text-[10px] font-black uppercase tracking-[0.16em] text-stone-500">Periodo</dt>
               <dd className="mt-2 text-xl font-black uppercase">{data.periodLabel}</dd>
@@ -294,6 +304,18 @@ export default async function InformeMensualAppccPage({
         </section>
 
         <section className="print-section border-b border-stone-300 py-8">
+          <h2 className="text-2xl font-black uppercase tracking-[-0.03em]">Acciones correctoras</h2>
+          <div className="mt-5 grid gap-3">
+            {data.alerts.filter((alert) => alert.corrective_action).length ? data.alerts.filter((alert) => alert.corrective_action).map((alert) => (
+              <article key={`corrective-${alert.id}`} className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                <p className="text-sm font-black">{alert.equipment} · {alert.alert_date}</p>
+                <p className="mt-2 text-sm text-stone-700">{alert.corrective_action}</p>
+              </article>
+            )) : <p className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm text-stone-700">No constan acciones correctoras en el periodo.</p>}
+          </div>
+        </section>
+
+        <section className="print-section border-b border-stone-300 py-8">
           <h2 className="text-2xl font-black uppercase tracking-[-0.03em]">Declaración final</h2>
           <p className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 p-5 text-base font-semibold leading-7 text-stone-800">
             Se revisan los registros APPCC del periodo indicado y se consideran válidos para el control sanitario interno.
@@ -302,7 +324,14 @@ export default async function InformeMensualAppccPage({
 
         <section className="print-section py-8">
           <h2 className="text-2xl font-black uppercase tracking-[-0.03em]">Firma responsable</h2>
-          {signedRecords.length ? (
+          {monthlySignature ? (
+            <div className="mt-4 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950">
+              <p className="text-[11px] font-black uppercase tracking-[0.16em]">INFORME FIRMADO</p>
+              <p className="mt-2 text-sm font-black">{monthlySignature.signed_by}</p>
+              <p className="mt-1 text-sm">{monthlySignature.signed_at}</p>
+              <p className="mt-2 text-sm">{monthlySignature.signature_note || "Sin observaciones de firma."}</p>
+            </div>
+          ) : signedRecords.length ? (
             <div className="mt-4 grid gap-3">
               {signedRecords.map((record) => (
                 <article key={`signature-${record.type}-${record.id}`} className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
@@ -312,22 +341,33 @@ export default async function InformeMensualAppccPage({
               ))}
             </div>
           ) : (
-            <div className="mt-6 grid gap-8 sm:grid-cols-3">
-              <div className="border-b border-stone-400 pb-10">
-                <p className="text-sm font-black uppercase tracking-[0.12em] text-stone-700">Responsable:</p>
+            <>
+              <form action={signMonthlyAppccReportAction} className="mt-5 grid gap-4 rounded-2xl border border-stone-200 bg-stone-50 p-4 print:hidden">
+                <input type="hidden" name="year" value={data.year} />
+                <input type="hidden" name="month" value={data.month} />
+                <label className="grid gap-2 text-sm font-semibold">
+                  Responsable
+                  <input name="signed_by" defaultValue="F. Javier Bocanegra Sanjuan" className="rounded-xl border border-stone-300 px-4 py-3" />
+                </label>
+                <label className="grid gap-2 text-sm font-semibold">
+                  Observaciones de firma
+                  <textarea name="signature_note" rows={3} className="rounded-xl border border-stone-300 px-4 py-3" />
+                </label>
+                <button type="submit" className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">
+                  Firmar informe
+                </button>
+              </form>
+              <div className="mt-6 grid gap-8 sm:grid-cols-3">
+                <div className="border-b border-stone-400 pb-10"><p className="text-sm font-black uppercase tracking-[0.12em] text-stone-700">Responsable:</p></div>
+                <div className="border-b border-stone-400 pb-10"><p className="text-sm font-black uppercase tracking-[0.12em] text-stone-700">Fecha:</p></div>
+                <div className="border-b border-stone-400 pb-10"><p className="text-sm font-black uppercase tracking-[0.12em] text-stone-700">Firma:</p></div>
               </div>
-              <div className="border-b border-stone-400 pb-10">
-                <p className="text-sm font-black uppercase tracking-[0.12em] text-stone-700">Fecha:</p>
-              </div>
-              <div className="border-b border-stone-400 pb-10">
-                <p className="text-sm font-black uppercase tracking-[0.12em] text-stone-700">Firma:</p>
-              </div>
-            </div>
+            </>
           )}
         </section>
 
         <footer className="border-t border-stone-300 pt-5 text-xs text-stone-500">
-          Documento generado desde panel interno Kiosko Alfresko
+          Documento generado desde panel interno KIOSKO ALFRESKO · Responsable: F. Javier Bocanegra Sanjuan · DNI 75.136.778-X
         </footer>
       </section>
     </main>

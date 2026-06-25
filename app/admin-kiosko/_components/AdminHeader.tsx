@@ -10,7 +10,7 @@ export function AdminHeader({ title, description }: { title: string; description
             <div className="inline-flex rounded-full border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#f2c6bb]">
               Zona interna · Acceso solo personal autorizado
             </div>
-            <p className="mt-8 text-xs font-black uppercase tracking-[0.22em] text-[#d94b2b]">Kiosko Alfresko</p>
+            <p className="mt-8 text-xs font-black uppercase tracking-[0.22em] text-[#d94b2b]">KIOSKO ALFRESKO</p>
             <h1 className="mt-3 max-w-3xl text-[2.4rem] font-black uppercase leading-[0.92] tracking-[-0.05em] text-[#fff8ef] sm:text-[3.2rem] md:text-[4.4rem]">
               {title}
             </h1>

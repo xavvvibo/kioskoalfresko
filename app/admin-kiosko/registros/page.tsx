@@ -31,6 +31,50 @@ function getMadridMonthDefaults() {
   };
 }
 
+function getMadridToday() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function shiftDate(date: string, days: number) {
+  const value = new Date(`${date}T00:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
+function buildQuickHref(range: "today" | "week" | "month" | "year") {
+  const today = getMadridToday();
+  const year = today.slice(0, 4);
+  const month = today.slice(5, 7);
+  const params = new URLSearchParams({ type: "todos" });
+
+  if (range === "today") {
+    params.set("dateFrom", today);
+    params.set("dateTo", today);
+  }
+
+  if (range === "week") {
+    params.set("dateFrom", shiftDate(today, -6));
+    params.set("dateTo", today);
+  }
+
+  if (range === "month") {
+    params.set("dateFrom", `${year}-${month}-01`);
+    params.set("dateTo", today);
+  }
+
+  if (range === "year") {
+    params.set("dateFrom", `${year}-01-01`);
+    params.set("dateTo", today);
+  }
+
+  return `/admin-kiosko/registros?${params.toString()}`;
+}
+
 function parseFilters(params?: { [key: string]: string | string[] | undefined }): AppccRecordFilters {
   const value = (key: string) => {
     const raw = params?.[key];
@@ -134,6 +178,18 @@ export default async function RegistrosAppccPage({
             </div>
 
             <form className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+              <div className="flex flex-wrap gap-2 md:col-span-2 xl:col-span-6">
+                {[
+                  ["Hoy", buildQuickHref("today")],
+                  ["Semana", buildQuickHref("week")],
+                  ["Mes", buildQuickHref("month")],
+                  ["Año", buildQuickHref("year")],
+                ].map(([label, href]) => (
+                  <a key={label} href={href} className="rounded-full border border-white/12 bg-white/6 px-4 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-white">
+                    {label}
+                  </a>
+                ))}
+              </div>
               <label className="grid gap-2 text-sm font-semibold text-stone-200">
                 Tipo
                 <select name="type" defaultValue={filters.type || "todos"} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30">
@@ -165,7 +221,7 @@ export default async function RegistrosAppccPage({
               </label>
               <label className="grid gap-2 text-sm font-semibold text-stone-200">
                 Responsable
-                <input name="responsible" defaultValue={filters.responsible} placeholder="Javi..." className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+                <input name="responsible" defaultValue={filters.responsible} placeholder="F. Javier Bocanegra Sanjuan" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
               </label>
               <label className="grid gap-2 text-sm font-semibold text-stone-200">
                 Mes informe

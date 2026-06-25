@@ -32,6 +32,16 @@ export type EquipmentAlert = {
   corrective_action: string | null;
 };
 
+export type MonthlySignature = {
+  id: string;
+  year: number;
+  month: number;
+  signed_by: string;
+  signed_at: string;
+  signature_note: string | null;
+  created_at: string;
+};
+
 export type DashboardTemperatureRecord = {
   id: string;
   equipment: string;
@@ -51,6 +61,10 @@ export type AdminDashboardSummary = {
   pendingAlerts: number;
   inProgressAlerts: number;
   resolvedAlertsThisMonth: number;
+  openIncidents: number;
+  latestChecklistOpening: RecentAdminRecord | null;
+  latestChecklistClosing: RecentAdminRecord | null;
+  latestMonthlySignature: MonthlySignature | null;
   lastTemperatureRecord: DashboardTemperatureRecord | null;
   latestByEquipment: DashboardTemperatureRecord[];
   openAlerts: EquipmentAlert[];
@@ -111,6 +125,7 @@ export type MonthlyAppccReport = {
   records: AppccRecord[];
   temperatures: AppccRecord[];
   alerts: EquipmentAlert[];
+  signature: MonthlySignature | null;
   summary: {
     totalRecords: number;
     correctRecords: number;
@@ -163,6 +178,85 @@ type ChecklistRecordInput = CommonRecordInput & {
   checklist_type: string;
   items?: string[];
   completed?: boolean;
+};
+
+type MonthlySignatureInput = {
+  year: number;
+  month: number;
+  signed_by: string;
+  signature_note?: string;
+};
+
+type InspectionRecordInput = {
+  inspection_date: string;
+  inspector?: string;
+  organization?: string;
+  result?: string;
+  observations?: string;
+  requirements?: string;
+  deadline?: string;
+  status?: string;
+  actions_done?: string;
+  responsible?: string;
+  documentation?: string;
+};
+
+type SupplierRecordInput = {
+  supplier: string;
+  cif?: string;
+  phone?: string;
+  email?: string;
+  category?: string;
+  certificates?: string;
+  observations?: string;
+};
+
+type EquipmentAssetInput = {
+  name: string;
+  brand?: string;
+  model?: string;
+  serial_number?: string;
+  purchase_date?: string;
+  installation_date?: string;
+  location?: string;
+  last_maintenance?: string;
+  next_maintenance?: string;
+  fault_history?: string;
+  status?: string;
+};
+
+type MaintenanceRecordInput = {
+  record_date: string;
+  equipment?: string;
+  intervention?: string;
+  company?: string;
+  invoice?: string;
+  observations?: string;
+  responsible?: string;
+};
+
+type WaterRecordInput = {
+  record_date: string;
+  color?: string;
+  smell?: string;
+  taste?: string;
+  chlorine?: string;
+  observations?: string;
+  responsible?: string;
+};
+
+type AnnualVerificationInput = {
+  record_date: string;
+  appcc_reviewed?: boolean;
+  health_memory_reviewed?: boolean;
+  allergens_reviewed?: boolean;
+  suppliers_reviewed?: boolean;
+  cleaning_products_reviewed?: boolean;
+  equipment_reviewed?: boolean;
+  handler_training?: boolean;
+  documentation_complete?: boolean;
+  observations?: string;
+  responsible?: string;
 };
 
 function getSupabaseConfig() {
@@ -551,6 +645,156 @@ export async function createChecklistRecord(data: ChecklistRecordInput) {
   });
 }
 
+export async function createMonthlySignature(data: MonthlySignatureInput) {
+  if (!Number.isFinite(data.year) || !Number.isFinite(data.month) || !hasRequiredText(data.signed_by)) {
+    return { ok: false, error: "Faltan campos obligatorios." };
+  }
+
+  const existing = await getMonthlySignature(data.year, data.month);
+  if (!existing.ok) return existing;
+  if (existing.data) {
+    return { ok: false, error: "Este informe mensual ya está firmado." };
+  }
+
+  return insertRecord("admin_appcc_monthly_signatures", {
+    year: data.year,
+    month: data.month,
+    signed_by: data.signed_by.trim(),
+    signed_at: new Date().toISOString(),
+    signature_note: cleanText(data.signature_note),
+  });
+}
+
+export async function getMonthlySignature(year: number, month: number): Promise<DbResult<MonthlySignature | null>> {
+  const result = await getRows<MonthlySignature>(
+    "admin_appcc_monthly_signatures",
+    `?select=id,year,month,signed_by,signed_at,signature_note,created_at&year=eq.${year}&month=eq.${month}&limit=1`,
+  );
+
+  if (!result.ok) return result;
+
+  return { ok: true, data: result.data[0] || null };
+}
+
+export async function getLatestMonthlySignature(): Promise<DbResult<MonthlySignature | null>> {
+  const result = await getRows<MonthlySignature>(
+    "admin_appcc_monthly_signatures",
+    "?select=id,year,month,signed_by,signed_at,signature_note,created_at&order=year.desc,month.desc,created_at.desc&limit=1",
+  );
+
+  if (!result.ok) return result;
+
+  return { ok: true, data: result.data[0] || null };
+}
+
+export async function createInspectionRecord(data: InspectionRecordInput) {
+  if (!hasRequiredText(data.inspection_date)) {
+    return { ok: false, error: "La fecha de inspección es obligatoria." };
+  }
+
+  return insertRecord("admin_inspection_records", {
+    inspection_date: data.inspection_date,
+    inspector: cleanText(data.inspector),
+    organization: cleanText(data.organization),
+    result: cleanText(data.result),
+    observations: cleanText(data.observations),
+    requirements: cleanText(data.requirements),
+    deadline: cleanText(data.deadline),
+    status: cleanText(data.status) || "pendiente",
+    actions_done: cleanText(data.actions_done),
+    responsible: cleanText(data.responsible),
+    documentation: cleanText(data.documentation),
+  });
+}
+
+export async function createSupplierRecord(data: SupplierRecordInput) {
+  if (!hasRequiredText(data.supplier)) {
+    return { ok: false, error: "El proveedor es obligatorio." };
+  }
+
+  return insertRecord("admin_supplier_records", {
+    supplier: data.supplier.trim(),
+    cif: cleanText(data.cif),
+    phone: cleanText(data.phone),
+    email: cleanText(data.email),
+    category: cleanText(data.category),
+    certificates: cleanText(data.certificates),
+    observations: cleanText(data.observations),
+  });
+}
+
+export async function createEquipmentAsset(data: EquipmentAssetInput) {
+  if (!hasRequiredText(data.name)) {
+    return { ok: false, error: "El nombre del equipo es obligatorio." };
+  }
+
+  return insertRecord("admin_equipment_assets", {
+    name: data.name.trim(),
+    brand: cleanText(data.brand),
+    model: cleanText(data.model),
+    serial_number: cleanText(data.serial_number),
+    purchase_date: cleanText(data.purchase_date),
+    installation_date: cleanText(data.installation_date),
+    location: cleanText(data.location),
+    last_maintenance: cleanText(data.last_maintenance),
+    next_maintenance: cleanText(data.next_maintenance),
+    fault_history: cleanText(data.fault_history),
+    status: cleanText(data.status) || "operativo",
+  });
+}
+
+export async function createMaintenanceRecord(data: MaintenanceRecordInput) {
+  if (!hasRequiredText(data.record_date)) {
+    return { ok: false, error: "La fecha es obligatoria." };
+  }
+
+  return insertRecord("admin_maintenance_records", {
+    record_date: data.record_date,
+    equipment: cleanText(data.equipment),
+    intervention: cleanText(data.intervention),
+    company: cleanText(data.company),
+    invoice: cleanText(data.invoice),
+    observations: cleanText(data.observations),
+    responsible: cleanText(data.responsible),
+  });
+}
+
+export async function createWaterRecord(data: WaterRecordInput) {
+  if (!hasRequiredText(data.record_date)) {
+    return { ok: false, error: "La fecha es obligatoria." };
+  }
+
+  return insertRecord("admin_water_records", {
+    record_date: data.record_date,
+    color: cleanText(data.color),
+    smell: cleanText(data.smell),
+    taste: cleanText(data.taste),
+    chlorine: cleanText(data.chlorine),
+    observations: cleanText(data.observations),
+    responsible: cleanText(data.responsible),
+  });
+}
+
+export async function createAnnualVerification(data: AnnualVerificationInput) {
+  if (!hasRequiredText(data.record_date)) {
+    return { ok: false, error: "La fecha es obligatoria." };
+  }
+
+  return insertRecord("admin_annual_verification_records", {
+    record_date: data.record_date,
+    appcc_reviewed: Boolean(data.appcc_reviewed),
+    health_memory_reviewed: Boolean(data.health_memory_reviewed),
+    allergens_reviewed: Boolean(data.allergens_reviewed),
+    suppliers_reviewed: Boolean(data.suppliers_reviewed),
+    cleaning_products_reviewed: Boolean(data.cleaning_products_reviewed),
+    equipment_reviewed: Boolean(data.equipment_reviewed),
+    handler_training: Boolean(data.handler_training),
+    documentation_complete: Boolean(data.documentation_complete),
+    observations: cleanText(data.observations),
+    responsible: cleanText(data.responsible),
+  });
+}
+
 export async function getRecentTemperatureRecords(): Promise<DbResult<RecentAdminRecord[]>> {
   const result = await getRecentRows<RecentAdminRecord & { equipment: string; temperature: number }>(
     "admin_temperature_records",
@@ -613,6 +857,10 @@ export async function getAdminDashboardSummary(): Promise<DbResult<AdminDashboar
     lastTemperature,
     recentTemperatures,
     openAlerts,
+    openIncidents,
+    latestOpeningChecklist,
+    latestClosingChecklist,
+    latestSignature,
   ] = await Promise.all([
     getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&limit=1000"),
     getRows<DashboardTemperatureRecord>("admin_temperature_records", `?select=id,equipment,record_date,record_time,temperature,status,responsible&record_date=eq.${today}&limit=1000`),
@@ -624,9 +872,13 @@ export async function getAdminDashboardSummary(): Promise<DbResult<AdminDashboar
     getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&order=record_date.desc,record_time.desc,created_at.desc&limit=100"),
     getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&order=record_date.desc,record_time.desc,created_at.desc&limit=100"),
     getOpenEquipmentAlerts(),
+    getRows<{ id: string }>("admin_incident_records", "?select=id&resolved=eq.false&limit=1000"),
+    getLatestChecklistByType("Apertura APPCC"),
+    getLatestChecklistByType("Cierre APPCC"),
+    getLatestMonthlySignature(),
   ]);
 
-  const results = [allTemperatures, todayTemperatures, reviewingTemperatures, incidentTemperatures, pendingAlerts, inProgressAlerts, resolvedAlertsThisMonth, lastTemperature, recentTemperatures, openAlerts];
+  const results = [allTemperatures, todayTemperatures, reviewingTemperatures, incidentTemperatures, pendingAlerts, inProgressAlerts, resolvedAlertsThisMonth, lastTemperature, recentTemperatures, openAlerts, openIncidents, latestOpeningChecklist, latestClosingChecklist, latestSignature];
   const failed = results.find((result) => !result.ok);
   if (failed && !failed.ok) {
     return failed;
@@ -667,6 +919,10 @@ export async function getAdminDashboardSummary(): Promise<DbResult<AdminDashboar
       pendingAlerts: activePendingAlerts.length,
       inProgressAlerts: activeInProgressAlerts.length,
       resolvedAlertsThisMonth: activeResolvedAlertsThisMonth.length,
+      openIncidents: openIncidents.ok ? openIncidents.data.length : 0,
+      latestChecklistOpening: latestOpeningChecklist.ok ? latestOpeningChecklist.data : null,
+      latestChecklistClosing: latestClosingChecklist.ok ? latestClosingChecklist.data : null,
+      latestMonthlySignature: latestSignature.ok ? latestSignature.data : null,
       lastTemperatureRecord: lastActiveTemperature,
       latestByEquipment,
       openAlerts: openAlerts.ok ? openAlerts.data : [],
@@ -773,6 +1029,152 @@ export async function getRecentChecklistRecords(): Promise<DbResult<RecentAdminR
     data: result.data.map((record) => ({
       ...record,
       main: `${record.checklist_type} · ${record.completed ? "Completado" : "Pendiente"}`,
+    })),
+  };
+}
+
+export async function getLatestChecklistByType(type: string): Promise<DbResult<RecentAdminRecord | null>> {
+  const result = await getRows<RecentAdminRecord & { checklist_type: string; completed: boolean }>(
+    "admin_checklist_records",
+    `?select=id,record_date,record_time,responsible,status,checklist_type,completed&checklist_type=eq.${encodeURIComponent(type)}&order=record_date.desc,record_time.desc,created_at.desc&limit=1`,
+  );
+
+  if (!result.ok) return result;
+
+  const record = result.data[0];
+  return {
+    ok: true,
+    data: record
+      ? {
+          ...record,
+          main: `${record.checklist_type} · ${record.completed ? "Completado" : "Pendiente"}`,
+        }
+      : null,
+  };
+}
+
+export async function getRecentInspectionRecords(): Promise<DbResult<RecentAdminRecord[]>> {
+  const result = await getRows<RecentAdminRecord & { inspection_date: string; inspector: string | null; result: string | null }>(
+    "admin_inspection_records",
+    "?select=id,inspection_date,inspector,result,status,responsible&order=inspection_date.desc,created_at.desc&limit=10",
+  );
+
+  if (!result.ok) return result;
+
+  return {
+    ok: true,
+    data: result.data.map((record) => ({
+      id: record.id,
+      record_date: record.inspection_date,
+      record_time: null,
+      responsible: record.responsible,
+      status: record.status,
+      main: `${record.inspector || "Inspección"}${record.result ? ` · ${record.result}` : ""}`,
+    })),
+  };
+}
+
+export async function getRecentSupplierRecords(): Promise<DbResult<RecentAdminRecord[]>> {
+  const result = await getRows<{ id: string; supplier: string; category: string | null; status: string | null; created_at: string }>(
+    "admin_supplier_records",
+    "?select=id,supplier,category,status,created_at&order=created_at.desc&limit=10",
+  );
+
+  if (!result.ok) return result;
+
+  return {
+    ok: true,
+    data: result.data.map((record) => ({
+      id: record.id,
+      record_date: record.created_at?.slice(0, 10) || "",
+      record_time: null,
+      responsible: null,
+      status: record.status || "activo",
+      main: `${record.supplier}${record.category ? ` · ${record.category}` : ""}`,
+    })),
+  };
+}
+
+export async function getRecentEquipmentAssets(): Promise<DbResult<RecentAdminRecord[]>> {
+  const result = await getRows<{ id: string; name: string; location: string | null; status: string | null; created_at: string }>(
+    "admin_equipment_assets",
+    "?select=id,name,location,status,created_at&order=created_at.desc&limit=10",
+  );
+
+  if (!result.ok) return result;
+
+  return {
+    ok: true,
+    data: result.data.map((record) => ({
+      id: record.id,
+      record_date: record.created_at?.slice(0, 10) || "",
+      record_time: null,
+      responsible: null,
+      status: record.status || "operativo",
+      main: `${record.name}${record.location ? ` · ${record.location}` : ""}`,
+    })),
+  };
+}
+
+export async function getRecentMaintenanceRecords(): Promise<DbResult<RecentAdminRecord[]>> {
+  const result = await getRows<RecentAdminRecord & { equipment: string | null; intervention: string | null }>(
+    "admin_maintenance_records",
+    "?select=id,record_date,equipment,intervention,responsible&order=record_date.desc,created_at.desc&limit=10",
+  );
+
+  if (!result.ok) return result;
+
+  return {
+    ok: true,
+    data: result.data.map((record) => ({
+      id: record.id,
+      record_date: record.record_date,
+      record_time: null,
+      responsible: record.responsible,
+      status: null,
+      main: `${record.equipment || "Equipo"}${record.intervention ? ` · ${record.intervention}` : ""}`,
+    })),
+  };
+}
+
+export async function getRecentWaterRecords(): Promise<DbResult<RecentAdminRecord[]>> {
+  const result = await getRows<RecentAdminRecord & { color: string | null; smell: string | null; taste: string | null }>(
+    "admin_water_records",
+    "?select=id,record_date,color,smell,taste,responsible&order=record_date.desc,created_at.desc&limit=10",
+  );
+
+  if (!result.ok) return result;
+
+  return {
+    ok: true,
+    data: result.data.map((record) => ({
+      id: record.id,
+      record_date: record.record_date,
+      record_time: null,
+      responsible: record.responsible,
+      status: null,
+      main: `Agua · color ${record.color || "-"} · olor ${record.smell || "-"} · sabor ${record.taste || "-"}`,
+    })),
+  };
+}
+
+export async function getRecentAnnualVerificationRecords(): Promise<DbResult<RecentAdminRecord[]>> {
+  const result = await getRows<RecentAdminRecord & { documentation_complete: boolean }>(
+    "admin_annual_verification_records",
+    "?select=id,record_date,documentation_complete,responsible&order=record_date.desc,created_at.desc&limit=10",
+  );
+
+  if (!result.ok) return result;
+
+  return {
+    ok: true,
+    data: result.data.map((record) => ({
+      id: record.id,
+      record_date: record.record_date,
+      record_time: null,
+      responsible: record.responsible,
+      status: record.documentation_complete ? "completo" : "pendiente",
+      main: "Verificación anual APPCC",
     })),
   };
 }
@@ -1018,13 +1420,14 @@ export async function getMonthlyAppccReport(filters: AppccRecordFilters & { year
   const { start } = getMonthRange(year, month);
   const dateTo = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
 
-  const [records, alerts] = await Promise.all([
+  const [records, alerts, signature] = await Promise.all([
     getAppccRecords({
       ...filters,
       dateFrom: start,
       dateTo,
     }),
     getEquipmentAlertsByMonth(year, month),
+    getMonthlySignature(year, month),
   ]);
 
   if (!records.ok) {
@@ -1033,6 +1436,10 @@ export async function getMonthlyAppccReport(filters: AppccRecordFilters & { year
 
   if (!alerts.ok) {
     return alerts;
+  }
+
+  if (!signature.ok) {
+    return signature;
   }
 
   const filteredAlerts = alerts.data
@@ -1061,6 +1468,7 @@ export async function getMonthlyAppccReport(filters: AppccRecordFilters & { year
       records: records.data,
       temperatures: records.data.filter((record) => record.type === "temperaturas"),
       alerts: filteredAlerts,
+      signature: signature.data,
       summary: {
         totalRecords: records.data.length,
         correctRecords: records.data.filter((record) => record.status === "correcto").length,

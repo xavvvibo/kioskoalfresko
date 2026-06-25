@@ -302,6 +302,18 @@ export const internalAdminSections: Array<{ title: string; description: string; 
     description: "Búsqueda, filtros y exportación de registros sanitarios.",
     items: [
       {
+        title: "Centro documental APPCC",
+        description: "Documentación oficial, registros, planes y protocolos.",
+        href: "/admin-kiosko/documentacion",
+        category: "documentacion",
+      },
+      {
+        title: "Calendario APPCC",
+        description: "Vista mensual de registros, pendientes e incidencias.",
+        href: "/admin-kiosko/calendario",
+        category: "documentacion",
+      },
+      {
         title: "Consultar y descargar registros",
         description: "Filtra registros APPCC y descarga CSV para revisión interna.",
         href: "/admin-kiosko/registros",
@@ -358,13 +370,13 @@ export const internalAdminSections: Array<{ title: string; description: string; 
       {
         title: "Apertura de cocina",
         description: "Preparación inicial, equipos y mise en place.",
-        href: "/admin-kiosko/checklists?tipo=apertura-cocina",
+        href: "/admin-kiosko/checklists/apertura",
         category: "operativo",
       },
       {
         title: "Cierre de cocina",
         description: "Limpieza, apagado y control final de equipos.",
-        href: "/admin-kiosko/checklists?tipo=cierre-cocina",
+        href: "/admin-kiosko/checklists/cierre",
         category: "operativo",
       },
       {
@@ -418,13 +430,13 @@ export const internalAdminSections: Array<{ title: string; description: string; 
       {
         title: "Proveedores",
         description: "Contactos, datos y documentación de proveedores.",
-        href: "/admin-kiosko/checklists?documento=proveedores",
+        href: "/admin-kiosko/proveedores",
         category: "documentacion",
       },
       {
         title: "Mantenimiento de maquinaria",
         description: "Revisiones, incidencias y mantenimiento preventivo.",
-        href: "/admin-kiosko/checklists?documento=mantenimiento",
+        href: "/admin-kiosko/mantenimiento",
         category: "documentacion",
       },
       {
@@ -433,6 +445,16 @@ export const internalAdminSections: Array<{ title: string; description: string; 
         href: "/admin-kiosko/checklists?documento=contratos",
         category: "documentacion",
       },
+    ],
+  },
+  {
+    title: "Gestión sanitaria avanzada",
+    description: "Secciones preparadas para inspecciones y verificación documental.",
+    items: [
+      { title: "Inspecciones", description: "Histórico, requerimientos y acciones realizadas.", href: "/admin-kiosko/inspecciones", category: "sanitario" },
+      { title: "Equipos", description: "Fichas de maquinaria y estado de mantenimiento.", href: "/admin-kiosko/equipos", category: "operativo" },
+      { title: "Agua", description: "Control de color, olor, sabor y cloro si aplica.", href: "/admin-kiosko/agua", category: "sanitario" },
+      { title: "Verificación anual", description: "Checklist anual de documentación y APPCC.", href: "/admin-kiosko/verificacion-anual", category: "documentacion" },
     ],
   },
 ];

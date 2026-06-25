@@ -6,8 +6,15 @@ import { clearAdminSession, createAdminSession, isCorrectAdminPassword, requireA
 import {
   createChecklistRecord,
   createCleaningRecord,
+  createAnnualVerification,
+  createEquipmentAsset,
   createFryerOilRecord,
   createGoodsReceptionRecord,
+  createInspectionRecord,
+  createMaintenanceRecord,
+  createMonthlySignature,
+  createSupplierRecord,
+  createWaterRecord,
   createIncidentRecord,
   createTemperatureRecord,
   updateEquipmentAlertStatus,
@@ -40,6 +47,10 @@ function optionalNumber(formData: FormData, key: string) {
 
 function checkbox(formData: FormData, key: string) {
   return formData.get(key) === "on";
+}
+
+function checkboxValue(formData: FormData, key: string) {
+  return formData.get(key) === "on" || formData.get(key) === "true";
 }
 
 function redirectAfterSave(path: string, result: { ok: true } | { ok: false; error: string }): never {
@@ -176,4 +187,186 @@ export async function saveChecklistRecordAction(formData: FormData) {
   });
 
   redirectAfterSave("/admin-kiosko/checklists", result);
+}
+
+export async function signMonthlyAppccReportAction(formData: FormData) {
+  await requireAdminSession();
+
+  const year = Number(text(formData, "year"));
+  const month = Number(text(formData, "month"));
+  const result = await createMonthlySignature({
+    year,
+    month,
+    signed_by: text(formData, "signed_by"),
+    signature_note: text(formData, "signature_note"),
+  });
+
+  revalidatePath("/admin-kiosko/registros/informe");
+  if (result.ok) {
+    redirect(`/admin-kiosko/registros/informe?year=${year}&month=${String(month).padStart(2, "0")}&saved=1`);
+  }
+
+  const error = encodeURIComponent(result.error.slice(0, 240));
+  redirect(`/admin-kiosko/registros/informe?year=${year}&month=${String(month).padStart(2, "0")}&error=${error}`);
+}
+
+export async function saveChecklistOpeningAction(formData: FormData) {
+  await requireAdminSession();
+
+  const checks = [
+    "Cámara refrigeración correcta",
+    "Congelador correcto",
+    "Lavamanos operativo",
+    "Productos etiquetados",
+    "Limpieza realizada",
+    "Termómetros revisados",
+    "Sin incidencias",
+  ];
+  const items = checks.filter((_, index) => checkboxValue(formData, `check_${index}`));
+  const result = await createChecklistRecord({
+    record_date: text(formData, "record_date"),
+    record_time: text(formData, "record_time"),
+    checklist_type: "Apertura APPCC",
+    items,
+    completed: items.length === checks.length,
+    status: items.length === checks.length ? "correcto" : "revisar",
+    observations: text(formData, "observations"),
+    responsible: text(formData, "responsible"),
+  });
+
+  redirectAfterSave("/admin-kiosko/checklists/apertura", result);
+}
+
+export async function saveChecklistClosingAction(formData: FormData) {
+  await requireAdminSession();
+
+  const checks = [
+    "Basura retirada",
+    "Superficies desinfectadas",
+    "Cámara cerrada",
+    "Freidoras apagadas",
+    "Productos almacenados",
+    "Incidencias registradas",
+  ];
+  const items = checks.filter((_, index) => checkboxValue(formData, `check_${index}`));
+  const result = await createChecklistRecord({
+    record_date: text(formData, "record_date"),
+    record_time: text(formData, "record_time"),
+    checklist_type: "Cierre APPCC",
+    items,
+    completed: items.length === checks.length,
+    status: items.length === checks.length ? "correcto" : "revisar",
+    observations: text(formData, "observations"),
+    responsible: text(formData, "responsible"),
+  });
+
+  redirectAfterSave("/admin-kiosko/checklists/cierre", result);
+}
+
+export async function saveInspectionRecordAction(formData: FormData) {
+  await requireAdminSession();
+
+  const result = await createInspectionRecord({
+    inspection_date: text(formData, "inspection_date"),
+    inspector: text(formData, "inspector"),
+    organization: text(formData, "organization"),
+    result: text(formData, "result"),
+    observations: text(formData, "observations"),
+    requirements: text(formData, "requirements"),
+    deadline: text(formData, "deadline"),
+    status: text(formData, "status"),
+    actions_done: text(formData, "actions_done"),
+    responsible: text(formData, "responsible"),
+    documentation: text(formData, "documentation"),
+  });
+
+  redirectAfterSave("/admin-kiosko/inspecciones", result);
+}
+
+export async function saveSupplierRecordAction(formData: FormData) {
+  await requireAdminSession();
+
+  const result = await createSupplierRecord({
+    supplier: text(formData, "supplier"),
+    cif: text(formData, "cif"),
+    phone: text(formData, "phone"),
+    email: text(formData, "email"),
+    category: text(formData, "category"),
+    certificates: text(formData, "certificates"),
+    observations: text(formData, "observations"),
+  });
+
+  redirectAfterSave("/admin-kiosko/proveedores", result);
+}
+
+export async function saveEquipmentAssetAction(formData: FormData) {
+  await requireAdminSession();
+
+  const result = await createEquipmentAsset({
+    name: text(formData, "name"),
+    brand: text(formData, "brand"),
+    model: text(formData, "model"),
+    serial_number: text(formData, "serial_number"),
+    purchase_date: text(formData, "purchase_date"),
+    installation_date: text(formData, "installation_date"),
+    location: text(formData, "location"),
+    last_maintenance: text(formData, "last_maintenance"),
+    next_maintenance: text(formData, "next_maintenance"),
+    fault_history: text(formData, "fault_history"),
+    status: text(formData, "status"),
+  });
+
+  redirectAfterSave("/admin-kiosko/equipos", result);
+}
+
+export async function saveMaintenanceRecordAction(formData: FormData) {
+  await requireAdminSession();
+
+  const result = await createMaintenanceRecord({
+    record_date: text(formData, "record_date"),
+    equipment: text(formData, "equipment"),
+    intervention: text(formData, "intervention"),
+    company: text(formData, "company"),
+    invoice: text(formData, "invoice"),
+    observations: text(formData, "observations"),
+    responsible: text(formData, "responsible"),
+  });
+
+  redirectAfterSave("/admin-kiosko/mantenimiento", result);
+}
+
+export async function saveWaterRecordAction(formData: FormData) {
+  await requireAdminSession();
+
+  const result = await createWaterRecord({
+    record_date: text(formData, "record_date"),
+    color: text(formData, "color"),
+    smell: text(formData, "smell"),
+    taste: text(formData, "taste"),
+    chlorine: text(formData, "chlorine"),
+    observations: text(formData, "observations"),
+    responsible: text(formData, "responsible"),
+  });
+
+  redirectAfterSave("/admin-kiosko/agua", result);
+}
+
+export async function saveAnnualVerificationAction(formData: FormData) {
+  await requireAdminSession();
+
+  const result = await createAnnualVerification({
+    record_date: text(formData, "record_date"),
+    appcc_reviewed: checkboxValue(formData, "appcc_reviewed"),
+    health_memory_reviewed: checkboxValue(formData, "health_memory_reviewed"),
+    allergens_reviewed: checkboxValue(formData, "allergens_reviewed"),
+    suppliers_reviewed: checkboxValue(formData, "suppliers_reviewed"),
+    cleaning_products_reviewed: checkboxValue(formData, "cleaning_products_reviewed"),
+    equipment_reviewed: checkboxValue(formData, "equipment_reviewed"),
+    handler_training: checkboxValue(formData, "handler_training"),
+    documentation_complete: checkboxValue(formData, "documentation_complete"),
+    observations: text(formData, "observations"),
+    responsible: text(formData, "responsible"),
+  });
+
+  redirectAfterSave("/admin-kiosko/verificacion-anual", result);
 }

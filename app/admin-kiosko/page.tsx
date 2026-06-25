@@ -37,11 +37,34 @@ export default async function AdminKioskoPage({
   const dashboard = await getAdminDashboardSummary();
   const summary = dashboard.ok ? dashboard.data : null;
   const inactiveTemperatureEquipment = temperatureEquipment.filter((equipment) => !equipment.active);
-  const semaphore = !summary || summary.pendingAlerts > 0 || summary.incidentTemperatureRecords > 0
-    ? { label: "Rojo", text: "Alertas pendientes o incidencias graves registradas", className: "border-[#d94b2b]/40 bg-[#d94b2b]/12 text-[#f2c6bb]" }
-    : summary.inProgressAlerts > 0 || summary.reviewingTemperatureRecords > 0
-      ? { label: "Naranja", text: "Alertas en proceso o registros de temperatura en revisión", className: "border-amber-300 bg-amber-100 text-amber-950" }
-      : { label: "Verde", text: "Sin alertas pendientes ni temperaturas en revisión", className: "border-emerald-300 bg-emerald-100 text-emerald-950" };
+  const latestMonthlySignatureRecord = summary?.latestMonthlySignature
+    ? {
+        main: `${summary.latestMonthlySignature.month}/${summary.latestMonthlySignature.year}`,
+        record_date: summary.latestMonthlySignature.signed_at.slice(0, 10),
+        record_time: null,
+        responsible: summary.latestMonthlySignature.signed_by,
+        status: "firmado",
+      }
+    : null;
+  const latestReviewItems: Array<{
+    label: string;
+    record: {
+      main: string;
+      record_date: string;
+      record_time: string | null;
+      responsible: string | null;
+      status?: string | null;
+    } | null;
+  }> = [
+    { label: "Apertura", record: summary?.latestChecklistOpening || null },
+    { label: "Cierre", record: summary?.latestChecklistClosing || null },
+    { label: "Informe mensual firmado", record: latestMonthlySignatureRecord },
+  ];
+  const semaphore = !summary || summary.pendingAlerts > 0 || summary.incidentTemperatureRecords > 0 || summary.openIncidents > 0 || !summary.latestMonthlySignature
+    ? { label: "🔴 Incidencias abiertas", text: "Incidencias abiertas, alertas pendientes o informe mensual sin firmar", className: "border-[#d94b2b]/40 bg-[#d94b2b]/12 text-[#f2c6bb]" }
+    : summary.inProgressAlerts > 0 || summary.reviewingTemperatureRecords > 0 || !summary.latestChecklistOpening || !summary.latestChecklistClosing
+      ? { label: "🟡 Revisiones pendientes", text: "Alertas en proceso o revisiones operativas pendientes", className: "border-amber-300 bg-amber-100 text-amber-950" }
+      : { label: "🟢 Todo correcto", text: "Registros principales al día y sin incidencias abiertas", className: "border-emerald-300 bg-emerald-100 text-emerald-950" };
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
@@ -55,11 +78,11 @@ export default async function AdminKioskoPage({
           <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.18)] sm:p-6">
             <div className="flex flex-col gap-3 border-b border-white/10 pb-5 md:flex-row md:items-end md:justify-between">
               <div>
-                <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Estado sanitario general</h2>
+                <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Semáforo sanitario</h2>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-300">Estado rápido de temperaturas, alertas técnicas y registros recientes.</p>
               </div>
               <span className={`inline-flex w-fit rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] ${semaphore.className}`}>
-                Semáforo {semaphore.label}
+                {semaphore.label}
               </span>
             </div>
 
@@ -67,18 +90,37 @@ export default async function AdminKioskoPage({
               <>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {[
-                    ["Registros de temperatura hoy", String(summary.todayTemperatureRecords)],
-                    ["Último registro de temperatura", summary.lastTemperatureRecord ? `${summary.lastTemperatureRecord.equipment} · ${summary.lastTemperatureRecord.temperature} ºC` : "Sin registros"],
-                    ["Equipos activos controlados", String(summary.activeEquipmentCount)],
+                    ["Temperaturas registradas hoy", String(summary.todayTemperatureRecords)],
+                    ["Equipos APPCC activos", String(summary.activeEquipmentCount)],
                     ["Alertas pendientes", String(summary.pendingAlerts)],
                     ["Alertas en proceso", String(summary.inProgressAlerts)],
-                    ["Alertas solventadas este mes", String(summary.resolvedAlertsThisMonth)],
+                    ["Alertas solventadas", String(summary.resolvedAlertsThisMonth)],
+                    ["Incidencias abiertas", String(summary.openIncidents)],
+                    ["Último registro realizado", summary.lastTemperatureRecord ? `${summary.lastTemperatureRecord.equipment} · ${summary.lastTemperatureRecord.record_date}` : "Sin registros"],
                   ].map(([label, value]) => (
                     <article key={label} className="rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{label}</p>
                       <p className="mt-3 text-xl font-black leading-tight text-white">{value}</p>
                     </article>
                   ))}
+                </div>
+
+                <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-[#0d0d0d] p-5">
+                  <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Última revisión APPCC</h3>
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    {latestReviewItems.map(({ label, record }) => (
+                      <article key={label} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{label}</p>
+                        {record ? (
+                          <>
+                            <p className="mt-2 text-sm font-black text-white">{record.main}</p>
+                            <p className="mt-1 text-xs text-stone-300">{record.record_date}{record.record_time ? ` · ${record.record_time.slice(0, 5)}` : ""}</p>
+                            <p className="mt-1 text-xs text-stone-300">{record.responsible || "Sin responsable"}</p>
+                          </>
+                        ) : <p className="mt-2 text-sm font-semibold text-stone-400">Pendiente</p>}
+                      </article>
+                    ))}
+                  </div>
                 </div>
 
                 <p className={`mt-5 rounded-[1.3rem] border px-4 py-3 text-sm font-semibold leading-6 ${semaphore.className}`}>
@@ -154,8 +196,8 @@ export default async function AdminKioskoPage({
                       <span className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] ${categoryStyles[item.category]}`}>
                         {item.category}
                       </span>
-                      <span className="rounded-full border border-amber-300 bg-amber-100 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-amber-900">
-                        Pendiente de enlazar
+                      <span className="rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-900">
+                        Acceso interno
                       </span>
                     </div>
                     <h3 className="mt-5 text-2xl font-black uppercase leading-tight tracking-[-0.03em]">{item.title}</h3>
