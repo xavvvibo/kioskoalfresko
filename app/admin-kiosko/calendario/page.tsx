@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getAppccRecords, type AppccRecord } from "@/lib/admin-kiosko/database";
+import { getAdminDashboardSummary, getAppccRecords, type AppccRecord } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../_components/AdminHeader";
 
 export const metadata: Metadata = { title: "Calendario APPCC | Panel interno", description: "Vista mensual de registros APPCC." };
@@ -43,8 +44,19 @@ export default async function CalendarioAppccPage({
   const { days, start, end } = monthRange(year, month);
   const selectedDay = params?.day || start;
   const result = await getAppccRecords({ dateFrom: start, dateTo: end });
+  const dashboard = await getAdminDashboardSummary();
   const records = result.ok ? result.data : [];
   const selectedRecords = records.filter((record) => record.record_date === selectedDay);
+  const dayGroups = Array.from({ length: days }, (_, index) => {
+    const day = `${year}-${String(month).padStart(2, "0")}-${String(index + 1).padStart(2, "0")}`;
+    return { day, status: dayStatus(records.filter((record) => record.record_date === day)) };
+  });
+  const completeDays = dayGroups.filter((day) => day.status.label.includes("Completo")).length;
+  const pendingDays = dayGroups.filter((day) => day.status.label.includes("Pendiente")).length;
+  const incidentDays = dayGroups.filter((day) => day.status.label.includes("Incidencias")).length;
+  const latestReview = dashboard.ok && dashboard.data.latestMonthlySignature
+    ? `${dashboard.data.latestMonthlySignature.month}/${dashboard.data.latestMonthlySignature.year} · ${dashboard.data.latestMonthlySignature.signed_by}`
+    : "Pendiente";
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
@@ -53,16 +65,30 @@ export default async function CalendarioAppccPage({
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5">
             <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">{month.toString().padStart(2, "0")} / {year}</h2>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {[
+                ["Mes actual", `${month.toString().padStart(2, "0")} / ${year}`],
+                ["Días completos", String(completeDays)],
+                ["Días pendientes", String(pendingDays)],
+                ["Días con incidencia", String(incidentDays)],
+                ["Última revisión APPCC", latestReview],
+              ].map(([label, value]) => (
+                <article key={label} className="rounded-[1.1rem] border border-white/10 bg-white/6 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">{label}</p>
+                  <p className="mt-2 text-sm font-black text-white">{value}</p>
+                </article>
+              ))}
+            </div>
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
               {Array.from({ length: days }, (_, index) => {
                 const day = `${year}-${String(month).padStart(2, "0")}-${String(index + 1).padStart(2, "0")}`;
                 const dayRecords = records.filter((record) => record.record_date === day);
                 const status = dayStatus(dayRecords);
                 return (
-                  <a key={day} href={`/admin-kiosko/calendario?year=${year}&month=${month}&day=${day}`} className={`rounded-2xl border p-3 ${status.className}`}>
+                  <Link key={day} href={`/admin-kiosko/calendario?year=${year}&month=${month}&day=${day}`} className={`rounded-2xl border p-3 ${status.className}`}>
                     <p className="text-2xl font-black">{index + 1}</p>
                     <p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em]">{status.label}</p>
-                  </a>
+                  </Link>
                 );
               })}
             </div>

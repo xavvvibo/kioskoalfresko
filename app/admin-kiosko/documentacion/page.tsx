@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { AdminHeader } from "../_components/AdminHeader";
 
@@ -56,13 +57,23 @@ export default async function DocumentacionPage() {
             <section key={group.title} className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">{group.title}</h2>
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {group.items.map(([title, href]) => (
-                  <a key={title} href={href} className="rounded-[1.4rem] border border-white/10 bg-[#fffaf4] p-5 text-stone-950 transition hover:border-[#d94b2b]">
+                {group.items.map(([title, href]) => {
+                  const available = !href.includes("/documentacion/") || ["alergenos", "fichas-tecnicas"].some((slug) => href.endsWith(slug));
+                  return (
+                  <article key={title} className="rounded-[1.4rem] border border-white/10 bg-[#fffaf4] p-5 text-stone-950 transition hover:border-[#d94b2b]">
                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#d94b2b]">Documento interno</p>
                     <h3 className="mt-3 text-xl font-black uppercase tracking-[-0.03em]">{title}</h3>
-                    <p className="mt-3 text-sm leading-6 text-stone-700">Abrir sección</p>
-                  </a>
-                ))}
+                    <div className="mt-4 grid gap-2 text-xs font-semibold text-stone-700">
+                      <p>Estado: <span className="font-black text-stone-950">{available ? "Disponible" : "Pendiente"}</span></p>
+                      <p>Última revisión: {available ? "2026" : "Pendiente"}</p>
+                      <p>Responsable: F. Javier Bocanegra Sanjuan</p>
+                    </div>
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      <Link href={href} className="rounded-full border border-stone-950 bg-stone-950 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Ver</Link>
+                      <button type="button" disabled className="rounded-full border border-stone-200 bg-stone-100 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-stone-400">Descargar</button>
+                    </div>
+                  </article>
+                );})}
               </div>
             </section>
           ))}

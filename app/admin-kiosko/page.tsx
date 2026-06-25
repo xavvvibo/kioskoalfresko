@@ -65,12 +65,17 @@ export default async function AdminKioskoPage({
     : summary.inProgressAlerts > 0 || summary.reviewingTemperatureRecords > 0 || !summary.latestChecklistOpening || !summary.latestChecklistClosing
       ? { label: "🟡 Revisiones pendientes", text: "Alertas en proceso o revisiones operativas pendientes", className: "border-amber-300 bg-amber-100 text-amber-950" }
       : { label: "🟢 Todo correcto", text: "Registros principales al día y sin incidencias abiertas", className: "border-emerald-300 bg-emerald-100 text-emerald-950" };
+  const complianceValue = summary
+    ? summary.pendingAlerts + summary.inProgressAlerts + summary.openIncidents + summary.reviewingTemperatureRecords + summary.incidentTemperatureRecords === 0
+      ? "Completo"
+      : "Revisar"
+    : "Sin datos";
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
       <AdminHeader
-        title="Panel interno Kiosko Alfresko"
-        description="Control sanitario, registros diarios y documentación operativa."
+        title="Panel APPCC KIOSKO ALFRESKO"
+        description="Control sanitario digital · Responsable: F. Javier Bocanegra Sanjuan · DNI 75.136.778-X"
       />
 
       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
@@ -90,12 +95,18 @@ export default async function AdminKioskoPage({
               <>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {[
+                    ["Estado APPCC general", semaphore.label],
+                    ["Cumplimiento del mes", complianceValue],
                     ["Temperaturas registradas hoy", String(summary.todayTemperatureRecords)],
+                    ["Limpieza hoy", String(summary.todayCleaningRecords)],
+                    ["Aceite freidora", summary.latestFryerOilRecord ? `${summary.latestFryerOilRecord.record_date} · ${summary.latestFryerOilRecord.status || "registrado"}` : "Sin registro"],
+                    ["Recepciones de mercancía hoy", String(summary.todayGoodsReceptionRecords)],
                     ["Equipos APPCC activos", String(summary.activeEquipmentCount)],
                     ["Alertas pendientes", String(summary.pendingAlerts)],
                     ["Alertas en proceso", String(summary.inProgressAlerts)],
-                    ["Alertas solventadas", String(summary.resolvedAlertsThisMonth)],
                     ["Incidencias abiertas", String(summary.openIncidents)],
+                    ["Alertas técnicas abiertas", String(summary.pendingAlerts + summary.inProgressAlerts)],
+                    ["Equipos fuera de rango", String(summary.reviewingTemperatureRecords + summary.incidentTemperatureRecords)],
                     ["Último registro realizado", summary.lastTemperatureRecord ? `${summary.lastTemperatureRecord.equipment} · ${summary.lastTemperatureRecord.record_date}` : "Sin registros"],
                   ].map(([label, value]) => (
                     <article key={label} className="rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
@@ -146,9 +157,9 @@ export default async function AdminKioskoPage({
                     {summary.latestByEquipment.map((record) => (
                       <article key={record.equipment} className="rounded-[1.3rem] border border-white/10 bg-[#fffaf4] p-4 text-stone-950">
                         <p className="text-sm font-black uppercase tracking-[-0.02em]">{record.equipment}</p>
-                        <p className="mt-2 text-2xl font-black">{record.temperature !== null ? `${record.temperature} ºC` : "Pendiente"}</p>
+                        <p className="mt-2 text-2xl font-black">{record.temperature !== null ? `${record.temperature} ºC` : "Sin registro todavía"}</p>
                         <p className="mt-1 text-xs font-semibold text-stone-600">
-                          {record.record_date ? `${record.record_date}${record.record_time ? ` · ${record.record_time.slice(0, 5)}` : ""} · ${record.status || "sin estado"}` : "Pendiente de registro"}
+                          {record.record_date ? `${record.record_date}${record.record_time ? ` · ${record.record_time.slice(0, 5)}` : ""} · ${record.status || "sin estado"}` : "Sin registro todavía"}
                         </p>
                       </article>
                     ))}
@@ -161,7 +172,7 @@ export default async function AdminKioskoPage({
                     <div className="mt-3 flex flex-wrap gap-2">
                       {inactiveTemperatureEquipment.map((equipment) => (
                         <span key={equipment.name} className="rounded-full border border-amber-300 bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.12em]">
-                          {equipment.name}{equipment.note ? ` · ${equipment.note}` : ""}
+                          {equipment.name} · No requiere registro activo
                         </span>
                       ))}
                     </div>

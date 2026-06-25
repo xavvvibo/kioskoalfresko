@@ -1,9 +1,9 @@
 import type { RecentAdminRecord } from "@/lib/admin-kiosko/database";
 
-export function RecentRecords({ records }: { records: RecentAdminRecord[] }) {
+export function RecentRecords({ records, title = "Últimos 10 registros" }: { records: RecentAdminRecord[]; title?: string }) {
   return (
     <section className="mt-6 rounded-[1.7rem] border border-white/10 bg-[#101010] p-4">
-      <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Últimos 10 registros</h2>
+      <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">{title}</h2>
       {records.length ? (
         <div className="mt-4 grid gap-3">
           {records.map((record) => (

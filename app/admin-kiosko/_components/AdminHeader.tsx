@@ -1,6 +1,24 @@
 import Link from "next/link";
 import { logoutAdminKioskoAction } from "../actions";
 
+const adminNav = [
+  ["Panel", "/admin-kiosko"],
+  ["Modo inspección", "/admin-kiosko/inspeccion"],
+  ["Registros", "/admin-kiosko/registros"],
+  ["Documentación", "/admin-kiosko/documentacion"],
+  ["Calendario", "/admin-kiosko/calendario"],
+  ["Temperaturas", "/admin-kiosko/temperaturas"],
+  ["Limpieza", "/admin-kiosko/limpieza"],
+  ["Aceite", "/admin-kiosko/aceite-freidora"],
+  ["Mercancías", "/admin-kiosko/recepcion-mercancia"],
+  ["Incidencias", "/admin-kiosko/incidencias"],
+  ["Equipos", "/admin-kiosko/equipos"],
+  ["Proveedores", "/admin-kiosko/proveedores"],
+  ["Mantenimiento", "/admin-kiosko/mantenimiento"],
+  ["Agua", "/admin-kiosko/agua"],
+  ["Verificación anual", "/admin-kiosko/verificacion-anual"],
+];
+
 export function AdminHeader({ title, description }: { title: string; description: string }) {
   return (
     <section className="border-b border-white/10 bg-[radial-gradient(circle_at_85%_10%,rgba(217,75,43,0.24),transparent_22%),linear-gradient(180deg,#171717_0%,#0d0d0d_100%)]">
@@ -35,6 +53,15 @@ export function AdminHeader({ title, description }: { title: string; description
             </form>
           </div>
         </div>
+        <nav className="mt-6 overflow-x-auto rounded-[1.2rem] border border-white/10 bg-black/20 p-2" aria-label="Navegación interna APPCC">
+          <div className="flex min-w-max gap-2">
+            {adminNav.map(([label, href]) => (
+              <Link key={href} href={href} className="rounded-full border border-white/10 bg-white/6 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white transition hover:border-[#d94b2b] hover:bg-[#d94b2b]">
+                {label}
+              </Link>
+            ))}
+          </div>
+        </nav>
       </div>
     </section>
   );

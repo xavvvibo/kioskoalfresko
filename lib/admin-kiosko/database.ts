@@ -58,6 +58,9 @@ export type AdminDashboardSummary = {
   reviewingTemperatureRecords: number;
   incidentTemperatureRecords: number;
   activeEquipmentCount: number;
+  todayCleaningRecords: number;
+  todayGoodsReceptionRecords: number;
+  latestFryerOilRecord: RecentAdminRecord | null;
   pendingAlerts: number;
   inProgressAlerts: number;
   resolvedAlertsThisMonth: number;
@@ -861,6 +864,9 @@ export async function getAdminDashboardSummary(): Promise<DbResult<AdminDashboar
     latestOpeningChecklist,
     latestClosingChecklist,
     latestSignature,
+    todayCleaning,
+    todayGoodsReception,
+    latestFryerOil,
   ] = await Promise.all([
     getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&limit=1000"),
     getRows<DashboardTemperatureRecord>("admin_temperature_records", `?select=id,equipment,record_date,record_time,temperature,status,responsible&record_date=eq.${today}&limit=1000`),
@@ -876,9 +882,12 @@ export async function getAdminDashboardSummary(): Promise<DbResult<AdminDashboar
     getLatestChecklistByType("Apertura APPCC"),
     getLatestChecklistByType("Cierre APPCC"),
     getLatestMonthlySignature(),
+    getRows<{ id: string }>("admin_cleaning_records", `?select=id&record_date=eq.${today}&limit=1000`),
+    getRows<{ id: string }>("admin_goods_reception_records", `?select=id&record_date=eq.${today}&limit=1000`),
+    getRecentFryerOilRecords(),
   ]);
 
-  const results = [allTemperatures, todayTemperatures, reviewingTemperatures, incidentTemperatures, pendingAlerts, inProgressAlerts, resolvedAlertsThisMonth, lastTemperature, recentTemperatures, openAlerts, openIncidents, latestOpeningChecklist, latestClosingChecklist, latestSignature];
+  const results = [allTemperatures, todayTemperatures, reviewingTemperatures, incidentTemperatures, pendingAlerts, inProgressAlerts, resolvedAlertsThisMonth, lastTemperature, recentTemperatures, openAlerts, openIncidents, latestOpeningChecklist, latestClosingChecklist, latestSignature, todayCleaning, todayGoodsReception, latestFryerOil];
   const failed = results.find((result) => !result.ok);
   if (failed && !failed.ok) {
     return failed;
@@ -916,6 +925,9 @@ export async function getAdminDashboardSummary(): Promise<DbResult<AdminDashboar
       reviewingTemperatureRecords: reviewingActiveTemperatures.length,
       incidentTemperatureRecords: incidentActiveTemperatures.length,
       activeEquipmentCount: activeEquipment.length,
+      todayCleaningRecords: todayCleaning.ok ? todayCleaning.data.length : 0,
+      todayGoodsReceptionRecords: todayGoodsReception.ok ? todayGoodsReception.data.length : 0,
+      latestFryerOilRecord: latestFryerOil.ok ? latestFryerOil.data[0] || null : null,
       pendingAlerts: activePendingAlerts.length,
       inProgressAlerts: activeInProgressAlerts.length,
       resolvedAlertsThisMonth: activeResolvedAlertsThisMonth.length,
