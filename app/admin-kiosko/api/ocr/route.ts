@@ -127,7 +127,6 @@ export async function POST(request: Request) {
           detectedType: result.detectedType,
           status: result.status,
         });
-        console.info("[OCR]\nguardado del historial omitido: persistencia no configurada");
 
         send({ type: "progress", message: "Preparando revisión...", progress: 95 });
         send({ type: "done", data: result });

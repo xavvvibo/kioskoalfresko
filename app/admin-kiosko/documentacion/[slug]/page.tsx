@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAdminDocument } from "@/lib/admin-kiosko/documents";
+import { getAdminDocument, hasDocumentPdf } from "@/lib/admin-kiosko/documents";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { AdminHeader } from "../../_components/AdminHeader";
 
@@ -29,7 +29,7 @@ export default async function DocumentoPage({
     );
   }
 
-  const hasPdf = document.fileUrl && document.status === "Disponible";
+  const hasPdf = hasDocumentPdf(document);
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
@@ -48,7 +48,7 @@ export default async function DocumentoPage({
             {hasPdf ? (
               <a href={document.fileUrl} download className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Descargar</a>
             ) : (
-              <button type="button" disabled className="rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-stone-400">Descargar</button>
+              <span className="rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-stone-300">Sin PDF disponible</span>
             )}
           </div>
           <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0d0d0d]">
@@ -56,8 +56,8 @@ export default async function DocumentoPage({
               <iframe title={document.title} src={document.fileUrl} className="h-[75vh] w-full bg-white" />
             ) : (
               <div className="p-8 text-center">
-                <p className="text-xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">PDF pendiente de subir</p>
-                <p className="mt-3 text-sm leading-6 text-stone-300">La ficha está preparada para incorporar el archivo PDF cuando esté disponible.</p>
+                <p className="text-xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">{document.status}</p>
+                <p className="mt-3 text-sm leading-6 text-stone-300">Documento registrado en el expediente digital.</p>
               </div>
             )}
           </div>

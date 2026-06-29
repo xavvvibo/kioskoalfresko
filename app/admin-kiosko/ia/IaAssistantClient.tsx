@@ -91,8 +91,6 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
     !temperature ? "Temperatura no visible en el documento. Revisar si aplica." : "",
   ].filter(Boolean);
   const reviewComplete = supplier && documentDate && products.length && batches.length && expiries.length && temperature;
-  const showTechnicalByDefault = process.env.NODE_ENV !== "production";
-  const [showTechnical, setShowTechnical] = useState(showTechnicalByDefault);
 
   return (
     <section className="mt-8 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
@@ -101,7 +99,7 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Pantalla de revisión</p>
           <h2 className="mt-2 text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">{result.documentName}</h2>
           <p className="mt-2 text-sm leading-6 text-stone-300">
-            Tipo detectado: {labelForKind(result.detectedType)} · Estado: {result.status === "processed" ? "procesado" : "preparado"}
+            Tipo detectado: {labelForKind(result.detectedType)} · Estado: {result.status === "processed" ? "procesado" : "recibido"}
           </p>
         </div>
         <span className="inline-flex w-fit rounded-full border border-amber-300/30 bg-amber-100 px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-amber-950">
@@ -200,33 +198,14 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
                 </div>
             )) : (
               <p className="rounded-[1.2rem] border border-white/10 bg-white/6 px-4 py-3 text-sm font-semibold text-stone-300">
-                Sin productos detectados todavía. La revisión queda preparada para completar manualmente.
+                No se han detectado productos en el documento. Completa la revisión manualmente antes de registrar.
               </p>
             )}
           </div>
         </div>
 
-        {result.rawOpenAIText ? (
-          <div className="rounded-[1.5rem] border border-sky-300/30 bg-sky-950/40 p-4">
-            <button type="button" onClick={() => setShowTechnical((value) => !value)} className="rounded-full border border-white/20 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white">
-              {showTechnical ? "Ocultar datos técnicos" : "Ver datos técnicos"}
-            </button>
-            {showTechnical ? (
-              <>
-                <h3 className="mt-4 text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Respuesta bruta OpenAI</h3>
-                <textarea readOnly value={result.rawOpenAIText} rows={8} className="mt-4 w-full rounded-2xl border border-white/12 bg-white px-4 py-3 font-mono text-xs text-stone-950 outline-none" />
-              </>
-            ) : null}
-          </div>
-        ) : null}
-
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            className="rounded-full border border-white/20 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:border-white"
-          >
-            Cancelar
-          </button>
+          <a href="/admin-kiosko/ia" className="rounded-full border border-white/20 px-5 py-3 text-center text-sm font-black uppercase tracking-[0.14em] text-white transition hover:border-white">Cancelar</a>
           <button
             type="submit"
             onClick={(event) => {
@@ -399,7 +378,7 @@ export function IaAssistantClient({ saved, errorMessage }: { saved?: boolean; er
                   onClick={() => inputs.current[card.kind]?.click()}
                   className="inline-flex w-full items-center justify-center rounded-full border border-stone-950 bg-stone-950 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#d94b2b] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Subir fotografía
+                  Subir archivo
                 </button>
               </div>
             </article>

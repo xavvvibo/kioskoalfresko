@@ -20,7 +20,12 @@ import {
   createAiProcessingLog,
   createAiSupplierDocument,
   createAiTraceabilityItem,
+  createInventoryProduct,
+  createLabelRecord,
   ensureSupplierRecord,
+  applyInventoryMovement,
+  updateInventoryProduct,
+  upsertInventoryFromAiReception,
   updateEquipmentAlertStatus,
 } from "@/lib/admin-kiosko/database";
 
@@ -47,6 +52,11 @@ function text(formData: FormData, key: string) {
 function optionalNumber(formData: FormData, key: string) {
   const value = text(formData, key).replace(",", ".");
   return value ? Number(value) : undefined;
+}
+
+function requiredNumber(formData: FormData, key: string) {
+  const value = Number(text(formData, key).replace(",", "."));
+  return Number.isFinite(value) ? value : 0;
 }
 
 function checkbox(formData: FormData, key: string) {
@@ -283,6 +293,16 @@ export async function saveAiReceptionAction(formData: FormData) {
     if (!traceability.ok) {
       redirect(`/admin-kiosko/ia?error=${encodeURIComponent(traceability.error.slice(0, 240))}`);
     }
+
+    await upsertInventoryFromAiReception({
+      name: product.name,
+      quantity: product.quantity,
+      supplier,
+      batch: product.batch,
+      expiry: product.expiry,
+      entryDate: documentDate,
+      documentId: supplierDocument.data.id,
+    });
   }
 
   const goodsReception = await createGoodsReceptionRecord({
@@ -490,14 +510,94 @@ export async function saveSupplierRecordAction(formData: FormData) {
   const result = await createSupplierRecord({
     supplier: text(formData, "supplier"),
     cif: text(formData, "cif"),
+    contact: text(formData, "contact"),
     phone: text(formData, "phone"),
     email: text(formData, "email"),
+    responsible_person: text(formData, "responsible_person"),
+    schedule: text(formData, "schedule"),
+    usual_products: text(formData, "usual_products"),
     category: text(formData, "category"),
     certificates: text(formData, "certificates"),
+    health_register: text(formData, "health_register"),
+    appcc: text(formData, "appcc"),
+    invoices: text(formData, "invoices"),
+    delivery_notes: text(formData, "delivery_notes"),
+    ocr_documents: text(formData, "ocr_documents"),
+    receptions: text(formData, "receptions"),
+    incidents: text(formData, "incidents"),
+    reception_temperatures: text(formData, "reception_temperatures"),
+    ai_history: text(formData, "ai_history"),
     observations: text(formData, "observations"),
   });
 
   redirectAfterSave("/admin-kiosko/proveedores", result);
+}
+
+export async function saveInventoryProductAction(formData: FormData) {
+  await requireAdminSession();
+
+  const id = text(formData, "id");
+  const payload = {
+    id,
+    name: text(formData, "name"),
+    category: text(formData, "category"),
+    usual_supplier: text(formData, "usual_supplier"),
+    unit: text(formData, "unit") || "ud",
+    current_stock: requiredNumber(formData, "current_stock"),
+    minimum_stock: requiredNumber(formData, "minimum_stock"),
+    location: text(formData, "location"),
+    current_batch: text(formData, "current_batch"),
+    expiry_date: text(formData, "expiry_date"),
+    observations: text(formData, "observations"),
+    active: formData.get("active") !== "false",
+  };
+  const result = id ? await updateInventoryProduct(payload) : await createInventoryProduct(payload);
+
+  ["/admin-kiosko/inventario", "/admin-kiosko", "/admin-kiosko/inspeccion-express"].forEach((path) => revalidatePath(path));
+  redirectAfterSave("/admin-kiosko/inventario", result);
+}
+
+export async function saveInventoryMovementAction(formData: FormData) {
+  await requireAdminSession();
+
+  const movement = text(formData, "movement_type");
+  const movementType = ["entrada", "consumo", "merma", "regularizacion", "baja"].includes(movement)
+    ? movement as "entrada" | "consumo" | "merma" | "regularizacion" | "baja"
+    : "consumo";
+  const result = await applyInventoryMovement({
+    product_id: text(formData, "product_id"),
+    movement_type: movementType,
+    quantity: requiredNumber(formData, "quantity"),
+    unit: text(formData, "unit"),
+    supplier: text(formData, "supplier"),
+    batch_number: text(formData, "batch_number"),
+    expiry_date: text(formData, "expiry_date"),
+    observations: text(formData, "observations"),
+  });
+
+  ["/admin-kiosko/inventario", "/admin-kiosko/trazabilidad", "/admin-kiosko", "/admin-kiosko/inspeccion-express"].forEach((path) => revalidatePath(path));
+  redirectAfterSave("/admin-kiosko/inventario", result);
+}
+
+export async function saveLabelRecordAction(formData: FormData) {
+  await requireAdminSession();
+
+  const result = await createLabelRecord({
+    model: text(formData, "model"),
+    product: text(formData, "product"),
+    batch: text(formData, "batch"),
+    elaboration_date: text(formData, "elaboration_date"),
+    opening_date: text(formData, "opening_date"),
+    freezing_date: text(formData, "freezing_date"),
+    defrosting_date: text(formData, "defrosting_date"),
+    best_before_date: text(formData, "best_before_date"),
+    responsible: text(formData, "responsible"),
+    print_format: text(formData, "print_format"),
+    copies: Math.max(1, Math.min(48, Math.round(requiredNumber(formData, "copies") || 8))),
+  });
+
+  revalidatePath("/admin-kiosko/etiquetas");
+  redirectAfterSave("/admin-kiosko/etiquetas", result);
 }
 
 export async function saveEquipmentAssetAction(formData: FormData) {

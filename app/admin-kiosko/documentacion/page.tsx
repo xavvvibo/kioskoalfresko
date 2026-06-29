@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { adminDocuments } from "@/lib/admin-kiosko/documents";
+import { adminDocuments, getDocumentStats, hasDocumentPdf } from "@/lib/admin-kiosko/documents";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { AdminHeader } from "../_components/AdminHeader";
 
@@ -14,17 +14,36 @@ const groups = ["Documentación oficial", "Registros digitales"] as const;
 function statusClass(status: string) {
   if (status === "Disponible") return "border-emerald-300 bg-emerald-100 text-emerald-950";
   if (status === "Pendiente de revisión") return "border-amber-300 bg-amber-100 text-amber-950";
+  if (status === "Caducado") return "border-[#d94b2b]/40 bg-[#d94b2b]/12 text-[#f2c6bb]";
   return "border-stone-300 bg-stone-100 text-stone-700";
 }
 
 export default async function DocumentacionPage() {
   await requireAdminSession();
+  const stats = getDocumentStats();
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
       <AdminHeader title="Centro documental APPCC" description="Expediente sanitario digital, registros y documentación de KIOSKO ALFRESKO." />
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12">
         <div className="grid gap-6">
+          <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.18)] sm:p-6">
+            <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Estado documental</h2>
+            <div className="mt-5 grid gap-3 md:grid-cols-5">
+              {[
+                ["Completa", `${stats.available}/${stats.total}`],
+                ["Porcentaje", `${stats.percent}%`],
+                ["Pendiente de subir", String(stats.pending)],
+                ["Pendiente de revisión", String(stats.review)],
+                ["Caducada", String(stats.expired)],
+              ].map(([label, value]) => (
+                <article key={label} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{label}</p>
+                  <p className="mt-2 text-xl font-black text-white">{value}</p>
+                </article>
+              ))}
+            </div>
+          </section>
           {groups.map((group) => (
             <section key={group} className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">{group}</h2>
@@ -43,10 +62,10 @@ export default async function DocumentacionPage() {
                     </div>
                     <div className="mt-5 flex flex-wrap gap-2">
                       <Link href={document.href} className="rounded-full border border-stone-950 bg-stone-950 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Ver</Link>
-                      {document.fileUrl && document.status === "Disponible" ? (
+                      {hasDocumentPdf(document) ? (
                         <a href={document.fileUrl} download className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Descargar</a>
                       ) : (
-                        <button type="button" disabled className="rounded-full border border-stone-200 bg-stone-100 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-stone-400">Descargar</button>
+                        <span className="rounded-full border border-stone-200 bg-stone-100 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-stone-500">Sin PDF</span>
                       )}
                     </div>
                   </article>

@@ -37,12 +37,25 @@ export default async function ProveedoresPage({ searchParams }: { searchParams?:
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField name="supplier" label="Proveedor" required />
           <TextField name="cif" label="CIF" />
-          <TextField name="category" label="Productos habituales / categoría" />
+          <TextField name="contact" label="Contacto" />
           <TextField name="phone" label="Teléfono" />
           <TextField name="email" label="Correo" type="email" />
+          <TextField name="responsible_person" label="Persona responsable" />
+          <TextField name="schedule" label="Horario" />
+          <TextField name="category" label="Categoría" />
+          <TextField name="usual_products" label="Productos habituales" />
         </div>
-        <TextAreaField name="certificates" label="Registro sanitario, certificados y últimos documentos" />
-        <TextAreaField name="observations" label="Contacto, últimas recepciones, incidencias asociadas y observaciones" />
+        <TextAreaField name="certificates" label="Certificados" />
+        <TextAreaField name="health_register" label="Registro sanitario" />
+        <TextAreaField name="appcc" label="APPCC proveedor" />
+        <TextAreaField name="invoices" label="Facturas" />
+        <TextAreaField name="delivery_notes" label="Albaranes" />
+        <TextAreaField name="ocr_documents" label="Documentos OCR" />
+        <TextAreaField name="receptions" label="Recepciones" />
+        <TextAreaField name="incidents" label="Incidencias" />
+        <TextAreaField name="reception_temperatures" label="Temperaturas recepción" />
+        <TextAreaField name="ai_history" label="Historial IA" />
+        <TextAreaField name="observations" label="Observaciones" />
         <SubmitButton />
       </form>
     </RecordPageShell>

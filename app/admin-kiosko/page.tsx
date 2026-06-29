@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { internalAdminSections } from "@/content/site";
 import { isAdminAuthenticated } from "@/lib/admin-kiosko/auth";
-import { getAdminDashboardSummary } from "@/lib/admin-kiosko/database";
+import { getAdminDashboardSummary, getExecutiveDashboardMetrics } from "@/lib/admin-kiosko/database";
 import { temperatureEquipment } from "@/lib/admin-kiosko/temperature-rules";
 import { AdminHeader } from "./_components/AdminHeader";
 import { LoginPanel } from "./_components/LoginPanel";
@@ -34,8 +34,12 @@ export default async function AdminKioskoPage({
     return <LoginPanel hasError={params?.error === "1"} />;
   }
 
-  const dashboard = await getAdminDashboardSummary();
+  const [dashboard, executive] = await Promise.all([
+    getAdminDashboardSummary(),
+    getExecutiveDashboardMetrics(),
+  ]);
   const summary = dashboard.ok ? dashboard.data : null;
+  const metrics = executive.ok ? executive.data : null;
   const inactiveTemperatureEquipment = temperatureEquipment.filter((equipment) => !equipment.active);
   const latestMonthlySignatureRecord = summary?.latestMonthlySignature
     ? {
@@ -93,6 +97,35 @@ export default async function AdminKioskoPage({
 
             {summary ? (
               <>
+                {metrics ? (
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {[
+                      ["Recepciones este mes", metrics.receptionsThisMonth],
+                      ["OCR procesados", metrics.ocrProcessed],
+                      ["OCR a revisar", metrics.ocrToReview],
+                      ["Productos activos", metrics.activeProducts],
+                      ["Lotes activos", metrics.activeLots],
+                      ["Stock bajo", metrics.lowStockProducts],
+                      ["Próximos a caducar", metrics.expiringProducts],
+                      ["Incidencias abiertas", metrics.openIncidents],
+                      ["Equipos fuera de rango", metrics.outOfRangeEquipment],
+                      ["Mantenimiento pendiente", metrics.pendingMaintenance],
+                      ["Agua hoy", metrics.waterToday],
+                      ["Documentos pendientes", metrics.pendingDocuments],
+                      ["Temperaturas hoy", metrics.temperaturesToday],
+                      ["Registros hoy", metrics.recordsToday],
+                      ["Registros semana", metrics.recordsWeek],
+                      ["Registros mes", metrics.recordsMonth],
+                      ["Última inspección", metrics.latestInspection],
+                    ].map(([label, value]) => (
+                      <article key={label} className="rounded-[1.3rem] border border-white/10 bg-[#0d0d0d] p-4">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{label}</p>
+                        <p className="mt-3 text-xl font-black leading-tight text-white">{String(value)}</p>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
+
                 <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {[
                     ["Estado APPCC general", semaphore.label],
@@ -101,6 +134,12 @@ export default async function AdminKioskoPage({
                     ["Limpieza hoy", String(summary.todayCleaningRecords)],
                     ["Aceite freidora", summary.latestFryerOilRecord ? `${summary.latestFryerOilRecord.record_date} · ${summary.latestFryerOilRecord.status || "registrado"}` : "Sin registro"],
                     ["Recepciones de mercancía hoy", String(summary.todayGoodsReceptionRecords)],
+                    ["Documentos pendientes", String(metrics?.pendingDocuments ?? 0)],
+                    ["OCR pendientes de revisión", String(metrics?.ocrToReview ?? 0)],
+                    ["Stock bajo", String(metrics?.lowStockProducts ?? 0)],
+                    ["Productos próximos a caducar", String(metrics?.expiringProducts ?? 0)],
+                    ["Mantenimiento pendiente", String(metrics?.pendingMaintenance ?? 0)],
+                    ["Control de agua hoy", String(metrics?.waterToday ?? 0)],
                     ["Equipos APPCC activos", String(summary.activeEquipmentCount)],
                     ["Alertas pendientes", String(summary.pendingAlerts)],
                     ["Alertas en proceso", String(summary.inProgressAlerts)],
@@ -180,6 +219,21 @@ export default async function AdminKioskoPage({
                 ) : null}
 
                 <TemperatureAlerts alerts={summary.openAlerts} />
+
+                {metrics?.alerts.length ? (
+                  <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-[#0d0d0d] p-5">
+                    <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Centro de alertas</h3>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      {metrics.alerts.slice(0, 10).map((alert) => (
+                        <a key={alert.id} href={alert.href} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200 transition hover:border-[#d94b2b]">
+                          <p className="font-black text-white">{alert.title}</p>
+                          <p className="mt-1">{alert.detail}</p>
+                          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">{alert.type} · {alert.severity}</p>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </>
             ) : (
               <p className="mt-5 rounded-[1.3rem] border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-3 text-sm font-semibold text-[#f2c6bb]">
