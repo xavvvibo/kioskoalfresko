@@ -500,7 +500,7 @@ export type GlobalSearchResult = {
 
 export type OperationalAlert = {
   id: string;
-  type: string;
+  type: "correcto" | "registro-diario" | "documentacion" | "administrativo" | "stock" | "caducidad" | "incidencia" | "temperatura" | "equipo" | "recepcion";
   severity: "correcto" | "revisar" | "incidencia";
   title: string;
   detail: string;
@@ -521,9 +521,14 @@ export type ExecutiveDashboardMetrics = {
   recordsMonth: number;
   pendingDocuments: number;
   lowStockProducts: number;
+  criticalStockProducts: number;
   pendingMaintenance: number;
   waterToday: number;
   ocrToReview: number;
+  rejectedReceptions: number;
+  temperatureCompliancePercent: number;
+  receptionCompliancePercent: number;
+  cleaningCompliancePercent: number;
   latestInspection: string;
   healthStatus: "Correcto" | "Revisar" | "Incidencias";
   alerts: OperationalAlert[];
@@ -2438,15 +2443,18 @@ export async function getOperationalAlerts(): Promise<DbResult<OperationalAlert[
   const soon = addDays(today, 7);
   const activeEquipment = temperatureEquipment.filter((equipment) => equipment.active).map((equipment) => equipment.name);
   const documentStats = getDocumentStats();
-  const [inventory, openIncidents, equipmentAlerts, aiLogs, todayTemperatures, todayCleaning, todayOil, suppliers] = await Promise.all([
+  const [inventory, openIncidents, equipmentAlerts, aiLogs, todayTemperatures, recentTemperatures, todayCleaning, todayOil, suppliers, rejectedReceptions, equipmentAssets] = await Promise.all([
     getInventoryProducts(),
     getRows<RecentAdminRecord & { incident_type: string; severity: string | null }>("admin_incident_records", "?select=id,record_date,record_time,responsible,status,incident_type,severity&resolved=eq.false&order=record_date.desc,created_at.desc&limit=50"),
     getRows<EquipmentAlert>("admin_equipment_alerts", "?select=id,equipment,alert_date,alert_time,temperature,alert_level,status,description,corrective_action&status=in.(pendiente,en_proceso)&order=created_at.desc&limit=50"),
     getRecentAiProcessingLogs(50),
     getRows<DashboardTemperatureRecord>("admin_temperature_records", `?select=id,equipment,record_date,record_time,temperature,status,responsible&record_date=eq.${today}&limit=1000`),
+    getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&order=record_date.desc,record_time.desc,created_at.desc&limit=200"),
     getRows<{ id: string }>("admin_cleaning_records", `?select=id&record_date=eq.${today}&limit=1000`),
     getRows<{ id: string }>("admin_fryer_oil_records", `?select=id&record_date=eq.${today}&limit=1000`),
     getRows<{ id: string; supplier: string; cif: string | null; phone: string | null; email: string | null; certificates: string | null; status: string | null }>("admin_supplier_records", "?select=id,supplier,cif,phone,email,certificates,status&status=neq.baja&limit=1000"),
+    getRows<{ id: string; supplier: string; product: string; record_date: string }>("admin_goods_reception_records", "?select=id,supplier,product,record_date&accepted=eq.false&order=record_date.desc,created_at.desc&limit=50"),
+    getRows<{ id: string; name: string; status: string | null }>("admin_equipment_assets", "?select=id,name,status&limit=1000"),
   ]);
 
   const alerts: OperationalAlert[] = [];
@@ -2479,8 +2487,8 @@ export async function getOperationalAlerts(): Promise<DbResult<OperationalAlert[
           id: `stock-${product.id}`,
           type: "stock",
           severity: "revisar",
-          title: `${product.name} con stock bajo`,
-          detail: `${product.current_stock || 0} ${product.unit || "ud"}`,
+          title: product.name,
+          detail: `Stock bajo: ${product.current_stock || 0} ${product.unit || "ud"}. Reposición administrativa recomendada.`,
           href: "/admin-kiosko/inventario",
         });
       }
@@ -2488,10 +2496,10 @@ export async function getOperationalAlerts(): Promise<DbResult<OperationalAlert[
       if (product.active && !product.current_batch) {
         alerts.push({
           id: `batch-${product.id}`,
-          type: "lote",
+          type: "administrativo",
           severity: "revisar",
-          title: `${product.name} sin lote actual`,
-          detail: "Completar trazabilidad si aplica.",
+          title: product.name,
+          detail: "Producto registrado. Información de lote pendiente de completar si aplica.",
           href: "/admin-kiosko/inventario",
         });
       }
@@ -2514,8 +2522,8 @@ export async function getOperationalAlerts(): Promise<DbResult<OperationalAlert[
       id: `equipment-${alert.id}`,
       type: "temperatura",
       severity: alert.alert_level === "incidencia" ? "incidencia" : "revisar",
-      title: `${alert.equipment} fuera de rango`,
-      detail: alert.description || "Revisar equipo.",
+      title: alert.equipment,
+      detail: alert.alert_level === "incidencia" ? alert.description || "Temperatura fuera de rango. Requiere actuación." : alert.description || "Seguimiento preventivo en curso.",
       href: "/admin-kiosko/temperaturas",
     }));
   }
@@ -2523,10 +2531,10 @@ export async function getOperationalAlerts(): Promise<DbResult<OperationalAlert[
   if (aiLogs.ok) {
     aiLogs.data.filter((log) => log.status === "error").forEach((log) => alerts.push({
       id: `ai-${log.id}`,
-      type: "ocr",
+      type: "administrativo",
       severity: "revisar",
-      title: log.document_name || "Documento OCR pendiente",
-      detail: log.error_message || "Revisar procesamiento IA.",
+      title: log.document_name || "Documento digital",
+      detail: "Documento recibido. Revisión administrativa pendiente.",
       href: "/admin-kiosko/ia/historial",
     }));
   }
@@ -2535,14 +2543,20 @@ export async function getOperationalAlerts(): Promise<DbResult<OperationalAlert[
     const registeredEquipment = new Set(todayTemperatures.data.filter((record) => isActiveTemperatureEquipment(record.equipment)).map((record) => record.equipment));
     activeEquipment
       .filter((equipment) => !registeredEquipment.has(equipment))
-      .forEach((equipment) => alerts.push({
-        id: `temperature-today-${equipment}`,
-        type: "registro-diario",
-        severity: "revisar",
-        title: `${equipment}: temperatura no registrada hoy`,
-        detail: "Último registro no disponible todavía para la jornada actual.",
-        href: "/admin-kiosko/temperaturas",
-      }));
+      .forEach((equipment) => {
+        const latest = recentTemperatures.ok ? recentTemperatures.data.find((record) => record.equipment === equipment) : null;
+        const latestText = latest?.record_date
+          ? `Último registro: ${latest.record_date}${latest.record_time ? ` ${latest.record_time.slice(0, 5)}` : ""}.`
+          : "Histórico inicial pendiente de consolidar.";
+        alerts.push({
+          id: `temperature-today-${equipment}`,
+          type: "registro-diario",
+          severity: "revisar",
+          title: equipment,
+          detail: `${latestText} Pendiente control correspondiente a la jornada actual.`,
+          href: "/admin-kiosko/temperaturas",
+        });
+      });
   }
 
   if (todayCleaning.ok && todayCleaning.data.length === 0) {
@@ -2550,8 +2564,8 @@ export async function getOperationalAlerts(): Promise<DbResult<OperationalAlert[
       id: "cleaning-today",
       type: "registro-diario",
       severity: "revisar",
-      title: "Limpieza no registrada hoy",
-      detail: "Registrar limpieza diaria o dejar constancia si no procede.",
+      title: "Limpieza",
+      detail: "Pendiente control correspondiente a la jornada actual.",
       href: "/admin-kiosko/limpieza",
     });
   }
@@ -2561,8 +2575,8 @@ export async function getOperationalAlerts(): Promise<DbResult<OperationalAlert[
       id: "oil-today",
       type: "registro-diario",
       severity: "revisar",
-      title: "Aceite no registrado hoy",
-      detail: "Registrar control de aceite de freidora o dejar constancia si no procede.",
+      title: "Aceite de freidora",
+      detail: "Pendiente control correspondiente a la jornada actual.",
       href: "/admin-kiosko/aceite-freidora",
     });
   }
@@ -2572,11 +2586,35 @@ export async function getOperationalAlerts(): Promise<DbResult<OperationalAlert[
       .filter((supplier) => !supplier.cif || !supplier.phone || !supplier.certificates)
       .forEach((supplier) => alerts.push({
         id: `supplier-${supplier.id}`,
-        type: "proveedores",
+        type: "administrativo",
         severity: "revisar",
-        title: `${supplier.supplier}: datos mínimos incompletos`,
-        detail: "Completar CIF, contacto y certificados sanitarios.",
+        title: supplier.supplier,
+        detail: "Proveedor registrado. Información administrativa pendiente de completar. No afecta al APPCC.",
         href: `/admin-kiosko/proveedores?q=${encodeURIComponent(supplier.supplier)}`,
+      }));
+  }
+
+  if (rejectedReceptions.ok) {
+    rejectedReceptions.data.forEach((reception) => alerts.push({
+      id: `reception-${reception.id}`,
+      type: "recepcion",
+      severity: "incidencia",
+      title: `${reception.supplier} · ${reception.product}`,
+      detail: `Recepción rechazada el ${reception.record_date}. Requiere trazabilidad y acción correctora.`,
+      href: "/admin-kiosko/recepcion-mercancia",
+    }));
+  }
+
+  if (equipmentAssets.ok) {
+    equipmentAssets.data
+      .filter((equipment) => ["averiado", "inoperativo"].includes(String(equipment.status || "").toLowerCase()))
+      .forEach((equipment) => alerts.push({
+        id: `equipment-asset-${equipment.id}`,
+        type: "equipo",
+        severity: "incidencia",
+        title: equipment.name,
+        detail: "Equipo marcado como averiado o inoperativo. Requiere actuación técnica.",
+        href: "/admin-kiosko/equipos",
       }));
   }
 
@@ -2599,11 +2637,13 @@ export async function getExecutiveDashboardMetrics(): Promise<DbResult<Executive
   const activeLots = inventory.ok ? new Set(inventory.data.filter((product) => product.active && product.current_batch).map((product) => product.current_batch)).size : 0;
   const expiringProducts = inventory.ok ? inventory.data.filter((product) => product.active && product.expiry_date && product.expiry_date <= soon).length : 0;
   const lowStockProducts = inventory.ok ? inventory.data.filter((product) => product.active && Number(product.current_stock || 0) <= Number(product.minimum_stock || 0)).length : 0;
+  const criticalStockProducts = inventory.ok ? inventory.data.filter((product) => product.active && Number(product.current_stock || 0) <= 0).length : 0;
   const outOfRangeEquipment = alerts.ok ? alerts.data.filter((alert) => alert.type === "temperatura").length : 0;
   const openIncidents = await countRows("admin_incident_records", "&resolved=eq.false");
   const pendingMaintenance = await countRows("admin_equipment_assets", `&next_maintenance=lte.${soon}&status=neq.baja`);
   const waterToday = await countRows("admin_water_records", `&record_date=eq.${today}`);
   const ocrToReview = await countRows("admin_supplier_documents", "&ocr_status=eq.revisar");
+  const rejectedReceptions = await countRows("admin_goods_reception_records", "&accepted=eq.false");
   const recordsTodayResult = await getAppccRecords({ type: "todos", dateFrom: today, dateTo: today });
   const recordsWeekResult = await getAppccRecords({ type: "todos", dateFrom: weekStart, dateTo: today });
   const recordsMonthResult = await getAppccRecords({ type: "todos", dateFrom: monthStart, dateTo: today });
@@ -2626,9 +2666,14 @@ export async function getExecutiveDashboardMetrics(): Promise<DbResult<Executive
       recordsMonth: recordsMonthResult.ok ? recordsMonthResult.data.length : 0,
       pendingDocuments: documentStats.pending + documentStats.expired + documentStats.review,
       lowStockProducts,
+      criticalStockProducts,
       pendingMaintenance,
       waterToday,
       ocrToReview,
+      rejectedReceptions,
+      temperatureCompliancePercent: Math.max(0, Math.min(100, Math.round((1 - (outOfRangeEquipment / Math.max(1, temperatureEquipment.filter((equipment) => equipment.active).length))) * 100))),
+      receptionCompliancePercent: rejectedReceptions > 0 ? 0 : 100,
+      cleaningCompliancePercent: await countRows("admin_cleaning_records", `&record_date=eq.${today}`) > 0 ? 100 : 0,
       latestInspection: latestInspection.ok && latestInspection.data[0] ? latestInspection.data[0].main : "Sin inspecciones registradas",
       healthStatus: incidentAlerts > 0 ? "Incidencias" : reviewAlerts > 0 ? "Revisar" : "Correcto",
       alerts: alerts.ok ? alerts.data : [],

@@ -281,14 +281,14 @@ export default async function RegistrosAppccPage({
                         <td className="px-3 py-3 font-semibold">{record.typeLabel}</td>
                         <td className="px-3 py-3">{record.subject}</td>
                         <td className="px-3 py-3 font-semibold">{record.main}</td>
-                        <td className="px-3 py-3">{record.status || "-"}</td>
-                        <td className="px-3 py-3">{record.responsible || "-"}</td>
-                        <td className="rounded-r-2xl px-3 py-3 text-stone-700">{record.observations || "-"}</td>
+                        <td className="px-3 py-3">{record.status || "Registro disponible"}</td>
+                        <td className="px-3 py-3">{record.responsible || "Responsable no consignado"}</td>
+                        <td className="rounded-r-2xl px-3 py-3 text-stone-700">{record.observations || "Observaciones no consignadas"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {!rows.length ? <p className="py-8 text-center text-sm text-stone-300">No hay registros para estos filtros.</p> : null}
+                {!rows.length ? <p className="py-8 text-center text-sm text-stone-300">Registro preparado para los filtros seleccionados. Ajusta fechas o añade nuevos controles.</p> : null}
               </div>
             ) : (
               <p className="mt-5 rounded-[1.3rem] border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-3 text-sm font-semibold text-[#f2c6bb]">

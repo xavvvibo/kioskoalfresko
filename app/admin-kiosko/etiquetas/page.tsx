@@ -135,11 +135,11 @@ export default async function EtiquetasPage({
               <div className="mt-4 grid gap-3">
                 {history.map((record) => (
                   <a key={record.id} href={`/admin-kiosko/etiquetas?id=${record.id}`} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200 transition hover:border-[#d94b2b]">
-                    <span className="block font-black text-white">{record.model} · {record.product || "-"}</span>
-                    <span className="mt-1 block text-xs text-stone-400">Lote {record.batch || "-"} · {record.created_at.slice(0, 10)}</span>
+                    <span className="block font-black text-white">{record.model} · {record.product || "Producto no consignado"}</span>
+                    <span className="mt-1 block text-xs text-stone-400">Lote {record.batch || "no consignado"} · {record.created_at.slice(0, 10)}</span>
                   </a>
                 ))}
-                {!history.length ? <p className="text-sm text-stone-400">Sin etiquetas guardadas.</p> : null}
+                {!history.length ? <p className="text-sm text-stone-400">Historial preparado para próximas etiquetas.</p> : null}
               </div>
             </section>
           </div>

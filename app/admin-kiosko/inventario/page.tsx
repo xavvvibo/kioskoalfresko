@@ -91,7 +91,7 @@ export default async function InventarioPage({
                         <span className="block text-xs text-stone-400">{product.expiry_date} · lote {product.current_batch || "-"}</span>
                       </a>
                     ))}
-                    {!(rows as typeof products).length ? <p className="text-sm text-stone-400">Sin productos.</p> : null}
+                    {!(rows as typeof products).length ? <p className="text-sm text-stone-400">Categoría preparada para próximos productos.</p> : null}
                   </div>
                 </article>
               ))}
@@ -253,11 +253,11 @@ export default async function InventarioPage({
                         <p className="font-black text-white">{movement.admin_inventory_products?.name || "Producto"} · {movement.movement_type}</p>
                         <p className="text-xs text-stone-400">{new Date(movement.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid" })}</p>
                       </div>
-                      <p className="mt-2">{movement.quantity ?? 0} {movement.unit || "ud"} · lote {movement.batch_number || "-"} · proveedor {movement.supplier || "-"}</p>
+                      <p className="mt-2">{movement.quantity ?? 0} {movement.unit || "ud"} · lote {movement.batch_number || "no consignado"} · proveedor {movement.supplier || "no consignado"}</p>
                       <p className="mt-1 text-stone-300">{movement.observations || "Movimiento registrado"}</p>
                     </article>
                   ))}
-                  {!movements.length ? <p className="text-sm text-stone-400">No hay movimientos para el filtro actual.</p> : null}
+                  {!movements.length ? <p className="text-sm text-stone-400">Histórico preparado para registrar próximos movimientos.</p> : null}
                 </div>
               </section>
             </div>

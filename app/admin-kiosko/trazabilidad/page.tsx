@@ -61,7 +61,7 @@ export default async function TrazabilidadPage({
                         <p><strong>Última salida:</strong> {row.inventory_product.last_exit_date || "-"}</p>
                         <a href={`/admin-kiosko/inventario?product=${row.inventory_product.id}`} className="mt-2 inline-flex w-fit rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Abrir inventario</a>
                       </div>
-                    ) : <p className="mt-3 text-sm text-stone-300">Sin producto de inventario asociado por nombre.</p>}
+                    ) : <p className="mt-3 text-sm text-stone-300">Producto pendiente de vincular al inventario operativo.</p>}
                   </section>
 
                   <section className="rounded-[1.5rem] border border-white/10 bg-white/6 p-4">
@@ -70,7 +70,7 @@ export default async function TrazabilidadPage({
                       {row.goods_receptions?.map((record) => (
                         <p key={record.id} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-sm text-stone-200">{record.record_date} · {record.main}</p>
                       ))}
-                      {!row.goods_receptions?.length ? <p className="text-sm text-stone-300">Sin recepción localizada para este lote.</p> : null}
+                      {!row.goods_receptions?.length ? <p className="text-sm text-stone-300">Recepción pendiente de vincular a este lote.</p> : null}
                     </div>
                   </section>
 
@@ -78,9 +78,9 @@ export default async function TrazabilidadPage({
                     <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Incidencias</h2>
                     <div className="mt-3 grid gap-2">
                       {row.incidents?.map((record) => (
-                        <p key={record.id} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-sm text-stone-200">{record.record_date} · {record.main} · {record.status || "-"}</p>
+                        <p key={record.id} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-sm text-stone-200">{record.record_date} · {record.main} · {record.status || "Registro disponible"}</p>
                       ))}
-                      {!row.incidents?.length ? <p className="text-sm text-stone-300">Sin incidencias vinculadas al lote.</p> : null}
+                      {!row.incidents?.length ? <p className="text-sm text-stone-300">No constan incidencias vinculadas al lote.</p> : null}
                     </div>
                   </section>
                 </div>
@@ -91,10 +91,10 @@ export default async function TrazabilidadPage({
                     <div className="mt-3 grid gap-2">
                       {row.labels?.map((label) => (
                         <a key={label.id} href={`/admin-kiosko/etiquetas?id=${label.id}`} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-sm text-stone-200">
-                          {label.created_at.slice(0, 10)} · {label.model} · {label.product || "-"}
+                          {label.created_at.slice(0, 10)} · {label.model} · {label.product || "Producto no consignado"}
                         </a>
                       ))}
-                      {!row.labels?.length ? <p className="text-sm text-stone-300">Sin etiquetas registradas para este lote.</p> : null}
+                      {!row.labels?.length ? <p className="text-sm text-stone-300">Etiquetas preparadas para registrar cuando proceda.</p> : null}
                     </div>
                   </section>
 
@@ -103,10 +103,10 @@ export default async function TrazabilidadPage({
                     <div className="mt-3 grid gap-2">
                       {row.temperatures?.slice(0, 8).map((temperature) => (
                         <p key={temperature.id} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-sm text-stone-200">
-                          {temperature.record_date} · {temperature.equipment} · {temperature.temperature ?? "-"} ºC · {temperature.status || "-"}
+                          {temperature.record_date} · {temperature.equipment} · {temperature.temperature ?? "lectura pendiente"} ºC · {temperature.status || "Registro disponible"}
                         </p>
                       ))}
-                      {!row.temperatures?.length ? <p className="text-sm text-stone-300">Sin temperaturas localizadas.</p> : null}
+                      {!row.temperatures?.length ? <p className="text-sm text-stone-300">Temperaturas pendientes de vincular al lote.</p> : null}
                     </div>
                   </section>
                 </div>
@@ -126,7 +126,7 @@ export default async function TrazabilidadPage({
                 </section>
               </article>
             ))}
-            {!rows.length ? <p className="rounded-[1.5rem] border border-white/10 bg-[#151515] p-5 text-sm text-stone-300">No hay trazabilidad registrada para el filtro indicado.</p> : null}
+            {!rows.length ? <p className="rounded-[1.5rem] border border-white/10 bg-[#151515] p-5 text-sm text-stone-300">Trazabilidad preparada para el filtro indicado. Registra recepciones o lotes para completar la ficha.</p> : null}
           </section>
         </div>
       </section>
