@@ -232,6 +232,8 @@ export async function saveAiReceptionAction(formData: FormData) {
     quantity: text(formData, `product_${index}_quantity`),
     batch: text(formData, `product_${index}_batch`),
     expiry: optionalDate(text(formData, `product_${index}_expiry`)),
+    price: optionalMoney(text(formData, `product_${index}_price`)),
+    location: text(formData, `product_${index}_location`) || "Almacén",
     accepted: formData.get(`product_${index}_accepted`) !== "false",
   })).filter((product) => product.name || product.batch || product.expiry);
   const missingBatchOrExpiry = products.some((product) => !product.batch || !product.expiry);
@@ -300,6 +302,8 @@ export async function saveAiReceptionAction(formData: FormData) {
       supplier,
       batch: product.batch,
       expiry: product.expiry,
+      purchasePrice: product.price,
+      location: product.location,
       entryDate: documentDate,
       documentId: supplierDocument.data.id,
     });
@@ -367,7 +371,22 @@ export async function saveAiReceptionAction(formData: FormData) {
     raw_json: ocrJson,
   });
 
-  ["/admin-kiosko/ia", "/admin-kiosko/recepcion-mercancia", "/admin-kiosko/registros", "/admin-kiosko/cronologia"].forEach((path) => revalidatePath(path));
+  ["/admin-kiosko/ia", "/admin-kiosko/recepcion-mercancia", "/admin-kiosko/registros", "/admin-kiosko/cronologia", "/admin-kiosko/inventario", "/admin-kiosko/trazabilidad"].forEach((path) => revalidatePath(path));
+  const labelProduct = products.find((product) => product.name && product.batch) || products[0];
+  if (labelProduct) {
+    const labelParams = new URLSearchParams({
+      model: labelProduct.expiry ? "Caducidad" : "Lote",
+      product: labelProduct.name,
+      batch: labelProduct.batch,
+      best_before_date: labelProduct.expiry,
+      responsible: "F. Javier Bocanegra Sanjuan",
+      supplier,
+      opening_date: documentDate,
+      copies: "8",
+    });
+    redirect(`/admin-kiosko/etiquetas?${labelParams.toString()}`);
+  }
+
   redirect("/admin-kiosko/ia?saved=1");
 }
 
@@ -545,6 +564,9 @@ export async function saveInventoryProductAction(formData: FormData) {
     unit: text(formData, "unit") || "ud",
     current_stock: requiredNumber(formData, "current_stock"),
     minimum_stock: requiredNumber(formData, "minimum_stock"),
+    recommended_stock: requiredNumber(formData, "recommended_stock"),
+    last_purchase_price: requiredNumber(formData, "last_purchase_price"),
+    average_purchase_price: requiredNumber(formData, "last_purchase_price"),
     location: text(formData, "location"),
     current_batch: text(formData, "current_batch"),
     expiry_date: text(formData, "expiry_date"),
@@ -586,6 +608,7 @@ export async function saveLabelRecordAction(formData: FormData) {
     model: text(formData, "model"),
     product: text(formData, "product"),
     batch: text(formData, "batch"),
+    supplier: text(formData, "supplier"),
     elaboration_date: text(formData, "elaboration_date"),
     opening_date: text(formData, "opening_date"),
     freezing_date: text(formData, "freezing_date"),

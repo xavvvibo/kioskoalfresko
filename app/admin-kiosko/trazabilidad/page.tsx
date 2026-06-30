@@ -85,6 +85,32 @@ export default async function TrazabilidadPage({
                   </section>
                 </div>
 
+                <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                  <section className="rounded-[1.5rem] border border-white/10 bg-white/6 p-4">
+                    <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Etiquetas impresas</h2>
+                    <div className="mt-3 grid gap-2">
+                      {row.labels?.map((label) => (
+                        <a key={label.id} href={`/admin-kiosko/etiquetas?id=${label.id}`} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-sm text-stone-200">
+                          {label.created_at.slice(0, 10)} · {label.model} · {label.product || "-"}
+                        </a>
+                      ))}
+                      {!row.labels?.length ? <p className="text-sm text-stone-300">Sin etiquetas registradas para este lote.</p> : null}
+                    </div>
+                  </section>
+
+                  <section className="rounded-[1.5rem] border border-white/10 bg-white/6 p-4">
+                    <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Temperaturas de almacenamiento</h2>
+                    <div className="mt-3 grid gap-2">
+                      {row.temperatures?.slice(0, 8).map((temperature) => (
+                        <p key={temperature.id} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-sm text-stone-200">
+                          {temperature.record_date} · {temperature.equipment} · {temperature.temperature ?? "-"} ºC · {temperature.status || "-"}
+                        </p>
+                      ))}
+                      {!row.temperatures?.length ? <p className="text-sm text-stone-300">Sin temperaturas localizadas.</p> : null}
+                    </div>
+                  </section>
+                </div>
+
                 <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/6 p-4">
                   <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Cronología del lote</h2>
                   <div className="mt-4 grid gap-3 md:grid-cols-2">

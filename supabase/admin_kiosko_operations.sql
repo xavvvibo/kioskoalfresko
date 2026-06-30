@@ -10,6 +10,9 @@ create table if not exists public.admin_inventory_products (
   unit text,
   current_stock numeric default 0,
   minimum_stock numeric default 0,
+  recommended_stock numeric default 0,
+  average_purchase_price numeric default 0,
+  last_purchase_price numeric default 0,
   location text,
   current_batch text,
   expiry_date date,
@@ -19,6 +22,16 @@ create table if not exists public.admin_inventory_products (
   active boolean default true
 );
 
+alter table if exists public.admin_inventory_products
+  add column if not exists recommended_stock numeric default 0,
+  add column if not exists average_purchase_price numeric default 0,
+  add column if not exists last_purchase_price numeric default 0;
+
+alter table if exists public.admin_inventory_products
+  alter column recommended_stock set default 0,
+  alter column average_purchase_price set default 0,
+  alter column last_purchase_price set default 0;
+
 create table if not exists public.admin_inventory_movements (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz default now(),
@@ -26,6 +39,7 @@ create table if not exists public.admin_inventory_movements (
   movement_type text not null,
   quantity numeric,
   unit text,
+  purchase_price numeric,
   supplier text,
   batch_number text,
   expiry_date date,
@@ -33,6 +47,9 @@ create table if not exists public.admin_inventory_movements (
   observations text,
   source text default 'admin-kiosko'
 );
+
+alter table if exists public.admin_inventory_movements
+  add column if not exists purchase_price numeric;
 
 create table if not exists public.admin_ai_learning_memory (
   id uuid primary key default gen_random_uuid(),
@@ -56,6 +73,7 @@ create table if not exists public.admin_label_records (
   model text not null,
   product text,
   batch text,
+  supplier text,
   elaboration_date date,
   opening_date date,
   freezing_date date,
@@ -68,7 +86,10 @@ create table if not exists public.admin_label_records (
   source text default 'admin-kiosko'
 );
 
-alter table public.admin_supplier_records
+alter table if exists public.admin_label_records
+  add column if not exists supplier text;
+
+alter table if exists public.admin_supplier_records
   add column if not exists contact text,
   add column if not exists responsible_person text,
   add column if not exists schedule text,
@@ -135,6 +156,8 @@ create index if not exists admin_inventory_products_created_at_idx on public.adm
 create index if not exists admin_inventory_products_expiry_idx on public.admin_inventory_products (expiry_date);
 create index if not exists admin_inventory_products_active_idx on public.admin_inventory_products (active);
 create index if not exists admin_inventory_products_stock_idx on public.admin_inventory_products (current_stock, minimum_stock);
+create index if not exists admin_inventory_products_recommended_stock_idx on public.admin_inventory_products (recommended_stock);
+create index if not exists admin_inventory_products_purchase_price_idx on public.admin_inventory_products (average_purchase_price);
 create index if not exists admin_inventory_products_batch_idx on public.admin_inventory_products (lower(current_batch));
 create index if not exists admin_inventory_movements_created_at_idx on public.admin_inventory_movements (created_at desc);
 create index if not exists admin_inventory_movements_product_idx on public.admin_inventory_movements (product_id);
@@ -144,9 +167,14 @@ create index if not exists admin_ai_learning_memory_created_at_idx on public.adm
 create index if not exists admin_ai_learning_memory_lookup_idx on public.admin_ai_learning_memory (memory_type, lower(original_value));
 create index if not exists admin_label_records_created_at_idx on public.admin_label_records (created_at desc);
 create index if not exists admin_label_records_batch_idx on public.admin_label_records (lower(batch));
+create index if not exists admin_label_records_supplier_idx on public.admin_label_records (lower(supplier));
 
 comment on table public.admin_inventory_products is 'Productos de inventario APPCC con stock operativo, lote actual y caducidad.';
 comment on table public.admin_inventory_movements is 'Histórico de entradas, consumos, mermas, regularizaciones y bajas de inventario APPCC.';
 comment on table public.admin_ai_learning_memory is 'Memoria de normalización para correcciones OCR APPCC.';
 comment on table public.admin_label_records is 'Historial de etiquetas APPCC generadas para reimpresión.';
 comment on column public.admin_inventory_movements.source_document_id is 'Documento OCR de proveedor que origina el movimiento cuando procede.';
+comment on column public.admin_inventory_products.recommended_stock is 'Stock recomendado para reposición operativa.';
+comment on column public.admin_inventory_products.average_purchase_price is 'Precio medio de compra calculado desde entradas registradas.';
+comment on column public.admin_inventory_products.last_purchase_price is 'Último precio de compra registrado.';
+comment on column public.admin_inventory_movements.purchase_price is 'Precio de compra asociado al movimiento cuando procede.';

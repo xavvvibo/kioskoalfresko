@@ -74,6 +74,10 @@ export default async function AdminKioskoPage({
       ? "Completo"
       : "Revisar"
     : "Sin datos";
+  const appccPercent = summary
+    ? Math.max(0, 100 - ((summary.pendingAlerts + summary.inProgressAlerts + summary.openIncidents + summary.reviewingTemperatureRecords + summary.incidentTemperatureRecords) * 10))
+    : 0;
+  const documentationPercent = metrics ? Math.max(0, Math.round(((27 - metrics.pendingDocuments) / 27) * 100)) : 0;
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
@@ -100,6 +104,8 @@ export default async function AdminKioskoPage({
                 {metrics ? (
                   <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {[
+                      ["APPCC completo", `${appccPercent}%`],
+                      ["Documentación", `${documentationPercent}%`],
                       ["Recepciones este mes", metrics.receptionsThisMonth],
                       ["OCR procesados", metrics.ocrProcessed],
                       ["OCR a revisar", metrics.ocrToReview],
@@ -117,6 +123,7 @@ export default async function AdminKioskoPage({
                       ["Registros semana", metrics.recordsWeek],
                       ["Registros mes", metrics.recordsMonth],
                       ["Última inspección", metrics.latestInspection],
+                      ["Próxima revisión", summary?.latestMonthlySignature ? "Revisión mensual" : "Firmar informe mensual"],
                     ].map(([label, value]) => (
                       <article key={label} className="rounded-[1.3rem] border border-white/10 bg-[#0d0d0d] p-4">
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{label}</p>

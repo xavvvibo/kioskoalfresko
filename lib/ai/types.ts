@@ -1,6 +1,10 @@
 export type AiDocumentKind =
   | "certificado_manipulador"
   | "certificado_ddd"
+  | "boletin_sanitario"
+  | "contrato_ddd"
+  | "analisis_agua"
+  | "ficha_tecnica"
   | "memoria_sanitaria"
   | "appcc"
   | "factura"

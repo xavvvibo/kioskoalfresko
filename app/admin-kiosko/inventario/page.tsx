@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getInventoryMovements, getInventoryProductById, getInventoryProducts } from "@/lib/admin-kiosko/database";
+import { getExpiryBuckets, getInventoryMovements, getInventoryProductById, getInventoryProducts } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../_components/AdminHeader";
 import { saveInventoryMovementAction, saveInventoryProductAction } from "../actions";
 
@@ -38,14 +38,18 @@ export default async function InventarioPage({
 }) {
   await requireAdminSession();
   const params = await searchParams;
-  const [productsResult, movementsResult, selectedResult] = await Promise.all([
+  const [productsResult, movementsResult, selectedResult, expiryResult] = await Promise.all([
     getInventoryProducts({ q: params?.q, status: params?.status, stock: params?.stock, expiry: params?.expiry }),
     getInventoryMovements(params?.product),
     params?.product ? getInventoryProductById(params.product) : Promise.resolve({ ok: true as const, data: null }),
+    getExpiryBuckets(),
   ]);
   const products = productsResult.ok ? productsResult.data : [];
   const movements = movementsResult.ok ? movementsResult.data : [];
   const selected = selectedResult.ok ? selectedResult.data : null;
+  const expiry = expiryResult.ok ? expiryResult.data : { expired: [], seven: [], fifteen: [], thirty: [] };
+  const stockLow = products.filter((product) => product.active && Number(product.current_stock || 0) <= Number(product.minimum_stock || 0)).length;
+  const withoutMovements = products.filter((product) => product.active && !product.last_entry_date && !product.last_exit_date).length;
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
@@ -54,6 +58,45 @@ export default async function InventarioPage({
         <div className="grid gap-6">
           {params?.saved === "1" ? <p className="rounded-2xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-black text-emerald-950">Inventario actualizado.</p> : null}
           {params?.error ? <p className="rounded-2xl border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-3 text-sm font-semibold text-[#f2c6bb]">{params.error}</p> : null}
+
+          <section className="grid gap-3 md:grid-cols-4">
+            {[
+              ["Productos activos", products.filter((product) => product.active).length],
+              ["Stock bajo", stockLow],
+              ["Caducados", expiry.expired.length],
+              ["Sin movimientos", withoutMovements],
+            ].map(([label, value]) => (
+              <article key={label} className="rounded-[1.4rem] border border-white/10 bg-[#151515] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{label}</p>
+                <p className="mt-2 text-3xl font-black text-white">{String(value)}</p>
+              </article>
+            ))}
+          </section>
+
+          <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+            <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Caducidades</h2>
+            <div className="mt-5 grid gap-4 md:grid-cols-4">
+              {[
+                ["Caducados", expiry.expired],
+                ["7 días", expiry.seven],
+                ["15 días", expiry.fifteen],
+                ["30 días", expiry.thirty],
+              ].map(([label, rows]) => (
+                <article key={label as string} className="rounded-[1.4rem] border border-white/10 bg-white/6 p-4">
+                  <p className="text-sm font-black uppercase tracking-[0.14em] text-[#f2c6bb]">{label as string}</p>
+                  <div className="mt-3 grid gap-2">
+                    {(rows as typeof products).slice(0, 5).map((product) => (
+                      <a key={product.id} href={`/admin-kiosko/inventario?product=${product.id}`} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-sm text-stone-200">
+                        <span className="block font-black text-white">{product.name}</span>
+                        <span className="block text-xs text-stone-400">{product.expiry_date} · lote {product.current_batch || "-"}</span>
+                      </a>
+                    ))}
+                    {!(rows as typeof products).length ? <p className="text-sm text-stone-400">Sin productos.</p> : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
 
           <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
             <form className="grid gap-3 md:grid-cols-[1fr_11rem_11rem_13rem_auto]">
@@ -90,6 +133,10 @@ export default async function InventarioPage({
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field name="current_stock" label="Stock actual" value={selected?.current_stock ?? 0} type="number" />
                     <Field name="minimum_stock" label="Stock mínimo" value={selected?.minimum_stock ?? 0} type="number" />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field name="recommended_stock" label="Stock recomendado" value={selected?.recommended_stock ?? 0} type="number" />
+                    <Field name="last_purchase_price" label="Precio compra" value={selected?.last_purchase_price ?? 0} type="number" />
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field name="unit" label="Unidad" value={selected?.unit || "ud"} />
@@ -158,6 +205,8 @@ export default async function InventarioPage({
                         <th className="px-3 py-2">Producto</th>
                         <th className="px-3 py-2">Stock</th>
                         <th className="px-3 py-2">Mínimo</th>
+                        <th className="px-3 py-2">Recomendado</th>
+                        <th className="px-3 py-2">Precio medio</th>
                         <th className="px-3 py-2">Último proveedor</th>
                         <th className="px-3 py-2">Último lote</th>
                         <th className="px-3 py-2">Última entrada</th>
@@ -174,6 +223,8 @@ export default async function InventarioPage({
                             <td className="rounded-l-2xl px-3 py-3 font-black">{product.name}<span className="block text-xs font-semibold text-stone-600">{product.category || product.location || ""}</span></td>
                             <td className="px-3 py-3">{product.current_stock ?? 0} {product.unit || "ud"}</td>
                             <td className="px-3 py-3">{product.minimum_stock ?? 0}</td>
+                            <td className="px-3 py-3">{product.recommended_stock ?? 0}</td>
+                            <td className="px-3 py-3">{product.average_purchase_price ? `${product.average_purchase_price} €` : "-"}</td>
                             <td className="px-3 py-3">{product.usual_supplier || "-"}</td>
                             <td className="px-3 py-3">{product.current_batch || "-"}</td>
                             <td className="px-3 py-3">{product.last_entry_date || "-"}</td>

@@ -37,5 +37,3 @@ export async function classifyDocument(input: AiDocumentInput & { base64?: strin
     rawOpenAIText: response.rawText,
   };
 }
-
-export const classifyDocumentPlaceholder = classifyDocument;

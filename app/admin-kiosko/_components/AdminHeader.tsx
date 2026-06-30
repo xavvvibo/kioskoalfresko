@@ -3,6 +3,8 @@ import { logoutAdminKioskoAction } from "../actions";
 
 const adminNav = [
   ["Panel", "/admin-kiosko"],
+  ["Buscar", "/admin-kiosko/buscar"],
+  ["Inspección en directo", "/admin-kiosko/inspeccion-directo"],
   ["Modo inspección", "/admin-kiosko/inspeccion"],
   ["Registros", "/admin-kiosko/registros"],
   ["Documentación", "/admin-kiosko/documentacion"],
@@ -59,6 +61,10 @@ export function AdminHeader({ title, description }: { title: string; description
             </form>
           </div>
         </div>
+        <form action="/admin-kiosko/buscar" className="mt-6 grid gap-3 rounded-[1.2rem] border border-white/10 bg-black/20 p-3 md:grid-cols-[1fr_auto]">
+          <input name="q" placeholder="Buscar producto, lote, proveedor, documento, equipo, incidencia o fecha" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-sm text-stone-950 outline-none focus:border-[#d94b2b]" />
+          <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Buscar APPCC</button>
+        </form>
         <nav className="mt-6 overflow-x-auto rounded-[1.2rem] border border-white/10 bg-black/20 p-2" aria-label="Navegación interna APPCC">
           <div className="flex min-w-max gap-2">
             {adminNav.map(([label, href]) => (

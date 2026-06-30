@@ -339,6 +339,9 @@ export type InventoryProduct = {
   unit: string | null;
   current_stock: number | null;
   minimum_stock: number | null;
+  recommended_stock: number | null;
+  average_purchase_price: number | null;
+  last_purchase_price: number | null;
   location: string | null;
   current_batch: string | null;
   expiry_date: string | null;
@@ -356,6 +359,9 @@ export type InventoryProductInput = {
   unit?: string;
   current_stock?: number;
   minimum_stock?: number;
+  recommended_stock?: number;
+  average_purchase_price?: number;
+  last_purchase_price?: number;
   location?: string;
   current_batch?: string;
   expiry_date?: string;
@@ -368,6 +374,7 @@ export type InventoryMovementInput = {
   movement_type: "entrada" | "consumo" | "merma" | "regularizacion" | "baja" | "edicion";
   quantity?: number;
   unit?: string;
+  purchase_price?: number;
   supplier?: string;
   batch_number?: string;
   expiry_date?: string;
@@ -381,6 +388,7 @@ export type InventoryMovement = {
   movement_type: string;
   quantity: number | null;
   unit: string | null;
+  purchase_price: number | null;
   supplier: string | null;
   batch_number: string | null;
   expiry_date: string | null;
@@ -401,6 +409,8 @@ export type InventoryReceptionInput = {
   supplier?: string;
   batch?: string;
   expiry?: string;
+  purchasePrice?: number;
+  location?: string;
   entryDate: string;
   documentId?: string;
 };
@@ -427,6 +437,8 @@ export type TraceabilityRow = {
   } | null;
   inventory_product?: InventoryProduct | null;
   inventory_movements?: InventoryMovement[];
+  labels?: LabelRecord[];
+  temperatures?: DashboardTemperatureRecord[];
   goods_receptions?: RecentAdminRecord[];
   incidents?: RecentAdminRecord[];
 };
@@ -435,6 +447,7 @@ export type LabelRecordInput = {
   model: string;
   product?: string;
   batch?: string;
+  supplier?: string;
   elaboration_date?: string;
   opening_date?: string;
   freezing_date?: string;
@@ -451,6 +464,7 @@ export type LabelRecord = {
   model: string;
   product: string | null;
   batch: string | null;
+  supplier: string | null;
   elaboration_date: string | null;
   opening_date: string | null;
   freezing_date: string | null;
@@ -460,6 +474,28 @@ export type LabelRecord = {
   print_format: string | null;
   copies: number | null;
   qr_payload: string | null;
+};
+
+export type SupplierProfile = {
+  id: string;
+  supplier: string;
+  cif: string | null;
+  phone: string | null;
+  email: string | null;
+  category: string | null;
+  status: string | null;
+  documents: AiSupplierDocument[];
+  receptions: RecentAdminRecord[];
+  incidents: RecentAdminRecord[];
+  products: InventoryProduct[];
+};
+
+export type GlobalSearchResult = {
+  type: string;
+  title: string;
+  detail: string;
+  href: string;
+  date?: string;
 };
 
 export type OperationalAlert = {
@@ -1101,7 +1137,7 @@ export async function createAiProcessingLog(data: AiProcessingLogInput) {
   });
 }
 
-const inventorySelect = "id,created_at,updated_at,name,category,usual_supplier,unit,current_stock,minimum_stock,location,current_batch,expiry_date,last_entry_date,last_exit_date,observations,active";
+const inventorySelect = "id,created_at,updated_at,name,category,usual_supplier,unit,current_stock,minimum_stock,recommended_stock,average_purchase_price,last_purchase_price,location,current_batch,expiry_date,last_entry_date,last_exit_date,observations,active";
 
 export async function getInventoryProducts(filters?: { q?: string; status?: string; stock?: string; expiry?: string }): Promise<DbResult<InventoryProduct[]>> {
   const result = await getRows<InventoryProduct>(
@@ -1179,6 +1215,9 @@ export async function createInventoryProduct(data: InventoryProductInput) {
     unit: cleanText(data.unit) || "ud",
     current_stock: normalizeNumber(data.current_stock),
     minimum_stock: normalizeNumber(data.minimum_stock),
+    recommended_stock: normalizeNumber(data.recommended_stock),
+    average_purchase_price: normalizeNumber(data.average_purchase_price),
+    last_purchase_price: normalizeNumber(data.last_purchase_price),
     location: cleanText(data.location),
     current_batch: cleanText(data.current_batch),
     expiry_date: cleanText(data.expiry_date),
@@ -1196,6 +1235,7 @@ export async function createInventoryProduct(data: InventoryProductInput) {
       movement_type: "entrada",
       quantity: normalizeNumber(data.current_stock),
       unit: cleanText(data.unit) || "ud",
+      purchase_price: normalizeNumber(data.last_purchase_price),
       supplier: data.usual_supplier,
       batch_number: data.current_batch,
       expiry_date: data.expiry_date,
@@ -1219,6 +1259,9 @@ export async function updateInventoryProduct(data: InventoryProductInput) {
     unit: cleanText(data.unit) || "ud",
     current_stock: normalizeNumber(data.current_stock),
     minimum_stock: normalizeNumber(data.minimum_stock),
+    recommended_stock: normalizeNumber(data.recommended_stock),
+    average_purchase_price: normalizeNumber(data.average_purchase_price),
+    last_purchase_price: normalizeNumber(data.last_purchase_price),
     location: cleanText(data.location),
     current_batch: cleanText(data.current_batch),
     expiry_date: cleanText(data.expiry_date),
@@ -1233,6 +1276,7 @@ export async function updateInventoryProduct(data: InventoryProductInput) {
     movement_type: "edicion",
     quantity: 0,
     unit: cleanText(data.unit) || "ud",
+    purchase_price: normalizeNumber(data.last_purchase_price),
     supplier: data.usual_supplier,
     batch_number: data.current_batch,
     expiry_date: data.expiry_date,
@@ -1252,6 +1296,7 @@ export async function insertInventoryMovement(data: InventoryMovementInput) {
     movement_type: data.movement_type,
     quantity: normalizeNumber(data.quantity),
     unit: cleanText(data.unit) || "ud",
+    purchase_price: normalizeNumber(data.purchase_price),
     supplier: cleanText(data.supplier),
     batch_number: cleanText(data.batch_number),
     expiry_date: cleanText(data.expiry_date),
@@ -1273,6 +1318,7 @@ export async function applyInventoryMovement(data: InventoryMovementInput) {
     ...data,
     quantity,
     unit: data.unit || product.data.unit || "ud",
+    purchase_price: data.purchase_price || product.data.last_purchase_price || undefined,
     supplier: data.supplier || product.data.usual_supplier || undefined,
     batch_number: data.batch_number || product.data.current_batch || undefined,
     expiry_date: data.expiry_date || product.data.expiry_date || undefined,
@@ -1284,6 +1330,8 @@ export async function applyInventoryMovement(data: InventoryMovementInput) {
     updated_at: new Date().toISOString(),
     current_stock: nextStock,
     usual_supplier: cleanText(data.supplier) || product.data.usual_supplier,
+    last_purchase_price: data.purchase_price || product.data.last_purchase_price,
+    average_purchase_price: data.purchase_price ? Number(((Number(product.data.average_purchase_price || data.purchase_price) + data.purchase_price) / 2).toFixed(2)) : product.data.average_purchase_price,
     current_batch: cleanText(data.batch_number) || product.data.current_batch,
     expiry_date: cleanText(data.expiry_date) || product.data.expiry_date,
     last_entry_date: data.movement_type === "entrada" ? today : product.data.last_entry_date,
@@ -1294,7 +1342,7 @@ export async function applyInventoryMovement(data: InventoryMovementInput) {
 
 export async function getInventoryMovements(productId?: string): Promise<DbResult<InventoryMovement[]>> {
   const filters = [
-    "select=id,created_at,product_id,movement_type,quantity,unit,supplier,batch_number,expiry_date,source_document_id,observations,source,admin_inventory_products(id,name,current_stock,unit)",
+    "select=id,created_at,product_id,movement_type,quantity,unit,purchase_price,supplier,batch_number,expiry_date,source_document_id,observations,source,admin_inventory_products(id,name,current_stock,unit)",
     "order=created_at.desc",
     "limit=300",
   ];
@@ -1322,8 +1370,12 @@ export async function upsertInventoryFromAiReception(data: InventoryReceptionInp
       updated_at: new Date().toISOString(),
       usual_supplier: cleanText(data.supplier) || product.usual_supplier,
       current_stock: Number(product.current_stock || 0) + quantity,
+      recommended_stock: Math.max(Number(product.recommended_stock || 0), quantity * 2),
+      last_purchase_price: data.purchasePrice,
+      average_purchase_price: data.purchasePrice ? Number(((Number(product.average_purchase_price || data.purchasePrice) + data.purchasePrice) / 2).toFixed(2)) : product.average_purchase_price,
       current_batch: cleanText(data.batch) || product.current_batch,
       expiry_date: cleanText(data.expiry) || product.expiry_date,
+      location: cleanText(data.location) || product.location,
       last_entry_date: data.entryDate,
       active: true,
     });
@@ -1336,8 +1388,12 @@ export async function upsertInventoryFromAiReception(data: InventoryReceptionInp
       unit: "ud",
       current_stock: quantity,
       minimum_stock: 0,
+      recommended_stock: Math.max(quantity * 2, quantity),
+      last_purchase_price: data.purchasePrice,
+      average_purchase_price: data.purchasePrice,
       current_batch: cleanText(data.batch),
       expiry_date: cleanText(data.expiry),
+      location: cleanText(data.location) || "Almacén",
       last_entry_date: data.entryDate,
       active: true,
       observations: "Creado desde recepción IA.",
@@ -1352,6 +1408,7 @@ export async function upsertInventoryFromAiReception(data: InventoryReceptionInp
     movement_type: "entrada",
     quantity,
     unit: "ud",
+    purchase_price: data.purchasePrice,
     supplier: cleanText(data.supplier),
     batch_number: cleanText(data.batch),
     expiry_date: cleanText(data.expiry),
@@ -1391,13 +1448,15 @@ export async function getTraceabilityRows(filters?: { q?: string; date?: string 
     : result.data;
 
   const enrichedRows = await Promise.all(filteredRows.map(async (row) => {
-    const [products, movements, receptions, incidents] = await Promise.all([
+    const [products, movements, labels, temperatures, receptions, incidents] = await Promise.all([
       row.product_name
         ? getRows<InventoryProduct>("admin_inventory_products", `?select=${inventorySelect}&name=ilike.${encodeURIComponent(row.product_name)}&limit=1`)
         : Promise.resolve({ ok: true as const, data: [] as InventoryProduct[] }),
       row.batch_number
-        ? getRows<InventoryMovement>("admin_inventory_movements", `?select=id,created_at,product_id,movement_type,quantity,unit,supplier,batch_number,expiry_date,source_document_id,observations,source&batch_number=eq.${encodeURIComponent(row.batch_number)}&order=created_at.desc&limit=25`)
+        ? getRows<InventoryMovement>("admin_inventory_movements", `?select=id,created_at,product_id,movement_type,quantity,unit,purchase_price,supplier,batch_number,expiry_date,source_document_id,observations,source&batch_number=eq.${encodeURIComponent(row.batch_number)}&order=created_at.desc&limit=25`)
         : Promise.resolve({ ok: true as const, data: [] as InventoryMovement[] }),
+      getLabelRecordsByBatch(row.batch_number || undefined),
+      getRows<DashboardTemperatureRecord>("admin_temperature_records", "?select=id,equipment,record_date,record_time,temperature,status,responsible&order=record_date.desc,created_at.desc&limit=30"),
       row.batch_number || row.admin_supplier_documents?.supplier_name
         ? getRows<RecentAdminRecord & { supplier: string; product: string }>(
             "admin_goods_reception_records",
@@ -1419,6 +1478,8 @@ export async function getTraceabilityRows(filters?: { q?: string; date?: string 
       ...row,
       inventory_product: products.ok ? products.data[0] || null : null,
       inventory_movements: movements.ok ? movements.data : [],
+      labels: labels.ok ? labels.data : [],
+      temperatures: temperatures.ok ? temperatures.data : [],
       goods_receptions: receptions.ok
         ? receptions.data.map((record) => ({
             ...record,
@@ -1446,6 +1507,7 @@ function buildLabelQrPayload(data: LabelRecordInput) {
     model: data.model,
     product: cleanText(data.product),
     batch: cleanText(data.batch),
+    supplier: cleanText(data.supplier),
     best_before_date: cleanText(data.best_before_date),
     responsible: cleanText(data.responsible),
   });
@@ -1460,6 +1522,7 @@ export async function createLabelRecord(data: LabelRecordInput) {
     model: data.model.trim(),
     product: cleanText(data.product),
     batch: cleanText(data.batch),
+    supplier: cleanText(data.supplier),
     elaboration_date: cleanText(data.elaboration_date),
     opening_date: cleanText(data.opening_date),
     freezing_date: cleanText(data.freezing_date),
@@ -1475,8 +1538,94 @@ export async function createLabelRecord(data: LabelRecordInput) {
 export async function getLabelRecords(limit = 25): Promise<DbResult<LabelRecord[]>> {
   return getRows<LabelRecord>(
     "admin_label_records",
-    `?select=id,created_at,model,product,batch,elaboration_date,opening_date,freezing_date,defrosting_date,best_before_date,responsible,print_format,copies,qr_payload&order=created_at.desc&limit=${limit}`,
+    `?select=id,created_at,model,product,batch,supplier,elaboration_date,opening_date,freezing_date,defrosting_date,best_before_date,responsible,print_format,copies,qr_payload&order=created_at.desc&limit=${limit}`,
   );
+}
+
+export async function getLabelRecordsByBatch(batch?: string): Promise<DbResult<LabelRecord[]>> {
+  if (!batch?.trim()) return { ok: true, data: [] };
+  const safeBatch = batch.trim();
+  return getRows<LabelRecord>(
+    "admin_label_records",
+    `?select=id,created_at,model,product,batch,supplier,elaboration_date,opening_date,freezing_date,defrosting_date,best_before_date,responsible,print_format,copies,qr_payload&batch=ilike.*${encodeURIComponent(safeBatch)}*&order=created_at.desc&limit=25`,
+  );
+}
+
+export async function getSupplierProfiles(q?: string): Promise<DbResult<SupplierProfile[]>> {
+  const suppliers = await getRows<{ id: string; supplier: string; cif: string | null; phone: string | null; email: string | null; category: string | null; status: string | null }>(
+    "admin_supplier_records",
+    "?select=id,supplier,cif,phone,email,category,status&order=supplier.asc&limit=100",
+  );
+  if (!suppliers.ok) return suppliers;
+
+  const needle = q?.trim().toLowerCase();
+  const filtered = suppliers.data.filter((supplier) => !needle || [supplier.supplier, supplier.cif, supplier.category].filter(Boolean).join(" ").toLowerCase().includes(needle));
+  const profiles = await Promise.all(filtered.map(async (supplier) => {
+    const [documents, receptions, incidents, products] = await Promise.all([
+      getRows<AiSupplierDocument>("admin_supplier_documents", `?select=id,created_at,document_type,document_number,document_date,supplier_name,ocr_status&supplier_name=ilike.*${encodeURIComponent(supplier.supplier)}*&order=created_at.desc&limit=20`),
+      getRows<RecentAdminRecord & { supplier: string; product: string }>("admin_goods_reception_records", `?select=id,record_date,record_time,responsible,status,supplier,product&supplier=ilike.*${encodeURIComponent(supplier.supplier)}*&order=record_date.desc,created_at.desc&limit=20`),
+      getRows<RecentAdminRecord & { incident_type: string; severity: string | null }>("admin_incident_records", `?select=id,record_date,record_time,responsible,status,incident_type,severity&observations=ilike.*${encodeURIComponent(supplier.supplier)}*&order=record_date.desc,created_at.desc&limit=20`),
+      getRows<InventoryProduct>("admin_inventory_products", `?select=${inventorySelect}&usual_supplier=ilike.*${encodeURIComponent(supplier.supplier)}*&order=name.asc&limit=50`),
+    ]);
+
+    return {
+      ...supplier,
+      documents: documents.ok ? documents.data : [],
+      receptions: receptions.ok ? receptions.data.map((record) => ({ ...record, main: `${record.supplier} · ${record.product}` })) : [],
+      incidents: incidents.ok ? incidents.data.map((record) => ({ ...record, main: `${record.incident_type}${record.severity ? ` · ${record.severity}` : ""}` })) : [],
+      products: products.ok ? products.data : [],
+    };
+  }));
+
+  return { ok: true, data: profiles };
+}
+
+export async function getExpiryBuckets(): Promise<DbResult<{ expired: InventoryProduct[]; seven: InventoryProduct[]; fifteen: InventoryProduct[]; thirty: InventoryProduct[] }>> {
+  const inventory = await getInventoryProducts({ status: "activos" });
+  if (!inventory.ok) return inventory;
+  const today = getMadridDate();
+  const seven = addDays(today, 7);
+  const fifteen = addDays(today, 15);
+  const thirty = addDays(today, 30);
+  const rows = inventory.data.filter((product) => product.active && product.expiry_date).sort((a, b) => String(a.expiry_date).localeCompare(String(b.expiry_date)));
+
+  return {
+    ok: true,
+    data: {
+      expired: rows.filter((product) => String(product.expiry_date) < today),
+      seven: rows.filter((product) => String(product.expiry_date) >= today && String(product.expiry_date) <= seven),
+      fifteen: rows.filter((product) => String(product.expiry_date) > seven && String(product.expiry_date) <= fifteen),
+      thirty: rows.filter((product) => String(product.expiry_date) > fifteen && String(product.expiry_date) <= thirty),
+    },
+  };
+}
+
+export async function getGlobalSearchResults(q: string): Promise<DbResult<GlobalSearchResult[]>> {
+  const needle = q.trim();
+  if (!needle) return { ok: true, data: [] };
+
+  const [inventory, traceability, suppliers, documents, incidents, temperatures, equipment, records] = await Promise.all([
+    getInventoryProducts({ q: needle, status: "todos" }),
+    getTraceabilityRows({ q: needle }),
+    getSupplierProfiles(needle),
+    getRows<AiSupplierDocument>("admin_supplier_documents", `?select=id,created_at,document_type,document_number,document_date,supplier_name,ocr_status&or=(supplier_name.ilike.*${encodeURIComponent(needle)}*,document_number.ilike.*${encodeURIComponent(needle)}*,original_filename.ilike.*${encodeURIComponent(needle)}*)&order=created_at.desc&limit=20`),
+    getRows<RecentAdminRecord & { incident_type: string; severity: string | null }>("admin_incident_records", `?select=id,record_date,record_time,responsible,status,incident_type,severity&or=(incident_type.ilike.*${encodeURIComponent(needle)}*,observations.ilike.*${encodeURIComponent(needle)}*)&order=record_date.desc,created_at.desc&limit=20`),
+    getRows<DashboardTemperatureRecord>("admin_temperature_records", `?select=id,equipment,record_date,record_time,temperature,status,responsible&or=(equipment.ilike.*${encodeURIComponent(needle)}*,record_date.eq.${encodeURIComponent(needle)})&order=record_date.desc,created_at.desc&limit=20`),
+    getRows<{ id: string; name: string; location: string | null; status: string | null; created_at: string }>("admin_equipment_assets", `?select=id,name,location,status,created_at&or=(name.ilike.*${encodeURIComponent(needle)}*,location.ilike.*${encodeURIComponent(needle)}*)&order=created_at.desc&limit=20`),
+    getAppccRecords({ type: "todos", equipment: needle, includeArchivedEquipment: true }),
+  ]);
+
+  const results: GlobalSearchResult[] = [];
+  if (inventory.ok) inventory.data.forEach((item) => results.push({ type: "Inventario", title: item.name, detail: `Stock ${item.current_stock ?? 0} ${item.unit || "ud"} · lote ${item.current_batch || "-"}`, href: `/admin-kiosko/inventario?product=${item.id}`, date: item.last_entry_date || item.created_at?.slice(0, 10) }));
+  if (traceability.ok) traceability.data.forEach((item) => results.push({ type: "Lote", title: item.batch_number || item.product_name || "Trazabilidad", detail: `${item.admin_supplier_documents?.supplier_name || "-"} · ${item.product_name || "-"}`, href: `/admin-kiosko/trazabilidad?q=${encodeURIComponent(item.batch_number || item.product_name || needle)}`, date: item.created_at.slice(0, 10) }));
+  if (suppliers.ok) suppliers.data.forEach((item) => results.push({ type: "Proveedor", title: item.supplier, detail: `${item.documents.length} documentos · ${item.receptions.length} recepciones · ${item.products.length} productos`, href: `/admin-kiosko/proveedores?q=${encodeURIComponent(item.supplier)}` }));
+  if (documents.ok) documents.data.forEach((item) => results.push({ type: item.document_type || "Documento OCR", title: item.document_number || item.supplier_name || "Documento", detail: `${item.supplier_name || "-"} · ${item.ocr_status || "-"}`, href: `/admin-kiosko/trazabilidad?q=${encodeURIComponent(item.document_number || item.supplier_name || needle)}`, date: item.document_date || item.created_at.slice(0, 10) }));
+  if (incidents.ok) incidents.data.forEach((item) => results.push({ type: "Incidencia", title: item.incident_type, detail: `${item.severity || "-"} · ${item.status || "-"}`, href: "/admin-kiosko/incidencias", date: item.record_date }));
+  if (temperatures.ok) temperatures.data.forEach((item) => results.push({ type: "Temperatura", title: item.equipment, detail: `${item.temperature ?? "-"} ºC · ${item.status || "-"}`, href: "/admin-kiosko/temperaturas", date: item.record_date }));
+  if (equipment.ok) equipment.data.forEach((item) => results.push({ type: "Equipo", title: item.name, detail: `${item.location || "-"} · ${item.status || "-"}`, href: `/admin-kiosko/equipos/${encodeURIComponent(item.name.toLowerCase().replaceAll(" ", "-"))}`, date: item.created_at?.slice(0, 10) }));
+  if (records.ok) records.data.slice(0, 20).forEach((item) => results.push({ type: item.typeLabel, title: item.subject, detail: `${item.main} · ${item.status || "-"}`, href: "/admin-kiosko/registros", date: item.record_date }));
+
+  return { ok: true, data: results.slice(0, 80) };
 }
 
 export async function createEquipmentAsset(data: EquipmentAssetInput) {

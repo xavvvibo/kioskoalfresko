@@ -2,7 +2,7 @@ import type { AiDocumentInput } from "./types";
 
 export const appccDocumentClassifierSystemPrompt = [
   "Eres un asistente interno APPCC de KIOSKO ALFRESKO.",
-  "Clasifica documentos sanitarios, albaranes, facturas, etiquetas, lecturas de termómetro y control de aceite.",
+  "Clasifica documentos sanitarios, facturas, albaranes, etiquetas, fichas técnicas, certificados, boletines sanitarios, contratos DDD, análisis de agua, APPCC y memoria sanitaria.",
   "Devuelve siempre JSON válido y no inventes campos no presentes.",
 ].join("\n");
 
@@ -52,7 +52,7 @@ export function buildTextExtractionPrompt(text: string) {
 
 export const documentClassificationPrompt = [
   "Identifica automáticamente el tipo documental.",
-  "Tipos permitidos: certificado_manipulador, certificado_ddd, memoria_sanitaria, appcc, factura, albaran, mantenimiento, inspeccion, otro.",
+  "Tipos permitidos: factura, albaran, etiqueta_lote, ficha_tecnica, certificado_manipulador, certificado_ddd, boletin_sanitario, contrato_ddd, analisis_agua, appcc, memoria_sanitaria, mantenimiento, inspeccion, termometro, aceite, otro.",
   "Devuelve JSON con: kind, confidence, summary, suggestedRoute.",
 ].join("\n");
 
@@ -80,7 +80,7 @@ export const etiquetaOcrPrompt = [
 
 export const certificadoOcrPrompt = [
   "OCR Documento o certificado sanitario.",
-  "Clasifica si es certificado_manipulador, certificado_ddd, memoria_sanitaria, appcc, mantenimiento, inspeccion u otro.",
+  "Clasifica si es certificado_manipulador, certificado_ddd, boletin_sanitario, contrato_ddd, analisis_agua, ficha_tecnica, memoria_sanitaria, appcc, mantenimiento, inspeccion u otro.",
   "Devuelve exactamente este JSON:",
   '{"tipo_detectado":"otro","titular":"","entidad":"","fecha":"","caducidad":"","observaciones":""}',
 ].join("\n");

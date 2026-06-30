@@ -188,6 +188,8 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
                     ["quantity", "cantidad", item.cantidad],
                     ["batch", "lote", item.lote],
                     ["expiry", "caducidad", item.caducidad],
+                    ["price", "precio compra", item.importe],
+                    ["location", "ubicación", "Almacén"],
                   ] as Array<[string, string, unknown]>).map(([field, label, value]) => (
                     <label key={field} className="grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-stone-300">
                       {label}

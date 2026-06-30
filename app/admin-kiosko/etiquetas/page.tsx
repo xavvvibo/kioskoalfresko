@@ -18,6 +18,7 @@ function labelFromParams(params: Record<string, string>) {
     model: params.model || "Elaboración",
     product: params.product || "",
     batch: params.batch || "",
+    supplier: params.supplier || "",
     elaboration_date: params.elaboration_date || "",
     opening_date: params.opening_date || "",
     freezing_date: params.freezing_date || "",
@@ -26,7 +27,7 @@ function labelFromParams(params: Record<string, string>) {
     responsible: params.responsible || "F. Javier Bocanegra Sanjuan",
     print_format: params.print_format || "a4",
     copies: Number(params.copies || 8),
-    qr_payload: params.qr_payload || JSON.stringify({ type: "appcc-label", product: params.product || "", batch: params.batch || "" }),
+    qr_payload: params.qr_payload || JSON.stringify({ type: "appcc-label", product: params.product || "", batch: params.batch || "", supplier: params.supplier || "" }),
   };
 }
 
@@ -44,6 +45,7 @@ function LabelCard({ label }: { label: ReturnType<typeof labelFromParams> }) {
       <div className="mt-3 grid gap-1 text-sm">
         <p><strong>Producto:</strong> {label.product || "-"}</p>
         <p><strong>Lote:</strong> {label.batch || "-"}</p>
+        <p><strong>Proveedor:</strong> {label.supplier || "-"}</p>
         <p><strong>Elaboración:</strong> {label.elaboration_date || "-"}</p>
         <p><strong>Apertura:</strong> {label.opening_date || "-"}</p>
         <p><strong>Congelación:</strong> {label.freezing_date || "-"}</p>
@@ -70,6 +72,7 @@ export default async function EtiquetasPage({
         model: selected.model,
         product: selected.product || "",
         batch: selected.batch || "",
+        supplier: selected.supplier || "",
         elaboration_date: selected.elaboration_date || "",
         opening_date: selected.opening_date || "",
         freezing_date: selected.freezing_date || "",
@@ -100,6 +103,7 @@ export default async function EtiquetasPage({
                 {[
                   ["product", "Producto", current.product],
                   ["batch", "Lote", current.batch],
+                  ["supplier", "Proveedor", current.supplier],
                   ["elaboration_date", "Fecha elaboración", current.elaboration_date],
                   ["opening_date", "Fecha apertura", current.opening_date],
                   ["freezing_date", "Fecha congelación", current.freezing_date],
