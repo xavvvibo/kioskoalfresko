@@ -3,6 +3,8 @@
 import { useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import type { OcrExtractorKind, OcrProgressEvent, OcrUploadResult } from "@/lib/ai/types";
+import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
+import { ZebraPrintButton } from "../_components/ZebraPrintButton";
 import { saveAiReceptionAction } from "../actions";
 
 type Card = {
@@ -91,6 +93,20 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
     !temperature ? "Temperatura no visible en el documento. Revisar si aplica." : "",
   ].filter(Boolean);
   const reviewComplete = supplier && documentDate && products.length && batches.length && expiries.length && temperature;
+  const firstProduct = products[0] || {};
+  const receptionProduct = asText(firstProduct.nombre ?? firstProduct.producto);
+  const receptionBatch = asText(firstProduct.lote ?? firstProduct.batch_number);
+  const receptionExpiry = asText(firstProduct.caducidad ?? firstProduct.expiry_date);
+  const receptionZpl = buildZebraLabelZpl({
+    template: "recepcion",
+    product: receptionProduct,
+    batch: receptionBatch,
+    supplier,
+    sourceBatch: receptionBatch,
+    receptionDate: documentDate,
+    expiryDate: receptionExpiry,
+    copies: 1,
+  });
 
   return (
     <section className="mt-8 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
@@ -106,6 +122,25 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
           Confirmación requerida
         </span>
       </div>
+      {receptionProduct || supplier ? (
+        <div className="mt-5 rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
+          <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">Etiqueta recepción</p>
+          <ZebraPrintButton
+            zpl={receptionZpl}
+            filename={`${receptionBatch || receptionProduct || "recepcion-appcc"}.zpl`}
+            label="Imprimir etiqueta recepción"
+            historyPayload={{
+              model: "Recepción",
+              template: "recepcion",
+              product: receptionProduct,
+              batch: receptionBatch,
+              supplier,
+              expiry_date: receptionExpiry,
+              copies: 1,
+            }}
+          />
+        </div>
+      ) : null}
 
       <div className="mt-6 grid gap-4 rounded-[1.5rem] border border-white/10 bg-[#0d0d0d] p-4 md:grid-cols-4">
         {[

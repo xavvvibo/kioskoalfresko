@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { getLabelRecords } from "@/lib/admin-kiosko/database";
+import { buildZebraLabelZpl, type ZebraTemplate } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
+import { ZebraPrintButton } from "../_components/ZebraPrintButton";
 import { saveLabelRecordAction } from "../actions";
 import { PrintButton } from "./PrintButton";
 
@@ -11,14 +13,24 @@ export const metadata: Metadata = {
   description: "Etiquetas APPCC listas para impresión térmica o A4.",
 };
 
-const models = ["Elaboración", "Apertura", "Congelación", "Descongelación", "Caducidad", "Lote"];
+const models = ["Elaboración", "Apertura", "Congelación", "Descongelación", "Recepción", "Caducidad", "Lote"];
+
+function zebraTemplate(model: string): ZebraTemplate {
+  if (model === "Congelación") return "congelacion";
+  if (model === "Descongelación") return "descongelacion";
+  if (model === "Recepción") return "recepcion";
+  if (model === "Lote") return "trazabilidad";
+  if (model === "Caducidad") return "trazabilidad";
+  return "elaboracion";
+}
 
 function labelFromParams(params: Record<string, string>) {
+  const supplier = params.supplier || params.source_supplier || "";
   return {
     model: params.model || "Elaboración",
     product: params.product || "",
     batch: params.batch || "",
-    supplier: params.supplier || "",
+    supplier,
     elaboration_date: params.elaboration_date || "",
     opening_date: params.opening_date || "",
     freezing_date: params.freezing_date || "",
@@ -27,7 +39,15 @@ function labelFromParams(params: Record<string, string>) {
     responsible: params.responsible || "F. Javier Bocanegra Sanjuan",
     print_format: params.print_format || "a4",
     copies: Number(params.copies || 8),
-    qr_payload: params.qr_payload || JSON.stringify({ type: "appcc-label", product: params.product || "", batch: params.batch || "", supplier: params.supplier || "" }),
+    qr_payload: params.qr_payload || JSON.stringify({
+      type: "appcc-label",
+      product: params.product || "",
+      batch: params.batch || "",
+      supplier,
+      source_batch_number: params.source_batch_number || "",
+      freezing_date: params.freezing_date || "",
+      defrosting_date: params.defrosting_date || "",
+    }),
   };
 }
 
@@ -85,6 +105,19 @@ export default async function EtiquetasPage({
       }
     : labelFromParams(params);
   const copies = Math.max(1, Math.min(48, current.copies || 8));
+  const template = zebraTemplate(current.model);
+  const zpl = buildZebraLabelZpl({
+    template,
+    product: current.product,
+    batch: current.batch,
+    supplier: current.supplier,
+    productionDate: current.elaboration_date,
+    freezingDate: current.freezing_date,
+    defrostingDate: current.defrosting_date,
+    expiryDate: current.best_before_date,
+    responsible: current.responsible,
+    copies: 1,
+  });
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
@@ -147,7 +180,26 @@ export default async function EtiquetasPage({
           <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6 print:border-0 print:bg-white print:p-0">
             <div className="flex items-center justify-between gap-4 print:hidden">
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Vista imprimible</h2>
-              <PrintButton />
+              <div className="flex flex-wrap items-start gap-3">
+                <ZebraPrintButton
+                  zpl={zpl}
+                  filename={`${current.batch || current.product || "etiqueta-appcc"}.zpl`}
+                  historyPayload={{
+                    model: current.model,
+                    template,
+                    product: current.product,
+                    batch: current.batch,
+                    supplier: current.supplier,
+                    production_date: current.elaboration_date,
+                    freezing_date: current.freezing_date,
+                    defrosting_date: current.defrosting_date,
+                    expiry_date: current.best_before_date,
+                    responsible: current.responsible,
+                    copies: 1,
+                  }}
+                />
+                <PrintButton />
+              </div>
             </div>
             <div className={current.print_format === "termica" ? "mt-6 grid max-w-[26rem] gap-3 print:mt-0" : "mt-6 grid gap-4 md:grid-cols-2 print:mt-0 print:grid-cols-2"}>
               {Array.from({ length: copies }).map((_, index) => <LabelCard key={index} label={current} />)}

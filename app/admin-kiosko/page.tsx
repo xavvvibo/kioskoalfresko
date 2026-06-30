@@ -119,6 +119,10 @@ export default async function AdminKioskoPage({
     ["Incidencias", String(metrics?.openIncidents ?? summary?.openIncidents ?? 0)],
     ["Stock crítico", String(metrics?.criticalStockProducts ?? 0)],
     ["Caducidades", String(metrics?.expiringProducts ?? 0)],
+    ["Lotes internos activos", String(metrics?.activeInternalBatches ?? 0)],
+    ["Descongelados abiertos", String(metrics?.openDefrostedBatches ?? 0)],
+    ["Próximos a consumir", String(metrics?.productsToConsumeSoon ?? 0)],
+    ["Mermas del mes", String(metrics?.monthlyWasteMovements ?? 0)],
   ];
   const statusStyle = (status: string) => status === "incidencia"
     ? "border-[#d94b2b]/35 bg-[#d94b2b]/10 text-[#f2c6bb]"
@@ -201,6 +205,20 @@ export default async function AdminKioskoPage({
 
                 {!inspectorMode ? (
                   <>
+                    {metrics?.recentProductions.length ? (
+                      <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-[#0d0d0d] p-5">
+                        <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Producciones recientes</h3>
+                        <div className="mt-4 grid gap-3 md:grid-cols-2">
+                          {metrics.recentProductions.map((batch) => (
+                            <a key={batch.id} href={`/admin-kiosko/produccion?batch=${batch.id}`} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200 transition hover:border-[#d94b2b]">
+                              <p className="font-black text-white">{batch.batch_code} · {batch.output_product}</p>
+                              <p className="mt-1">{batch.production_date} · {batch.output_quantity ?? 0} {batch.output_unit || "ud"} · {batch.storage_state || "refrigerado"}</p>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
                     <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-[#0d0d0d] p-5">
                       <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Última revisión APPCC</h3>
                       <div className="mt-4 grid gap-3 md:grid-cols-3">

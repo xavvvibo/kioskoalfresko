@@ -21,7 +21,10 @@ import {
   createAiSupplierDocument,
   createAiTraceabilityItem,
   createInventoryProduct,
+  createInternalRecipe,
   createLabelRecord,
+  createProductionBatch,
+  createProductionMovement,
   ensureSupplierRecord,
   applyInventoryMovement,
   updateInventoryProduct,
@@ -406,6 +409,83 @@ export async function saveIncidentRecordAction(formData: FormData) {
   });
 
   redirectAfterSave("/admin-kiosko/incidencias", result);
+}
+
+export async function saveProductionBatchAction(formData: FormData) {
+  await requireAdminSession();
+
+  const result = await createProductionBatch({
+    production_date: text(formData, "production_date") || todayMadrid(),
+    production_time: text(formData, "production_time") || timeMadrid(),
+    responsible: text(formData, "responsible"),
+    source_supplier: text(formData, "source_supplier"),
+    source_product: text(formData, "source_product"),
+    source_batch_number: text(formData, "source_batch_number"),
+    input_quantity: optionalNumber(formData, "input_quantity"),
+    input_unit: text(formData, "input_unit"),
+    output_product: text(formData, "output_product"),
+    output_quantity: optionalNumber(formData, "output_quantity"),
+    output_unit: text(formData, "output_unit"),
+    unit_weight: optionalNumber(formData, "unit_weight"),
+    storage_state: text(formData, "storage_state") || "refrigerado",
+    expiry_date: text(formData, "expiry_date"),
+    observations: text(formData, "observations"),
+    source_document_id: text(formData, "source_document_id"),
+  });
+
+  revalidatePath("/admin-kiosko/produccion");
+  revalidatePath("/admin-kiosko/inventario");
+  revalidatePath("/admin-kiosko/trazabilidad");
+  revalidatePath("/admin-kiosko/etiquetas");
+
+  if (result.ok) {
+    const params = new URLSearchParams({ saved: "1", batch: result.data.id });
+    if (result.data.warnings.length) params.set("warning", result.data.warnings.join(" · ").slice(0, 240));
+    redirect(`/admin-kiosko/produccion?${params.toString()}`);
+  }
+
+  redirect(`/admin-kiosko/produccion?error=${encodeURIComponent(result.error.slice(0, 240))}`);
+}
+
+export async function saveProductionMovementAction(formData: FormData) {
+  await requireAdminSession();
+
+  const movementType = text(formData, "movement_type") as Parameters<typeof createProductionMovement>[0]["movement_type"];
+  const result = await createProductionMovement({
+    batch_id: text(formData, "batch_id"),
+    movement_date: text(formData, "movement_date") || todayMadrid(),
+    movement_time: text(formData, "movement_time") || timeMadrid(),
+    movement_type: movementType,
+    quantity: optionalNumber(formData, "quantity"),
+    unit: text(formData, "unit"),
+    from_state: text(formData, "from_state"),
+    to_state: text(formData, "to_state"),
+    reason: text(formData, "reason"),
+    responsible: text(formData, "responsible"),
+    observations: text(formData, "observations"),
+    expiry_date: text(formData, "expiry_date"),
+  });
+
+  redirectAfterSave("/admin-kiosko/produccion", result);
+}
+
+export async function saveInternalRecipeAction(formData: FormData) {
+  await requireAdminSession();
+
+  const result = await createInternalRecipe({
+    recipe_name: text(formData, "recipe_name"),
+    output_product: text(formData, "output_product"),
+    expected_yield: optionalNumber(formData, "expected_yield"),
+    output_unit: text(formData, "output_unit"),
+    unit_weight: optionalNumber(formData, "unit_weight"),
+    instructions: text(formData, "instructions"),
+    input_product: text(formData, "input_product"),
+    input_quantity: optionalNumber(formData, "input_quantity"),
+    input_unit: text(formData, "input_unit"),
+    active: true,
+  });
+
+  redirectAfterSave("/admin-kiosko/produccion", result);
 }
 
 export async function saveChecklistRecordAction(formData: FormData) {

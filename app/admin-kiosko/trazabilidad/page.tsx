@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getTraceabilityRows } from "@/lib/admin-kiosko/database";
+import { getProductionTraceabilityRows, getTraceabilityRows } from "@/lib/admin-kiosko/database";
+import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
+import { ZebraPrintButton } from "../_components/ZebraPrintButton";
 
 export const metadata: Metadata = {
   title: "Trazabilidad APPCC | Panel interno",
@@ -15,8 +17,12 @@ export default async function TrazabilidadPage({
 }) {
   await requireAdminSession();
   const params = await searchParams;
-  const result = await getTraceabilityRows({ q: params?.q, date: params?.date });
+  const [result, productionResult] = await Promise.all([
+    getTraceabilityRows({ q: params?.q, date: params?.date }),
+    getProductionTraceabilityRows({ q: params?.q }),
+  ]);
   const rows = result.ok ? result.data : [];
+  const productionRows = productionResult.ok ? productionResult.data : [];
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
@@ -32,6 +38,114 @@ export default async function TrazabilidadPage({
           </section>
 
           <section className="grid gap-4">
+            {productionRows.map((batch) => {
+              const movements = batch.movements || [];
+              const byType = (type: string) => movements.filter((movement) => movement.movement_type === type);
+              const zpl = buildZebraLabelZpl({
+                template: "trazabilidad",
+                product: batch.output_product || "",
+                batch: batch.batch_code || "",
+                supplier: batch.source_supplier || "",
+                sourceBatch: batch.source_batch_number || "",
+                productionDate: batch.production_date,
+                expiryDate: batch.expiry_date || "",
+                responsible: batch.responsible || "F. Javier Bocanegra Sanjuan",
+              });
+              return (
+                <article key={batch.id} className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Lote interno de producción</p>
+                      <h2 className="mt-2 text-3xl font-black uppercase tracking-[-0.04em] text-[#fff8ef]">{batch.batch_code}</h2>
+                      <p className="mt-2 text-sm leading-6 text-stone-300">{batch.output_product} · {batch.output_quantity ?? 0} {batch.output_unit || "ud"} · {batch.storage_state || "refrigerado"}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      <a href={`/admin-kiosko/produccion?batch=${batch.id}`} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Abrir producción</a>
+                      <ZebraPrintButton
+                        zpl={zpl}
+                        filename={`${batch.batch_code || "trazabilidad"}.zpl`}
+                        historyPayload={{
+                          model: "Lote",
+                          template: "trazabilidad",
+                          product: batch.output_product || "",
+                          batch: batch.batch_code || "",
+                          supplier: batch.source_supplier || "",
+                          production_date: batch.production_date,
+                          expiry_date: batch.expiry_date || "",
+                          responsible: batch.responsible || "F. Javier Bocanegra Sanjuan",
+                          copies: 1,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid gap-3 md:grid-cols-5">
+                    {[
+                      ["Proveedor origen", batch.source_supplier || "Proveedor no consignado"],
+                      ["Producto origen", batch.source_product || "Materia prima no consignada"],
+                      ["Lote proveedor", batch.source_batch_number || "Lote no consignado"],
+                      ["Fecha producción", batch.production_date],
+                      ["Caducidad", batch.expiry_date || "Vida útil no consignada"],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-2xl border border-white/10 bg-[#fffaf4] p-4 text-stone-950">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#d94b2b]">{label}</p>
+                        <p className="mt-2 text-sm font-black">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-5 grid gap-4 lg:grid-cols-3">
+                    {[
+                      ["Congelaciones", byType("congelacion")],
+                      ["Descongelaciones", byType("descongelacion")],
+                      ["Consumos", byType("consumo")],
+                      ["Mermas", byType("merma")],
+                      ["Salidas personales", movements.filter((movement) => ["personal", "invitacion", "degustacion"].includes(movement.movement_type || ""))],
+                      ["Regularizaciones", byType("regularizacion")],
+                    ].map(([title, items]) => (
+                      <section key={title as string} className="rounded-[1.5rem] border border-white/10 bg-white/6 p-4">
+                        <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">{title as string}</h3>
+                        <div className="mt-3 grid gap-2">
+                          {(items as typeof movements).map((movement) => (
+                            <p key={movement.id} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-sm text-stone-200">
+                              {movement.movement_date} · {movement.quantity ?? 0} {movement.unit || batch.output_unit || "ud"} · {movement.responsible || "Responsable no consignado"}
+                            </p>
+                          ))}
+                          {!(items as typeof movements).length ? <p className="text-sm text-stone-300">Movimiento preparado para registrar cuando proceda.</p> : null}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+
+                  <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                    <section className="rounded-[1.5rem] border border-white/10 bg-white/6 p-4">
+                      <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Etiquetas asociadas</h3>
+                      <div className="mt-3 grid gap-2">
+                        {batch.labels?.map((label) => (
+                          <a key={label.id} href={`/admin-kiosko/etiquetas?id=${label.id}`} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-sm text-stone-200">
+                            {label.created_at.slice(0, 10)} · {label.model} · {label.product || batch.output_product}
+                          </a>
+                        ))}
+                        {!batch.labels?.length ? <p className="text-sm text-stone-300">Etiquetas listas para generar desde el lote interno.</p> : null}
+                      </div>
+                    </section>
+
+                    <section className="rounded-[1.5rem] border border-white/10 bg-white/6 p-4">
+                      <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Cronología completa</h3>
+                      <div className="mt-3 grid gap-2">
+                        <p className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-sm text-stone-200">{batch.production_date} · producción · {batch.output_product}</p>
+                        {movements.map((movement) => (
+                          <p key={movement.id} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-sm text-stone-200">
+                            {movement.movement_date} · {movement.movement_type} · {movement.quantity ?? 0} {movement.unit || batch.output_unit || "ud"}
+                          </p>
+                        ))}
+                      </div>
+                    </section>
+                  </div>
+                </article>
+              );
+            })}
+
             {rows.map((row) => (
               <article key={row.id} className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
                 <div className="grid gap-3 md:grid-cols-5">
@@ -126,7 +240,7 @@ export default async function TrazabilidadPage({
                 </section>
               </article>
             ))}
-            {!rows.length ? <p className="rounded-[1.5rem] border border-white/10 bg-[#151515] p-5 text-sm text-stone-300">Trazabilidad preparada para el filtro indicado. Registra recepciones o lotes para completar la ficha.</p> : null}
+            {!rows.length && !productionRows.length ? <p className="rounded-[1.5rem] border border-white/10 bg-[#151515] p-5 text-sm text-stone-300">Trazabilidad preparada para el filtro indicado. Registra recepciones, producciones o lotes para completar la ficha.</p> : null}
           </section>
         </div>
       </section>

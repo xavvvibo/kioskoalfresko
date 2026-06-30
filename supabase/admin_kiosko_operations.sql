@@ -82,12 +82,20 @@ create table if not exists public.admin_label_records (
   responsible text,
   print_format text default 'a4',
   copies int default 8,
+  printed_at timestamptz,
+  printer text,
+  template text,
+  zpl_version text,
   qr_payload text,
   source text default 'admin-kiosko'
 );
 
 alter table if exists public.admin_label_records
-  add column if not exists supplier text;
+  add column if not exists supplier text,
+  add column if not exists printed_at timestamptz,
+  add column if not exists printer text,
+  add column if not exists template text,
+  add column if not exists zpl_version text;
 
 alter table if exists public.admin_supplier_records
   add column if not exists contact text,
@@ -168,6 +176,7 @@ create index if not exists admin_ai_learning_memory_lookup_idx on public.admin_a
 create index if not exists admin_label_records_created_at_idx on public.admin_label_records (created_at desc);
 create index if not exists admin_label_records_batch_idx on public.admin_label_records (lower(batch));
 create index if not exists admin_label_records_supplier_idx on public.admin_label_records (lower(supplier));
+create index if not exists admin_label_records_printed_at_idx on public.admin_label_records (printed_at desc);
 
 comment on table public.admin_inventory_products is 'Productos de inventario APPCC con stock operativo, lote actual y caducidad.';
 comment on table public.admin_inventory_movements is 'Histórico de entradas, consumos, mermas, regularizaciones y bajas de inventario APPCC.';
@@ -178,3 +187,7 @@ comment on column public.admin_inventory_products.recommended_stock is 'Stock re
 comment on column public.admin_inventory_products.average_purchase_price is 'Precio medio de compra calculado desde entradas registradas.';
 comment on column public.admin_inventory_products.last_purchase_price is 'Último precio de compra registrado.';
 comment on column public.admin_inventory_movements.purchase_price is 'Precio de compra asociado al movimiento cuando procede.';
+comment on column public.admin_label_records.printed_at is 'Fecha y hora de impresión de etiqueta APPCC cuando se envía a impresora.';
+comment on column public.admin_label_records.printer is 'Impresora usada para la etiqueta APPCC.';
+comment on column public.admin_label_records.template is 'Plantilla de etiqueta APPCC usada para impresión.';
+comment on column public.admin_label_records.zpl_version is 'Versión de lenguaje ZPL usada para impresión Zebra.';

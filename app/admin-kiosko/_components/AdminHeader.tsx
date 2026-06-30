@@ -11,6 +11,7 @@ const adminNav = [
   ["Calendario", "/admin-kiosko/calendario"],
   ["Cronología", "/admin-kiosko/cronologia"],
   ["Inventario", "/admin-kiosko/inventario"],
+  ["Producción", "/admin-kiosko/produccion"],
   ["Trazabilidad", "/admin-kiosko/trazabilidad"],
   ["Etiquetas", "/admin-kiosko/etiquetas"],
   ["Inspección express", "/admin-kiosko/inspeccion-express"],
@@ -24,6 +25,7 @@ const adminNav = [
   ["Mantenimiento", "/admin-kiosko/mantenimiento"],
   ["Agua", "/admin-kiosko/agua"],
   ["Verificación anual", "/admin-kiosko/verificacion-anual"],
+  ["Impresoras", "/admin-kiosko/configuracion/impresoras"],
   ["IA APPCC", "/admin-kiosko/ia"],
 ];
 

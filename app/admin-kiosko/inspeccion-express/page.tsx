@@ -167,6 +167,10 @@ export default async function InspeccionExpressPage({ searchParams }: { searchPa
               <Row label="Incidencias" value={kpis?.openIncidents ?? dashboard?.openIncidents ?? 0} />
               <Row label="Stock crítico" value={kpis?.criticalStockProducts ?? 0} />
               <Row label="Caducidades" value={kpis?.expiringProducts ?? 0} />
+              <Row label="Lotes internos activos" value={kpis?.activeInternalBatches ?? 0} />
+              <Row label="Descongelados abiertos" value={kpis?.openDefrostedBatches ?? 0} />
+              <Row label="Próximos a consumir" value={kpis?.productsToConsumeSoon ?? 0} />
+              <Row label="Mermas del mes" value={kpis?.monthlyWasteMovements ?? 0} />
             </div>
           </FoldableSection>
 
@@ -224,6 +228,11 @@ export default async function InspeccionExpressPage({ searchParams }: { searchPa
 
           <FoldableSection title="Cronología" open={!inspectorMode}>
             <div className="grid gap-2">
+              {kpis?.recentProductions.map((batch) => (
+                <Link key={batch.id} href={`/admin-kiosko/produccion?batch=${batch.id}`} className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-stone-200">
+                  Producción · {batch.production_date} · {batch.batch_code} · {batch.output_product}
+                </Link>
+              ))}
               {chronology.length ? chronology.map((item) => (
                 <p key={item} className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-stone-200">{item}</p>
               )) : <p className="text-sm text-stone-400">Cronología sanitaria preparada para los próximos registros.</p>}
