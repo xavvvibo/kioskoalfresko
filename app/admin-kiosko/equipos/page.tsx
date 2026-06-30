@@ -49,10 +49,10 @@ export default async function EquiposPage({ searchParams }: { searchParams?: Pro
                       <p>Tipo: {equipmentType(equipment.name, equipment.active, equipment.kind)}</p>
                       <p>Estado: {equipment.active ? "activo" : "fuera de servicio"}</p>
                       <p>Temperatura objetivo: {target(equipment.kind, equipment.active)}</p>
-                      <p>Última temperatura: {last?.temperature !== null && last ? `${last.temperature} ºC · ${last.record_date}${last.record_time ? ` ${last.record_time.slice(0, 5)}` : ""}` : "Sin registro todavía"}</p>
-                      <p>Última revisión: {last?.record_date || "Pendiente"}</p>
-                      <p>Último mantenimiento: Pendiente de registrar</p>
-                      <p>Próximo mantenimiento: Pendiente de planificar</p>
+                      <p>Última temperatura: {last?.temperature !== null && last ? `${last.temperature} ºC · ${last.record_date}${last.record_time ? ` ${last.record_time.slice(0, 5)}` : ""}` : "Último registro no disponible todavía."}</p>
+                      <p>Última revisión: {last?.record_date || "Último registro no disponible todavía."}</p>
+                      <p>Último mantenimiento: Último registro no disponible todavía.</p>
+                      <p>Próximo mantenimiento: Revisión no planificada todavía.</p>
                       <p>Incidencias abiertas: 0</p>
                     </div>
                     <Link href={`/admin-kiosko/equipos/${slugify(equipment.name)}`} className="mt-5 inline-flex rounded-full border border-stone-950 bg-stone-950 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Ver expediente</Link>

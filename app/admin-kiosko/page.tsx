@@ -78,6 +78,33 @@ export default async function AdminKioskoPage({
     ? Math.max(0, 100 - ((summary.pendingAlerts + summary.inProgressAlerts + summary.openIncidents + summary.reviewingTemperatureRecords + summary.incidentTemperatureRecords) * 10))
     : 0;
   const documentationPercent = metrics ? Math.max(0, Math.round(((27 - metrics.pendingDocuments) / 27) * 100)) : 0;
+  const dailyPending = [
+    {
+      label: "Temperaturas",
+      status: metrics?.dailyPending.some((alert) => alert.href === "/admin-kiosko/temperaturas") ? "Requiere registro hoy" : "Registrado o sin alertas",
+      href: "/admin-kiosko/temperaturas",
+    },
+    {
+      label: "Limpieza",
+      status: metrics?.dailyPending.some((alert) => alert.href === "/admin-kiosko/limpieza") ? "Requiere registro hoy" : "Registrado o sin alertas",
+      href: "/admin-kiosko/limpieza",
+    },
+    {
+      label: "Aceite",
+      status: metrics?.dailyPending.some((alert) => alert.href === "/admin-kiosko/aceite-freidora") ? "Requiere registro hoy" : "Registrado o sin alertas",
+      href: "/admin-kiosko/aceite-freidora",
+    },
+    {
+      label: "Recepción mercancías",
+      status: summary?.todayGoodsReceptionRecords ? `${summary.todayGoodsReceptionRecords} registros hoy` : "Registrar solo si hubo recepción",
+      href: "/admin-kiosko/recepcion-mercancia",
+    },
+    {
+      label: "Incidencias",
+      status: summary?.openIncidents ? `${summary.openIncidents} abiertas` : "No constan incidencias abiertas.",
+      href: "/admin-kiosko/incidencias",
+    },
+  ];
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
@@ -139,7 +166,7 @@ export default async function AdminKioskoPage({
                     ["Cumplimiento del mes", complianceValue],
                     ["Temperaturas registradas hoy", String(summary.todayTemperatureRecords)],
                     ["Limpieza hoy", String(summary.todayCleaningRecords)],
-                    ["Aceite freidora", summary.latestFryerOilRecord ? `${summary.latestFryerOilRecord.record_date} · ${summary.latestFryerOilRecord.status || "registrado"}` : "Sin registro"],
+                      ["Aceite freidora", summary.latestFryerOilRecord ? `${summary.latestFryerOilRecord.record_date} · ${summary.latestFryerOilRecord.status || "registrado"}` : "Último registro no disponible todavía."],
                     ["Recepciones de mercancía hoy", String(summary.todayGoodsReceptionRecords)],
                     ["Documentos pendientes", String(metrics?.pendingDocuments ?? 0)],
                     ["OCR pendientes de revisión", String(metrics?.ocrToReview ?? 0)],
@@ -153,7 +180,7 @@ export default async function AdminKioskoPage({
                     ["Incidencias abiertas", String(summary.openIncidents)],
                     ["Alertas técnicas abiertas", String(summary.pendingAlerts + summary.inProgressAlerts)],
                     ["Equipos fuera de rango", String(summary.reviewingTemperatureRecords + summary.incidentTemperatureRecords)],
-                    ["Último registro realizado", summary.lastTemperatureRecord ? `${summary.lastTemperatureRecord.equipment} · ${summary.lastTemperatureRecord.record_date}` : "Sin registros"],
+                    ["Último registro realizado", summary.lastTemperatureRecord ? `${summary.lastTemperatureRecord.equipment} · ${summary.lastTemperatureRecord.record_date}` : "Último registro no disponible todavía."],
                   ].map(([label, value]) => (
                     <article key={label} className="rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{label}</p>
@@ -172,10 +199,30 @@ export default async function AdminKioskoPage({
                           <>
                             <p className="mt-2 text-sm font-black text-white">{record.main}</p>
                             <p className="mt-1 text-xs text-stone-300">{record.record_date}{record.record_time ? ` · ${record.record_time.slice(0, 5)}` : ""}</p>
-                            <p className="mt-1 text-xs text-stone-300">{record.responsible || "Sin responsable"}</p>
+                            <p className="mt-1 text-xs text-stone-300">{record.responsible || "Responsable no consignado"}</p>
                           </>
-                        ) : <p className="mt-2 text-sm font-semibold text-stone-400">Pendiente</p>}
+                    ) : <p className="mt-2 text-sm font-semibold text-stone-400">Último registro no disponible todavía.</p>}
                       </article>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-[#0d0d0d] p-5">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                    <div>
+                      <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Pendiente de registrar hoy</h3>
+                      <p className="mt-2 text-sm leading-6 text-stone-300">Control mínimo diario para enseñar a inspección.</p>
+                    </div>
+                    <a href="/admin-kiosko/registros" className="w-fit rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">
+                      Ver registros
+                    </a>
+                  </div>
+                  <div className="mt-4 grid gap-3 md:grid-cols-5">
+                    {dailyPending.map((item) => (
+                      <a key={item.label} href={item.href} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 transition hover:border-[#d94b2b]">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{item.label}</p>
+                        <p className="mt-2 text-sm font-semibold text-white">{item.status}</p>
+                      </a>
                     ))}
                   </div>
                 </div>
@@ -203,9 +250,9 @@ export default async function AdminKioskoPage({
                     {summary.latestByEquipment.map((record) => (
                       <article key={record.equipment} className="rounded-[1.3rem] border border-white/10 bg-[#fffaf4] p-4 text-stone-950">
                         <p className="text-sm font-black uppercase tracking-[-0.02em]">{record.equipment}</p>
-                        <p className="mt-2 text-2xl font-black">{record.temperature !== null ? `${record.temperature} ºC` : "Sin registro todavía"}</p>
+                        <p className="mt-2 text-2xl font-black">{record.temperature !== null ? `${record.temperature} ºC` : "Último registro no disponible todavía."}</p>
                         <p className="mt-1 text-xs font-semibold text-stone-600">
-                          {record.record_date ? `${record.record_date}${record.record_time ? ` · ${record.record_time.slice(0, 5)}` : ""} · ${record.status || "sin estado"}` : "Sin registro todavía"}
+                          {record.record_date ? `${record.record_date}${record.record_time ? ` · ${record.record_time.slice(0, 5)}` : ""} · ${record.status || "Registro disponible"}` : "Último registro no disponible todavía."}
                         </p>
                       </article>
                     ))}

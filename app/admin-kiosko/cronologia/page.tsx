@@ -110,11 +110,11 @@ export default async function CronologiaPage() {
                 {items.map((item) => (
                   <tr key={item.id} className="bg-[#fffaf4] text-stone-950">
                     <td className="rounded-l-2xl px-3 py-3 font-black">{item.date}</td>
-                    <td className="px-3 py-3">{item.time ? item.time.slice(0, 5) : "-"}</td>
+                    <td className="px-3 py-3">{item.time ? item.time.slice(0, 5) : "Hora no consignada"}</td>
                     <td className="px-3 py-3 font-black">{item.type}</td>
                     <td className="px-3 py-3">{item.description}</td>
-                    <td className="px-3 py-3">{item.responsible || "Sin responsable"}</td>
-                    <td className="rounded-r-2xl px-3 py-3">{item.status || "Sin estado"}</td>
+                    <td className="px-3 py-3">{item.responsible || "Responsable no consignado"}</td>
+                    <td className="rounded-r-2xl px-3 py-3">{item.status || "Registro disponible"}</td>
                   </tr>
                 ))}
               </tbody>

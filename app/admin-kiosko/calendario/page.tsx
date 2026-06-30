@@ -104,10 +104,10 @@ export default async function CalendarioAppccPage({
                   {items.length ? (
                     <div className="mt-3 grid gap-2">
                       {items.map((record) => (
-                        <p key={`${record.type}-${record.id}`} className="text-sm text-stone-200">{record.subject} · {record.main} · {record.status || "sin estado"}</p>
+                        <p key={`${record.type}-${record.id}`} className="text-sm text-stone-200">{record.subject} · {record.main} · {record.status || "Registro disponible"}</p>
                       ))}
                     </div>
-                  ) : <p className="mt-3 text-sm text-stone-400">Sin registros.</p>}
+                  ) : <p className="mt-3 text-sm text-stone-400">Último registro no disponible para esta fecha.</p>}
                 </div>
               );
             })}

@@ -527,6 +527,7 @@ export type ExecutiveDashboardMetrics = {
   latestInspection: string;
   healthStatus: "Correcto" | "Revisar" | "Incidencias";
   alerts: OperationalAlert[];
+  dailyPending: OperationalAlert[];
 };
 
 function getSupabaseConfig() {
@@ -2435,14 +2436,30 @@ async function countRows(table: string, query = "") {
 export async function getOperationalAlerts(): Promise<DbResult<OperationalAlert[]>> {
   const today = getMadridDate();
   const soon = addDays(today, 7);
-  const [inventory, openIncidents, equipmentAlerts, aiLogs] = await Promise.all([
+  const activeEquipment = temperatureEquipment.filter((equipment) => equipment.active).map((equipment) => equipment.name);
+  const documentStats = getDocumentStats();
+  const [inventory, openIncidents, equipmentAlerts, aiLogs, todayTemperatures, todayCleaning, todayOil, suppliers] = await Promise.all([
     getInventoryProducts(),
-    getRecentIncidentRecords(),
+    getRows<RecentAdminRecord & { incident_type: string; severity: string | null }>("admin_incident_records", "?select=id,record_date,record_time,responsible,status,incident_type,severity&resolved=eq.false&order=record_date.desc,created_at.desc&limit=50"),
     getRows<EquipmentAlert>("admin_equipment_alerts", "?select=id,equipment,alert_date,alert_time,temperature,alert_level,status,description,corrective_action&status=in.(pendiente,en_proceso)&order=created_at.desc&limit=50"),
     getRecentAiProcessingLogs(50),
+    getRows<DashboardTemperatureRecord>("admin_temperature_records", `?select=id,equipment,record_date,record_time,temperature,status,responsible&record_date=eq.${today}&limit=1000`),
+    getRows<{ id: string }>("admin_cleaning_records", `?select=id&record_date=eq.${today}&limit=1000`),
+    getRows<{ id: string }>("admin_fryer_oil_records", `?select=id&record_date=eq.${today}&limit=1000`),
+    getRows<{ id: string; supplier: string; cif: string | null; phone: string | null; email: string | null; certificates: string | null; status: string | null }>("admin_supplier_records", "?select=id,supplier,cif,phone,email,certificates,status&status=neq.baja&limit=1000"),
   ]);
 
   const alerts: OperationalAlert[] = [];
+  if (documentStats.pending + documentStats.expired + documentStats.review > 0) {
+    alerts.push({
+      id: "documents-pending",
+      type: "documentacion",
+      severity: "revisar",
+      title: "Documentación sanitaria pendiente",
+      detail: `${documentStats.pending + documentStats.expired + documentStats.review} documentos requieren aportación o revisión.`,
+      href: "/admin-kiosko/documentacion",
+    });
+  }
 
   if (inventory.ok) {
     inventory.data.forEach((product) => {
@@ -2451,7 +2468,7 @@ export async function getOperationalAlerts(): Promise<DbResult<OperationalAlert[
           id: `expiry-${product.id}`,
           type: "caducidad",
           severity: product.expiry_date < today ? "incidencia" : "revisar",
-          title: `${product.name} próximo a caducar`,
+          title: product.expiry_date < today ? `${product.name} caducado` : `${product.name} próximo a caducar`,
           detail: product.expiry_date,
           href: "/admin-kiosko/inventario",
         });
@@ -2486,8 +2503,8 @@ export async function getOperationalAlerts(): Promise<DbResult<OperationalAlert[
       id: `incident-${record.id}`,
       type: "incidencia",
       severity: "incidencia",
-      title: record.main,
-      detail: record.status || "Pendiente",
+      title: `${record.incident_type}${record.severity ? ` · ${record.severity}` : ""}`,
+      detail: record.status || "Requiere cierre sanitario.",
       href: "/admin-kiosko/incidencias",
     }));
   }
@@ -2512,6 +2529,55 @@ export async function getOperationalAlerts(): Promise<DbResult<OperationalAlert[
       detail: log.error_message || "Revisar procesamiento IA.",
       href: "/admin-kiosko/ia/historial",
     }));
+  }
+
+  if (todayTemperatures.ok) {
+    const registeredEquipment = new Set(todayTemperatures.data.filter((record) => isActiveTemperatureEquipment(record.equipment)).map((record) => record.equipment));
+    activeEquipment
+      .filter((equipment) => !registeredEquipment.has(equipment))
+      .forEach((equipment) => alerts.push({
+        id: `temperature-today-${equipment}`,
+        type: "registro-diario",
+        severity: "revisar",
+        title: `${equipment}: temperatura no registrada hoy`,
+        detail: "Último registro no disponible todavía para la jornada actual.",
+        href: "/admin-kiosko/temperaturas",
+      }));
+  }
+
+  if (todayCleaning.ok && todayCleaning.data.length === 0) {
+    alerts.push({
+      id: "cleaning-today",
+      type: "registro-diario",
+      severity: "revisar",
+      title: "Limpieza no registrada hoy",
+      detail: "Registrar limpieza diaria o dejar constancia si no procede.",
+      href: "/admin-kiosko/limpieza",
+    });
+  }
+
+  if (todayOil.ok && todayOil.data.length === 0) {
+    alerts.push({
+      id: "oil-today",
+      type: "registro-diario",
+      severity: "revisar",
+      title: "Aceite no registrado hoy",
+      detail: "Registrar control de aceite de freidora o dejar constancia si no procede.",
+      href: "/admin-kiosko/aceite-freidora",
+    });
+  }
+
+  if (suppliers.ok) {
+    suppliers.data
+      .filter((supplier) => !supplier.cif || !supplier.phone || !supplier.certificates)
+      .forEach((supplier) => alerts.push({
+        id: `supplier-${supplier.id}`,
+        type: "proveedores",
+        severity: "revisar",
+        title: `${supplier.supplier}: datos mínimos incompletos`,
+        detail: "Completar CIF, contacto y certificados sanitarios.",
+        href: `/admin-kiosko/proveedores?q=${encodeURIComponent(supplier.supplier)}`,
+      }));
   }
 
   return { ok: true, data: alerts.slice(0, 50) };
@@ -2566,6 +2632,7 @@ export async function getExecutiveDashboardMetrics(): Promise<DbResult<Executive
       latestInspection: latestInspection.ok && latestInspection.data[0] ? latestInspection.data[0].main : "Sin inspecciones registradas",
       healthStatus: incidentAlerts > 0 ? "Incidencias" : reviewAlerts > 0 ? "Revisar" : "Correcto",
       alerts: alerts.ok ? alerts.data : [],
+      dailyPending: alerts.ok ? alerts.data.filter((alert) => alert.type === "registro-diario") : [],
     },
   };
 }

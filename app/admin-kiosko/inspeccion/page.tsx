@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { adminDocuments } from "@/lib/admin-kiosko/documents";
-import { getAdminDashboardSummary, getRecentCleaningRecords, getRecentGoodsReceptionRecords, getRecentIncidentRecords, getRecentTemperatureRecords } from "@/lib/admin-kiosko/database";
+import { getAdminDashboardSummary, getExecutiveDashboardMetrics, getRecentCleaningRecords, getRecentGoodsReceptionRecords, getRecentIncidentRecords, getRecentTemperatureRecords } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../_components/AdminHeader";
 import { RecentRecords } from "../_components/RecentRecords";
 
@@ -51,19 +51,21 @@ const essentialDocumentSlugs = [
 
 export default async function ModoInspeccionPage() {
   await requireAdminSession();
-  const [dashboard, temperatures, incidents, goods, cleaning] = await Promise.all([
+  const [dashboard, metricsResult, temperatures, incidents, goods, cleaning] = await Promise.all([
     getAdminDashboardSummary(),
+    getExecutiveDashboardMetrics(),
     getRecentTemperatureRecords(),
     getRecentIncidentRecords(),
     getRecentGoodsReceptionRecords(),
     getRecentCleaningRecords(),
   ]);
   const summary = dashboard.ok ? dashboard.data : null;
+  const metrics = metricsResult.ok ? metricsResult.data : null;
   const status = !summary || summary.pendingAlerts > 0 || summary.openIncidents > 0 || summary.incidentTemperatureRecords > 0
-    ? "🔴 Incidencias abiertas"
+    ? "Incidencias abiertas"
     : summary.inProgressAlerts > 0 || summary.reviewingTemperatureRecords > 0
-      ? "🟡 Revisiones pendientes"
-      : "🟢 Todo correcto";
+      ? "Revisiones pendientes"
+      : "Todo correcto";
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
@@ -84,9 +86,13 @@ export default async function ModoInspeccionPage() {
             <div className="mt-4 grid gap-3 md:grid-cols-4">
               {[
                 ["Semáforo APPCC", status],
-                ["Última revisión", summary?.latestMonthlySignature ? `${summary.latestMonthlySignature.month}/${summary.latestMonthlySignature.year}` : "Pendiente"],
+                ["Última revisión", summary?.latestMonthlySignature ? `${summary.latestMonthlySignature.month}/${summary.latestMonthlySignature.year}` : "Último registro no disponible todavía."],
                 ["Incidencias abiertas", String(summary?.openIncidents || 0)],
                 ["Alertas abiertas", String((summary?.pendingAlerts || 0) + (summary?.inProgressAlerts || 0))],
+                ["Documentación pendiente", String(metrics?.pendingDocuments ?? 0)],
+                ["Stock bajo", String(metrics?.lowStockProducts ?? 0)],
+                ["Caducidades próximas", String(metrics?.expiringProducts ?? 0)],
+                ["OCR a revisar", String(metrics?.ocrToReview ?? 0)],
               ].map(([label, value]) => (
                 <article key={label} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{label}</p>
@@ -98,10 +104,30 @@ export default async function ModoInspeccionPage() {
 
           <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5">
             <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Accesos rápidos</h2>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href="/admin-kiosko/registros" className="rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Ver registros</Link>
+              <Link href="/admin-kiosko/registros/descargar" className="rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Descargar CSV</Link>
+              <Link href="/admin-kiosko/registros/informe" className="rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Ver informe mensual</Link>
+              <Link href="/admin-kiosko/documentacion" className="rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Ir a documentación</Link>
+              <Link href="/admin-kiosko/incidencias" className="rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Ir a incidencias</Link>
+              <Link href="/admin-kiosko/trazabilidad" className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Ir a trazabilidad</Link>
+            </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {quickLinks.map(([label, href]) => (
                 <Link key={label} href={href} className="rounded-[1.1rem] border border-white/10 bg-[#fffaf4] p-4 text-sm font-black text-stone-950">{label}</Link>
               ))}
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5">
+            <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Alertas sanitarias</h2>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {metrics?.alerts.length ? metrics.alerts.slice(0, 8).map((alert) => (
+                <Link key={alert.id} href={alert.href} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
+                  <span className="block font-black text-white">{alert.title}</span>
+                  <span className="mt-1 block">{alert.detail}</span>
+                </Link>
+              )) : <p className="text-sm text-stone-400">No hay alertas técnicas pendientes.</p>}
             </div>
           </section>
 

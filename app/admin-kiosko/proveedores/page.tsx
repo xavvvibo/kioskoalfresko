@@ -31,7 +31,7 @@ export default async function ProveedoresPage({ searchParams }: { searchParams?:
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">Proveedor</p>
                   <h2 className="mt-2 text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">{profile.supplier}</h2>
-                  <p className="mt-2 text-sm text-stone-300">{profile.cif || "Sin CIF"} · {profile.category || "Sin categoría"} · {profile.status || "activo"}</p>
+                  <p className="mt-2 text-sm text-stone-300">{profile.cif || "CIF pendiente de aportar"} · {profile.category || "Categoría no consignada"} · {profile.status || "activo"}</p>
                 </div>
                 <a href={`/admin-kiosko/trazabilidad?q=${encodeURIComponent(profile.supplier)}`} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Abrir trazabilidad</a>
               </div>
@@ -46,7 +46,7 @@ export default async function ProveedoresPage({ searchParams }: { searchParams?:
                     <h3 className="text-sm font-black uppercase tracking-[0.14em] text-[#f2c6bb]">{title as string}</h3>
                     <div className="mt-3 grid gap-2">
                       {(values as string[]).slice(0, 5).map((value) => <p key={value} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-sm text-stone-200">{value}</p>)}
-                      {!(values as string[]).length ? <p className="text-sm text-stone-400">Sin registros.</p> : null}
+                      {!(values as string[]).length ? <p className="text-sm text-stone-400">Último registro no disponible todavía.</p> : null}
                     </div>
                   </section>
                 ))}

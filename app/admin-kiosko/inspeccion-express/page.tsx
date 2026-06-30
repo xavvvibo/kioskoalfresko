@@ -30,13 +30,24 @@ function Row({ label, value }: { label: string; value: string | number }) {
 }
 
 function ListBlock({ title, values }: { title: string; values: string[] }) {
+  const emptyTextByTitle: Record<string, string> = {
+    Temperaturas: "Último registro no disponible todavía.",
+    Aceite: "Último registro no disponible todavía.",
+    Limpieza: "Último registro no disponible todavía.",
+    Recepciones: "No constan recepciones registradas en el periodo reciente.",
+    Incidencias: "No constan incidencias abiertas.",
+    Equipos: "No hay alertas técnicas pendientes.",
+    Mantenimiento: "No hay alertas técnicas pendientes.",
+    Agua: "Último registro no disponible todavía.",
+  };
+
   return (
     <article className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
       <h3 className="text-xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">{title}</h3>
       <div className="mt-4 grid gap-2">
         {values.length ? values.map((value) => (
           <p key={value} className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-stone-200">{value}</p>
-        )) : <p className="text-sm text-stone-400">Sin registros.</p>}
+        )) : <p className="text-sm text-stone-400">{emptyTextByTitle[title] || "Último registro no disponible todavía."}</p>}
       </div>
     </article>
   );
@@ -73,9 +84,12 @@ export default async function InspeccionExpressPage() {
                 <h2 className="mt-2 text-4xl font-black uppercase tracking-[-0.04em] text-[#fff8ef]">{semaphore}</h2>
               </div>
               <div className="flex flex-wrap gap-3">
+                <Link href="/admin-kiosko/registros" className="rounded-full border border-white/20 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Ver registros</Link>
+                <Link href="/admin-kiosko/registros/descargar" className="rounded-full border border-white/20 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Descargar CSV</Link>
                 <Link href="/admin-kiosko/registros/informe" className="rounded-full border border-white/20 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Informe mensual</Link>
                 <Link href="/admin-kiosko/documentacion" className="rounded-full border border-white/20 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Documentación</Link>
-                <Link href="/admin-kiosko/registros" className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Registros</Link>
+                <Link href="/admin-kiosko/incidencias" className="rounded-full border border-white/20 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Incidencias</Link>
+                <Link href="/admin-kiosko/trazabilidad" className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Trazabilidad</Link>
               </div>
             </div>
             <div className="mt-6 grid gap-3 md:grid-cols-4">
@@ -95,12 +109,12 @@ export default async function InspeccionExpressPage() {
           </section>
 
           <section className="grid gap-4 lg:grid-cols-2">
-            <ListBlock title="Temperaturas" values={dashboard?.latestByEquipment.map((item) => `${item.equipment}: ${item.temperature ?? "-"} ºC · ${item.record_date || "-"}`) || []} />
+            <ListBlock title="Temperaturas" values={dashboard?.latestByEquipment.map((item) => item.record_date ? `${item.equipment}: ${item.temperature ?? "sin lectura"} ºC · ${item.record_date}` : `${item.equipment}: último registro no disponible todavía`) || []} />
             <ListBlock title="Aceite" values={oil.ok ? oil.data.map((item) => `${item.record_date}: ${item.main}`) : []} />
             <ListBlock title="Limpieza" values={cleaning.ok ? cleaning.data.map((item) => `${item.record_date}: ${item.main}`) : []} />
             <ListBlock title="Recepciones" values={receptions.ok ? receptions.data.map((item) => `${item.record_date}: ${item.main}`) : []} />
-            <ListBlock title="Incidencias" values={incidents.ok ? incidents.data.map((item) => `${item.record_date}: ${item.main} · ${item.status || "-"}`) : []} />
-            <ListBlock title="Equipos" values={equipment.ok ? equipment.data.map((item) => `${item.main} · ${item.status || "-"}`) : []} />
+            <ListBlock title="Incidencias" values={incidents.ok ? incidents.data.map((item) => `${item.record_date}: ${item.main} · ${item.status || "Requiere seguimiento"}`) : []} />
+            <ListBlock title="Equipos" values={equipment.ok ? equipment.data.map((item) => `${item.main} · ${item.status || "Operativo"}`) : []} />
             <ListBlock title="Mantenimiento" values={maintenance.ok ? maintenance.data.map((item) => `${item.record_date}: ${item.main}`) : []} />
             <ListBlock title="Agua" values={water.ok ? water.data.map((item) => `${item.record_date}: ${item.main}`) : []} />
           </section>
@@ -125,7 +139,7 @@ export default async function InspeccionExpressPage() {
                   <span className="block font-black text-white">{item.title}</span>
                   <span className="mt-1 block">{item.detail}</span>
                 </Link>
-              )) : <p className="text-sm text-stone-400">Sin alertas abiertas.</p>}
+              )) : <p className="text-sm text-stone-400">No hay alertas técnicas pendientes.</p>}
             </div>
           </section>
         </div>

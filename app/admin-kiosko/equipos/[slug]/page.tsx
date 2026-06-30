@@ -57,7 +57,7 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Ficha técnica</p>
                 <h2 className="mt-2 text-3xl font-black uppercase tracking-[-0.04em] text-[#fff8ef]">{equipment.name}</h2>
-                <p className="mt-3 text-sm leading-6 text-stone-300">Pendiente de completar ficha técnica.</p>
+                <p className="mt-3 text-sm leading-6 text-stone-300">Ficha técnica disponible para completar marca, modelo, serie y mantenimiento.</p>
               </div>
               <Link href="/admin-kiosko/equipos" className="inline-flex rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">
                 Volver a equipos
@@ -84,10 +84,10 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
               <div className="mt-4 grid gap-3">
                 {equipmentTemperatures.length ? equipmentTemperatures.map((record) => (
                   <div key={record.id} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
-                    <p className="font-black text-white">{record.main} · {record.status || "Sin estado"}</p>
-                    <p className="mt-1 text-sm text-stone-300">{record.record_date}{record.record_time ? ` · ${record.record_time.slice(0, 5)}` : ""} · {record.responsible || "Sin responsable"}</p>
+                    <p className="font-black text-white">{record.main} · {record.status || "Registro disponible"}</p>
+                    <p className="mt-1 text-sm text-stone-300">{record.record_date}{record.record_time ? ` · ${record.record_time.slice(0, 5)}` : ""} · {record.responsible || "Responsable no consignado"}</p>
                   </div>
-                )) : <p className="text-sm text-stone-300">Sin registros de temperatura todavía.</p>}
+                )) : <p className="text-sm text-stone-300">Último registro no disponible todavía.</p>}
               </div>
             </article>
 
@@ -97,10 +97,10 @@ export default async function EquipmentDetailPage({ params }: { params: Promise<
                 {equipmentAlerts.length ? equipmentAlerts.map((alert) => (
                   <div key={alert.id} className="rounded-[1.2rem] border border-[#d94b2b]/30 bg-[#d94b2b]/10 p-4">
                     <p className="font-black text-[#fff8ef]">{alert.alert_level} · {alert.status}</p>
-                    <p className="mt-1 text-sm text-stone-300">{alert.alert_date}{alert.alert_time ? ` · ${alert.alert_time.slice(0, 5)}` : ""} · {alert.temperature ?? "-"} ºC</p>
+                    <p className="mt-1 text-sm text-stone-300">{alert.alert_date}{alert.alert_time ? ` · ${alert.alert_time.slice(0, 5)}` : ""} · {alert.temperature ?? "sin lectura"} ºC</p>
                     {alert.corrective_action ? <p className="mt-2 text-sm text-stone-300">{alert.corrective_action}</p> : null}
                   </div>
-                )) : <p className="text-sm text-stone-300">Sin alertas abiertas para este equipo.</p>}
+                )) : <p className="text-sm text-stone-300">No hay alertas técnicas pendientes para este equipo.</p>}
               </div>
             </article>
           </section>
