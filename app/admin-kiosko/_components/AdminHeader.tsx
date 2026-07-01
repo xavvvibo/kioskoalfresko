@@ -1,32 +1,73 @@
 import Link from "next/link";
+import { canAccessSection, type AdminRole, type AdminSection } from "@/lib/admin-kiosko/roles";
 import { logoutAdminKioskoAction } from "../actions";
 
-const adminNav = [
-  ["Panel", "/admin-kiosko"],
-  ["Buscar", "/admin-kiosko/buscar"],
-  ["Inspección en directo", "/admin-kiosko/inspeccion-directo"],
-  ["Modo inspección", "/admin-kiosko/inspeccion"],
-  ["Registros", "/admin-kiosko/registros"],
-  ["Documentación", "/admin-kiosko/documentacion"],
-  ["Calendario", "/admin-kiosko/calendario"],
-  ["Cronología", "/admin-kiosko/cronologia"],
-  ["Inventario", "/admin-kiosko/inventario"],
-  ["Producción", "/admin-kiosko/produccion"],
-  ["Trazabilidad", "/admin-kiosko/trazabilidad"],
-  ["Etiquetas", "/admin-kiosko/etiquetas"],
-  ["Inspección express", "/admin-kiosko/inspeccion-express"],
-  ["Temperaturas", "/admin-kiosko/temperaturas"],
-  ["Limpieza", "/admin-kiosko/limpieza"],
-  ["Aceite", "/admin-kiosko/aceite-freidora"],
-  ["Mercancías", "/admin-kiosko/recepcion-mercancia"],
-  ["Incidencias", "/admin-kiosko/incidencias"],
-  ["Equipos", "/admin-kiosko/equipos"],
-  ["Proveedores", "/admin-kiosko/proveedores"],
-  ["Mantenimiento", "/admin-kiosko/mantenimiento"],
-  ["Agua", "/admin-kiosko/agua"],
-  ["Verificación anual", "/admin-kiosko/verificacion-anual"],
-  ["Impresoras", "/admin-kiosko/configuracion/impresoras"],
-  ["IA APPCC", "/admin-kiosko/ia"],
+const navGroups = [
+  {
+    label: "Operativa",
+    section: "operativa",
+    links: [
+      ["Calendario APPCC", "/admin-kiosko/calendario"],
+      ["Temperaturas", "/admin-kiosko/temperaturas"],
+      ["Limpieza", "/admin-kiosko/limpieza"],
+      ["Aceite", "/admin-kiosko/aceite-freidora"],
+      ["Recepción", "/admin-kiosko/recepcion-mercancia"],
+      ["Producción", "/admin-kiosko/produccion"],
+      ["Etiquetas", "/admin-kiosko/etiquetas"],
+      ["Incidencias", "/admin-kiosko/incidencias"],
+    ],
+  },
+  {
+    label: "Compras",
+    section: "compras",
+    links: [
+      ["IA / OCR", "/admin-kiosko/ia"],
+      ["Historial OCR", "/admin-kiosko/ia/historial"],
+      ["Recepciones", "/admin-kiosko/recepcion-mercancia"],
+      ["Proveedores", "/admin-kiosko/proveedores"],
+      ["Inventario", "/admin-kiosko/inventario"],
+      ["Trazabilidad", "/admin-kiosko/trazabilidad"],
+    ],
+  },
+  {
+    label: "Producción",
+    section: "produccion",
+    links: [
+      ["Producción interna", "/admin-kiosko/produccion"],
+      ["Recetas y lotes", "/admin-kiosko/produccion#recetas"],
+      ["Etiquetas", "/admin-kiosko/etiquetas"],
+      ["Trazabilidad", "/admin-kiosko/trazabilidad"],
+      ["Inventario", "/admin-kiosko/inventario"],
+    ],
+  },
+  {
+    label: "Inspección",
+    section: "inspeccion",
+    links: [
+      ["Modo inspección", "/admin-kiosko/inspeccion"],
+      ["Inspección express", "/admin-kiosko/inspeccion-express"],
+      ["Inspección en directo", "/admin-kiosko/inspeccion-directo"],
+      ["Documentación", "/admin-kiosko/documentacion"],
+      ["Registros", "/admin-kiosko/registros"],
+      ["Informe mensual", "/admin-kiosko/registros/informe"],
+      ["Agua", "/admin-kiosko/agua"],
+      ["Mantenimiento", "/admin-kiosko/mantenimiento"],
+      ["Equipos", "/admin-kiosko/equipos"],
+      ["Verificación anual", "/admin-kiosko/verificacion-anual"],
+    ],
+  },
+  {
+    label: "Configuración",
+    section: "configuracion",
+    ownerOnly: true,
+    links: [
+      ["Configuración", "/admin-kiosko/configuracion"],
+      ["Impresoras", "/admin-kiosko/configuracion/impresoras"],
+      ["Calendario operativo", "/admin-kiosko/configuracion/calendario"],
+      ["Equipos", "/admin-kiosko/equipos"],
+      ["Proveedores", "/admin-kiosko/proveedores"],
+    ],
+  },
 ];
 
 const inspectorNavLabels = new Set([
@@ -45,8 +86,23 @@ const inspectorNavLabels = new Set([
   "Equipos",
 ]);
 
-export function AdminHeader({ title, description, inspectorMode = false }: { title: string; description: string; inspectorMode?: boolean }) {
-  const nav = inspectorMode ? adminNav.filter(([label]) => inspectorNavLabels.has(label)) : adminNav;
+export function AdminHeader({
+  title,
+  description,
+  inspectorMode = false,
+  role = "owner",
+}: {
+  title: string;
+  description: string;
+  inspectorMode?: boolean;
+  role?: AdminRole;
+}) {
+  const groups = navGroups
+    .filter((group) => (!group.ownerOnly || role === "owner") && canAccessSection(role, group.section as AdminSection))
+    .map((group) => inspectorMode
+      ? { ...group, links: group.links.filter(([label]) => inspectorNavLabels.has(label)) }
+      : group)
+    .filter((group) => group.links.length);
 
   return (
     <section className="border-b border-white/10 bg-[radial-gradient(circle_at_85%_10%,rgba(217,75,43,0.24),transparent_22%),linear-gradient(180deg,#171717_0%,#0d0d0d_100%)]">
@@ -71,6 +127,18 @@ export function AdminHeader({ title, description, inspectorMode = false }: { tit
             >
               Panel
             </Link>
+            <Link href="/admin-kiosko/owner" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12">
+              Owner
+            </Link>
+            <Link href="/admin-kiosko/empleado" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12">
+              Empleado
+            </Link>
+            <Link href="/admin-kiosko/inspeccion" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12">
+              Inspector
+            </Link>
+            <Link href="/admin-kiosko/buscar" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12">
+              Buscar
+            </Link>
             <form action={logoutAdminKioskoAction}>
               <button
                 type="submit"
@@ -85,14 +153,19 @@ export function AdminHeader({ title, description, inspectorMode = false }: { tit
           <input name="q" placeholder="Buscar producto, lote, proveedor, documento, equipo, incidencia o fecha" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-sm text-stone-950 outline-none focus:border-[#d94b2b]" />
           <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Buscar APPCC</button>
         </form> : null}
-        <nav className="mt-6 overflow-x-auto rounded-[1.2rem] border border-white/10 bg-black/20 p-2" aria-label="Navegación interna APPCC">
-          <div className="flex min-w-max gap-2">
-            {nav.map(([label, href]) => (
-              <Link key={href} href={href} className="rounded-full border border-white/10 bg-white/6 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white transition hover:border-[#d94b2b] hover:bg-[#d94b2b]">
-                {label}
-              </Link>
-            ))}
-          </div>
+        <nav className="mt-6 grid gap-3 rounded-[1.2rem] border border-white/10 bg-black/20 p-3 lg:grid-cols-5" aria-label="Navegación interna APPCC">
+          {groups.map((group) => (
+            <details key={group.label} className="rounded-2xl border border-white/10 bg-white/6 p-3" open={group.label === "Operativa"}>
+              <summary className="cursor-pointer text-[11px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">{group.label}</summary>
+              <div className="mt-3 grid gap-2">
+                {group.links.map(([label, href]) => (
+                  <Link key={href} href={href} className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] font-black uppercase tracking-[0.1em] text-white transition hover:border-[#d94b2b] hover:bg-[#d94b2b]">
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </details>
+          ))}
         </nav>
       </div>
     </section>

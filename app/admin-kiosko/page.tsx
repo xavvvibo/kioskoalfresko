@@ -136,10 +136,27 @@ export default async function AdminKioskoPage({
         title="Panel APPCC KIOSKO ALFRESKO"
         description="Control sanitario digital · Responsable: F. Javier Bocanegra Sanjuan · DNI 75.136.778-X"
         inspectorMode={inspectorMode}
+        role={inspectorMode ? "inspector" : "owner"}
       />
 
       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
         <div className="grid gap-8">
+          {!inspectorMode ? (
+            <section className="grid gap-4 md:grid-cols-3">
+              {[
+                ["Panel Owner", "Gestión completa del ERP APPCC.", "/admin-kiosko/owner"],
+                ["Panel Empleado", "Registros diarios, etiquetas, mermas y producción.", "/admin-kiosko/empleado"],
+                ["Modo Inspector", "Vista limpia para inspección sanitaria.", "/admin-kiosko/inspeccion"],
+              ].map(([title, text, href]) => (
+                <a key={href} href={href} className="rounded-[1.8rem] border border-white/10 bg-[#fffaf4] p-6 text-stone-950 transition hover:border-[#d94b2b]">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#d94b2b]">Acceso por rol</p>
+                  <h2 className="mt-3 text-3xl font-black uppercase tracking-[-0.04em]">{title}</h2>
+                  <p className="mt-3 text-sm leading-6 text-stone-700">{text}</p>
+                </a>
+              ))}
+            </section>
+          ) : null}
+
           <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.18)] sm:p-6">
             <div className="flex flex-col gap-3 border-b border-white/10 pb-5 md:flex-row md:items-start md:justify-between">
               <div>

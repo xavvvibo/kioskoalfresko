@@ -169,6 +169,22 @@ export default async function ProduccionPage({
           {params?.warning ? <p className="rounded-2xl border border-amber-300 bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-950">{params.warning}</p> : null}
           {params?.error ? <p className="rounded-2xl border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-3 text-sm font-semibold text-[#f2c6bb]">{params.error}</p> : null}
 
+          <nav className="flex flex-wrap gap-2 rounded-[1.4rem] border border-white/10 bg-[#151515] p-3" aria-label="Subsecciones producción">
+            {[
+              ["Nueva producción", "#nueva-produccion"],
+              ["Recetas", "#recetas"],
+              ["Lotes internos", "#lotes"],
+              ["Congelación", "#lotes"],
+              ["Descongelación", "#lotes"],
+              ["Mermas", "#lotes"],
+              ["Etiquetas", "/admin-kiosko/etiquetas"],
+              ["Inventario", "/admin-kiosko/inventario"],
+              ["Trazabilidad", "/admin-kiosko/trazabilidad"],
+            ].map(([label, href]) => (
+              <a key={label} href={href} className="rounded-full border border-white/10 bg-white/6 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white transition hover:border-[#d94b2b]">{label}</a>
+            ))}
+          </nav>
+
           <section className="grid gap-3 md:grid-cols-4 xl:grid-cols-8">
             {[
               ["Hoy", metrics?.productionToday ?? 0],
@@ -188,7 +204,7 @@ export default async function ProduccionPage({
           </section>
 
           <section className="grid gap-6 xl:grid-cols-[1fr_24rem]">
-            <form action={saveProductionBatchAction} className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+            <form id="nueva-produccion" action={saveProductionBatchAction} className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
               <div className="flex flex-col gap-3 border-b border-white/10 pb-5 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Nuevo lote interno</p>
@@ -234,7 +250,7 @@ export default async function ProduccionPage({
               </div>
             </form>
 
-            <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+            <section id="recetas" className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Recetas base</h2>
               <form action={saveInternalRecipeAction} className="mt-5 grid gap-4">
                 <Field name="recipe_name" label="Nombre receta" value="Bolas smash" required />
@@ -303,7 +319,7 @@ export default async function ProduccionPage({
             </section>
           </section>
 
-          <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+          <section id="lotes" className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Trazabilidad</p>
