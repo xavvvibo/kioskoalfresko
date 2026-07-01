@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { getSupplierOptions } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../_components/AdminHeader";
 import { IaAssistantClient } from "./IaAssistantClient";
 
@@ -19,12 +20,14 @@ export default async function IaAppccPage({
 }) {
   await requireAdminSession();
   const params = await searchParams;
+  const suppliersResult = await getSupplierOptions();
+  const suppliers = suppliersResult.ok ? suppliersResult.data : [];
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
       <AdminHeader title="Asistente IA APPCC" description="Subida y clasificación inteligente de documentos sanitarios, albaranes, facturas, etiquetas y registros." />
       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
-        <IaAssistantClient saved={params?.saved === "1"} errorMessage={params?.error} />
+        <IaAssistantClient saved={params?.saved === "1"} errorMessage={params?.error} suppliers={suppliers} />
       </section>
     </main>
   );

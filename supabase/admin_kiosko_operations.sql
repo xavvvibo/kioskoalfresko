@@ -98,6 +98,7 @@ alter table if exists public.admin_label_records
   add column if not exists zpl_version text;
 
 alter table if exists public.admin_supplier_records
+  add column if not exists status text,
   add column if not exists contact text,
   add column if not exists responsible_person text,
   add column if not exists schedule text,

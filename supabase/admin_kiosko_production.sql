@@ -47,6 +47,13 @@ create table if not exists public.admin_internal_recipes (
   expected_yield numeric,
   output_unit text,
   unit_weight numeric,
+  expected_waste numeric default 0,
+  final_weight numeric,
+  prep_time_minutes numeric,
+  shelf_life_refrigerated_hours numeric,
+  shelf_life_frozen_days numeric,
+  conservation_type text,
+  status text default 'activa',
   instructions text,
   active boolean default true
 );
@@ -54,6 +61,7 @@ create table if not exists public.admin_internal_recipes (
 create table if not exists public.admin_internal_recipe_inputs (
   id uuid primary key default gen_random_uuid(),
   recipe_id uuid references public.admin_internal_recipes(id) on delete cascade,
+  input_product_id uuid references public.admin_inventory_products(id) on delete set null,
   input_product text not null,
   quantity numeric,
   unit text
@@ -95,11 +103,19 @@ alter table if exists public.admin_internal_recipes
   add column if not exists expected_yield numeric,
   add column if not exists output_unit text,
   add column if not exists unit_weight numeric,
+  add column if not exists expected_waste numeric default 0,
+  add column if not exists final_weight numeric,
+  add column if not exists prep_time_minutes numeric,
+  add column if not exists shelf_life_refrigerated_hours numeric,
+  add column if not exists shelf_life_frozen_days numeric,
+  add column if not exists conservation_type text,
+  add column if not exists status text default 'activa',
   add column if not exists instructions text,
   add column if not exists active boolean default true;
 
 alter table if exists public.admin_internal_recipe_inputs
   add column if not exists recipe_id uuid references public.admin_internal_recipes(id) on delete cascade,
+  add column if not exists input_product_id uuid references public.admin_inventory_products(id) on delete set null,
   add column if not exists input_product text,
   add column if not exists quantity numeric,
   add column if not exists unit text;
@@ -160,6 +176,7 @@ create index if not exists admin_production_movements_date_idx on public.admin_p
 create index if not exists admin_production_movements_batch_idx on public.admin_production_movements (batch_id);
 create index if not exists admin_internal_recipes_name_idx on public.admin_internal_recipes (lower(recipe_name));
 create index if not exists admin_internal_recipe_inputs_recipe_idx on public.admin_internal_recipe_inputs (recipe_id);
+create index if not exists admin_internal_recipe_inputs_product_idx on public.admin_internal_recipe_inputs (input_product_id);
 
 comment on table public.admin_production_batches is 'Lotes internos de producción APPCC para elaboraciones, congelación, descongelación y salidas internas.';
 comment on table public.admin_production_movements is 'Movimientos trazables de lotes internos de producción APPCC.';

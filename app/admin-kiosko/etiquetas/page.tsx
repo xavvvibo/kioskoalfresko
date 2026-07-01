@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getLabelRecords } from "@/lib/admin-kiosko/database";
+import { getLabelRecords, getSupplierOptions, type SupplierOption } from "@/lib/admin-kiosko/database";
 import { buildZebraLabelZpl, type ZebraTemplate } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
 import { ZebraPrintButton } from "../_components/ZebraPrintButton";
@@ -51,6 +51,37 @@ function labelFromParams(params: Record<string, string>) {
   };
 }
 
+function SupplierSelector({ suppliers, current }: { suppliers: SupplierOption[]; current: string }) {
+  const selected = suppliers.find((supplier) => supplier.name.toLowerCase() === current.toLowerCase());
+
+  return (
+    <div className="grid gap-3">
+      <label className="grid gap-2 text-sm font-semibold text-stone-200">
+        Proveedor autorizado
+        <select name="supplier_name" defaultValue={selected?.name || current || suppliers[0]?.name || "__new__"} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
+          {current && !selected ? <option value={current}>Proveedor precargado: {current}</option> : null}
+          {suppliers.map((supplier) => (
+            <option key={supplier.id} value={supplier.name}>{supplier.name}{supplier.tax_id ? ` · ${supplier.tax_id}` : ""}</option>
+          ))}
+          <option value="__new__">Añadir nuevo proveedor</option>
+        </select>
+      </label>
+      <details className="rounded-2xl border border-amber-300/30 bg-amber-100 px-4 py-3 text-amber-950">
+        <summary className="cursor-pointer text-sm font-black uppercase tracking-[0.12em]">Añadir nuevo proveedor</summary>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <input name="new_supplier_name" placeholder="Nombre proveedor" className="rounded-xl border border-amber-950/15 bg-white px-3 py-2 text-sm text-stone-950" />
+          <input name="new_supplier_tax_id" placeholder="CIF/NIF" className="rounded-xl border border-amber-950/15 bg-white px-3 py-2 text-sm text-stone-950" />
+          <input name="new_supplier_phone" placeholder="Teléfono" className="rounded-xl border border-amber-950/15 bg-white px-3 py-2 text-sm text-stone-950" />
+          <input name="new_supplier_email" placeholder="Email" className="rounded-xl border border-amber-950/15 bg-white px-3 py-2 text-sm text-stone-950" />
+          <input name="new_supplier_contact" placeholder="Persona contacto" className="rounded-xl border border-amber-950/15 bg-white px-3 py-2 text-sm text-stone-950" />
+          <input name="new_supplier_observations" placeholder="Observaciones" className="rounded-xl border border-amber-950/15 bg-white px-3 py-2 text-sm text-stone-950" />
+        </div>
+        <p className="mt-3 text-sm font-semibold">Información administrativa pendiente de completar.</p>
+      </details>
+    </div>
+  );
+}
+
 function LabelCard({ label }: { label: ReturnType<typeof labelFromParams> }) {
   const qr = `/admin-kiosko/etiquetas/qr?p=${encodeURIComponent(label.qr_payload)}`;
   return (
@@ -84,8 +115,12 @@ export default async function EtiquetasPage({
 }) {
   await requireAdminSession();
   const params = await searchParams || {};
-  const historyResult = await getLabelRecords(20);
+  const [historyResult, suppliersResult] = await Promise.all([
+    getLabelRecords(20),
+    getSupplierOptions(),
+  ]);
   const history = historyResult.ok ? historyResult.data : [];
+  const suppliers = suppliersResult.ok ? suppliersResult.data : [];
   const selected = history.find((record) => record.id === params.id);
   const current = selected
     ? {
@@ -136,7 +171,6 @@ export default async function EtiquetasPage({
                 {[
                   ["product", "Producto", current.product],
                   ["batch", "Lote", current.batch],
-                  ["supplier", "Proveedor", current.supplier],
                   ["elaboration_date", "Fecha elaboración", current.elaboration_date],
                   ["opening_date", "Fecha apertura", current.opening_date],
                   ["freezing_date", "Fecha congelación", current.freezing_date],
@@ -148,6 +182,7 @@ export default async function EtiquetasPage({
                     <input name={name} defaultValue={value} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950" />
                   </label>
                 ))}
+                <SupplierSelector suppliers={suppliers} current={current.supplier} />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="grid gap-2 text-sm font-semibold text-stone-200">Formato
                     <select name="print_format" defaultValue={current.print_format} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">

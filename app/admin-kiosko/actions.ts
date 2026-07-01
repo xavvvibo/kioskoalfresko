@@ -123,6 +123,34 @@ function hasCriticalObservation(value: string) {
   return /rechaz|incidencia|cr[ií]tic|mal estado|temperatura alta|caducad[ao]|no conforme/i.test(value);
 }
 
+async function resolveSupplierFromForm(formData: FormData, fieldPrefix = "supplier") {
+  const selectedId = text(formData, `${fieldPrefix}_id`);
+  const selectedName = text(formData, `${fieldPrefix}_name`) || text(formData, fieldPrefix);
+  const newName = text(formData, `new_${fieldPrefix}_name`);
+  const creatingNew = selectedId === "__new__" || selectedName === "__new__" || Boolean(newName);
+
+  if (!creatingNew) {
+    return selectedName;
+  }
+
+  const supplierName = newName || (selectedName === "__new__" ? "" : selectedName);
+  if (!supplierName) return "";
+
+  const ensured = await ensureSupplierRecord({
+    supplier: supplierName,
+    cif: text(formData, `new_${fieldPrefix}_tax_id`),
+    phone: text(formData, `new_${fieldPrefix}_phone`),
+    email: text(formData, `new_${fieldPrefix}_email`),
+    contact: text(formData, `new_${fieldPrefix}_contact`),
+    responsible_person: text(formData, `new_${fieldPrefix}_contact`),
+    category: "Proveedor APPCC",
+    status: "pendiente_datos_administrativos",
+    observations: text(formData, `new_${fieldPrefix}_observations`) || "Proveedor registrado. Información administrativa pendiente de completar.",
+  });
+
+  return ensured.ok && ensured.data?.supplier ? ensured.data.supplier : supplierName;
+}
+
 function redirectAfterSave(path: string, result: { ok: true } | { ok: false; error: string }): never {
   revalidatePath(path);
   if (result.ok) {
@@ -202,11 +230,12 @@ export async function saveFryerOilRecordAction(formData: FormData) {
 
 export async function saveGoodsReceptionRecordAction(formData: FormData) {
   await requireAdminSession();
+  const supplier = await resolveSupplierFromForm(formData);
 
   const result = await createGoodsReceptionRecord({
     record_date: text(formData, "record_date"),
     record_time: text(formData, "record_time"),
-    supplier: text(formData, "supplier"),
+    supplier,
     product: text(formData, "product"),
     delivery_temperature: optionalNumber(formData, "delivery_temperature"),
     accepted: checkbox(formData, "accepted"),
@@ -225,7 +254,7 @@ export async function saveAiReceptionAction(formData: FormData) {
 
   const ocrJson = parseJson<Record<string, unknown>>(text(formData, "ocr_json"), {});
   const productCount = Number(text(formData, "product_count")) || 0;
-  const supplier = text(formData, "supplier_name") || "Proveedor no identificado";
+  const supplier = await resolveSupplierFromForm(formData) || "Proveedor no identificado";
   const documentDate = optionalDate(text(formData, "document_date")) || todayMadrid();
   const recordTime = timeMadrid();
   const observations = text(formData, "observations");
@@ -281,7 +310,8 @@ export async function saveAiReceptionAction(formData: FormData) {
     supplier,
     cif: text(formData, "supplier_tax_id"),
     category: "Proveedor IA",
-    observations: "Creado desde recepción IA OCR.",
+    status: "pendiente_datos_administrativos",
+    observations: "Proveedor registrado desde recepción IA OCR. Información administrativa pendiente de completar.",
   });
 
   for (const product of products) {
@@ -413,24 +443,41 @@ export async function saveIncidentRecordAction(formData: FormData) {
 
 export async function saveProductionBatchAction(formData: FormData) {
   await requireAdminSession();
+  const material = parseJson<{
+    product_id?: string;
+    product?: string;
+    supplier?: string | null;
+    batch?: string | null;
+    unit?: string | null;
+    expiry_date?: string | null;
+    source_document_id?: string | null;
+  }>(text(formData, "source_material"), {});
+  const recipeShelfLifeDays = Math.ceil((optionalNumber(formData, "shelf_life_refrigerated_hours") || 0) / 24);
+  const productionDate = text(formData, "production_date") || todayMadrid();
+  const calculatedExpiry = recipeShelfLifeDays
+    ? new Date(`${productionDate}T00:00:00.000Z`)
+    : null;
+  if (calculatedExpiry) calculatedExpiry.setUTCDate(calculatedExpiry.getUTCDate() + recipeShelfLifeDays);
+  const expiryDate = text(formData, "expiry_date") || (calculatedExpiry ? calculatedExpiry.toISOString().slice(0, 10) : "");
 
   const result = await createProductionBatch({
-    production_date: text(formData, "production_date") || todayMadrid(),
+    production_date: productionDate,
     production_time: text(formData, "production_time") || timeMadrid(),
     responsible: text(formData, "responsible"),
-    source_supplier: text(formData, "source_supplier"),
-    source_product: text(formData, "source_product"),
-    source_batch_number: text(formData, "source_batch_number"),
+    source_product_id: material.product_id,
+    source_supplier: material.supplier || "",
+    source_product: material.product || "",
+    source_batch_number: material.batch || "",
     input_quantity: optionalNumber(formData, "input_quantity"),
-    input_unit: text(formData, "input_unit"),
+    input_unit: text(formData, "input_unit") || material.unit || "",
     output_product: text(formData, "output_product"),
     output_quantity: optionalNumber(formData, "output_quantity"),
     output_unit: text(formData, "output_unit"),
     unit_weight: optionalNumber(formData, "unit_weight"),
     storage_state: text(formData, "storage_state") || "refrigerado",
-    expiry_date: text(formData, "expiry_date"),
+    expiry_date: expiryDate,
     observations: text(formData, "observations"),
-    source_document_id: text(formData, "source_document_id"),
+    source_document_id: material.source_document_id || "",
   });
 
   revalidatePath("/admin-kiosko/produccion");
@@ -439,9 +486,20 @@ export async function saveProductionBatchAction(formData: FormData) {
   revalidatePath("/admin-kiosko/etiquetas");
 
   if (result.ok) {
-    const params = new URLSearchParams({ saved: "1", batch: result.data.id });
+    const params = new URLSearchParams({
+      model: "Elaboración",
+      product: text(formData, "output_product"),
+      batch: result.data.batch_code,
+      supplier: material.supplier || "",
+      source_batch_number: material.batch || "",
+      elaboration_date: productionDate,
+      best_before_date: expiryDate,
+      responsible: text(formData, "responsible") || "F. Javier Bocanegra Sanjuan",
+      print_format: "termica",
+      copies: "1",
+    });
     if (result.data.warnings.length) params.set("warning", result.data.warnings.join(" · ").slice(0, 240));
-    redirect(`/admin-kiosko/produccion?${params.toString()}`);
+    redirect(`/admin-kiosko/etiquetas?${params.toString()}`);
   }
 
   redirect(`/admin-kiosko/produccion?error=${encodeURIComponent(result.error.slice(0, 240))}`);
@@ -471,17 +529,27 @@ export async function saveProductionMovementAction(formData: FormData) {
 
 export async function saveInternalRecipeAction(formData: FormData) {
   await requireAdminSession();
+  const inputProduct = parseJson<{ id?: string; name?: string; unit?: string }>(text(formData, "recipe_input_product"), {});
 
   const result = await createInternalRecipe({
+    id: text(formData, "id"),
     recipe_name: text(formData, "recipe_name"),
     output_product: text(formData, "output_product"),
     expected_yield: optionalNumber(formData, "expected_yield"),
     output_unit: text(formData, "output_unit"),
     unit_weight: optionalNumber(formData, "unit_weight"),
+    expected_waste: optionalNumber(formData, "expected_waste"),
+    final_weight: optionalNumber(formData, "final_weight"),
+    prep_time_minutes: optionalNumber(formData, "prep_time_minutes"),
+    shelf_life_refrigerated_hours: optionalNumber(formData, "shelf_life_refrigerated_hours"),
+    shelf_life_frozen_days: optionalNumber(formData, "shelf_life_frozen_days"),
+    conservation_type: text(formData, "conservation_type"),
+    status: text(formData, "status"),
     instructions: text(formData, "instructions"),
-    input_product: text(formData, "input_product"),
+    input_product_id: inputProduct.id || text(formData, "input_product_id"),
+    input_product: inputProduct.name || text(formData, "input_product"),
     input_quantity: optionalNumber(formData, "input_quantity"),
-    input_unit: text(formData, "input_unit"),
+    input_unit: text(formData, "input_unit") || inputProduct.unit || "",
     active: true,
   });
 
@@ -609,6 +677,7 @@ export async function saveSupplierRecordAction(formData: FormData) {
   const result = await createSupplierRecord({
     supplier: text(formData, "supplier"),
     cif: text(formData, "cif"),
+    status: text(formData, "status") || "pendiente_datos_administrativos",
     contact: text(formData, "contact"),
     phone: text(formData, "phone"),
     email: text(formData, "email"),
@@ -683,12 +752,13 @@ export async function saveInventoryMovementAction(formData: FormData) {
 
 export async function saveLabelRecordAction(formData: FormData) {
   await requireAdminSession();
+  const supplier = await resolveSupplierFromForm(formData);
 
   const result = await createLabelRecord({
     model: text(formData, "model"),
     product: text(formData, "product"),
     batch: text(formData, "batch"),
-    supplier: text(formData, "supplier"),
+    supplier,
     elaboration_date: text(formData, "elaboration_date"),
     opening_date: text(formData, "opening_date"),
     freezing_date: text(formData, "freezing_date"),

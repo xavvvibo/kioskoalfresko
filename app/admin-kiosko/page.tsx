@@ -205,17 +205,36 @@ export default async function AdminKioskoPage({
 
                 {!inspectorMode ? (
                   <>
-                    {metrics?.recentProductions.length ? (
+                    {metrics ? (
                       <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-[#0d0d0d] p-5">
-                        <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Producciones recientes</h3>
-                        <div className="mt-4 grid gap-3 md:grid-cols-2">
-                          {metrics.recentProductions.map((batch) => (
-                            <a key={batch.id} href={`/admin-kiosko/produccion?batch=${batch.id}`} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200 transition hover:border-[#d94b2b]">
-                              <p className="font-black text-white">{batch.batch_code} · {batch.output_product}</p>
-                              <p className="mt-1">{batch.production_date} · {batch.output_quantity ?? 0} {batch.output_unit || "ud"} · {batch.storage_state || "refrigerado"}</p>
-                            </a>
+                        <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Producción interna</h3>
+                        <div className="mt-4 grid gap-3 md:grid-cols-4">
+                          {[
+                            ["Hoy", metrics.productionToday],
+                            ["Semana", metrics.productionWeek],
+                            ["Mes", metrics.productionMonth],
+                            ["Kg transformados", `${metrics.transformedKgMonth} kg`],
+                            ["Unidades producidas", metrics.producedUnitsMonth],
+                            ["Merma", metrics.wasteQuantityMonth],
+                            ["Coste medio", `${metrics.averageProductionCost.toFixed(2)} €`],
+                            ["Stock producido", metrics.producedStock],
+                          ].map(([label, value]) => (
+                            <article key={label} className="rounded-[1.1rem] border border-white/10 bg-white/6 p-3">
+                              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">{label}</p>
+                              <p className="mt-2 text-lg font-black text-white">{value}</p>
+                            </article>
                           ))}
                         </div>
+                        {metrics.recentProductions.length ? (
+                          <div className="mt-4 grid gap-3 md:grid-cols-2">
+                            {metrics.recentProductions.map((batch) => (
+                              <a key={batch.id} href={`/admin-kiosko/produccion?batch=${batch.id}`} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200 transition hover:border-[#d94b2b]">
+                                <p className="font-black text-white">{batch.batch_code} · {batch.output_product}</p>
+                                <p className="mt-1">{batch.production_date} · {batch.output_quantity ?? 0} {batch.output_unit || "ud"} · {batch.storage_state || "refrigerado"}</p>
+                              </a>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
 

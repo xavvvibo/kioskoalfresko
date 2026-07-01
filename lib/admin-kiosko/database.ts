@@ -208,6 +208,7 @@ type InspectionRecordInput = {
 type SupplierRecordInput = {
   supplier: string;
   cif?: string;
+  status?: string;
   contact?: string;
   phone?: string;
   email?: string;
@@ -226,6 +227,15 @@ type SupplierRecordInput = {
   reception_temperatures?: string;
   ai_history?: string;
   observations?: string;
+};
+
+export type SupplierOption = {
+  id: string;
+  name: string;
+  tax_id: string | null;
+  status: string | null;
+  health_register: string | null;
+  appcc: string | null;
 };
 
 type EquipmentAssetInput = {
@@ -488,6 +498,7 @@ export type ProductionBatchInput = {
   production_date: string;
   production_time?: string;
   responsible?: string;
+  source_product_id?: string;
   source_supplier?: string;
   source_product?: string;
   source_batch_number?: string;
@@ -566,7 +577,15 @@ export type InternalRecipeInput = {
   expected_yield?: number;
   output_unit?: string;
   unit_weight?: number;
+  expected_waste?: number;
+  final_weight?: number;
+  prep_time_minutes?: number;
+  shelf_life_refrigerated_hours?: number;
+  shelf_life_frozen_days?: number;
+  conservation_type?: string;
+  status?: string;
   instructions?: string;
+  input_product_id?: string;
   input_product?: string;
   input_quantity?: number;
   input_unit?: string;
@@ -581,14 +600,36 @@ export type InternalRecipe = {
   expected_yield: number | null;
   output_unit: string | null;
   unit_weight: number | null;
+  expected_waste: number | null;
+  final_weight: number | null;
+  prep_time_minutes: number | null;
+  shelf_life_refrigerated_hours: number | null;
+  shelf_life_frozen_days: number | null;
+  conservation_type: string | null;
+  status: string | null;
   instructions: string | null;
   active: boolean;
   inputs?: Array<{
     id: string;
+    input_product_id: string | null;
     input_product: string;
     quantity: number | null;
     unit: string | null;
   }>;
+};
+
+export type ProductionMaterialOption = {
+  key: string;
+  product_id: string;
+  product: string;
+  supplier: string | null;
+  batch: string | null;
+  stock: number | null;
+  unit: string | null;
+  expiry_date: string | null;
+  location: string | null;
+  source_document_id: string | null;
+  fefo: boolean;
 };
 
 export type SupplierProfile = {
@@ -599,6 +640,9 @@ export type SupplierProfile = {
   email: string | null;
   category: string | null;
   status: string | null;
+  certificates?: string | null;
+  health_register?: string | null;
+  appcc?: string | null;
   documents: AiSupplierDocument[];
   receptions: RecentAdminRecord[];
   incidents: RecentAdminRecord[];
@@ -646,6 +690,15 @@ export type ExecutiveDashboardMetrics = {
   productsToConsumeSoon: number;
   expiredDefrostedBatches: number;
   monthlyWasteMovements: number;
+  productionToday: number;
+  productionWeek: number;
+  productionMonth: number;
+  transformedKgMonth: number;
+  producedUnitsMonth: number;
+  wasteQuantityMonth: number;
+  rawMaterialCostMonth: number;
+  averageProductionCost: number;
+  producedStock: number;
   recentProductions: ProductionBatch[];
   temperatureCompliancePercent: number;
   receptionCompliancePercent: number;
@@ -1158,6 +1211,7 @@ export async function createSupplierRecord(data: SupplierRecordInput) {
   return insertRecord("admin_supplier_records", {
     supplier: data.supplier.trim(),
     cif: cleanText(data.cif),
+    status: cleanText(data.status) || "pendiente_datos_administrativos",
     contact: cleanText(data.contact),
     phone: cleanText(data.phone),
     email: cleanText(data.email),
@@ -1179,10 +1233,38 @@ export async function createSupplierRecord(data: SupplierRecordInput) {
   });
 }
 
-async function findSupplierByName(supplier: string) {
-  return getRows<{ id: string; supplier: string }>(
+export async function getSupplierOptions(): Promise<DbResult<SupplierOption[]>> {
+  const result = await getRows<{ id: string; supplier: string; cif: string | null; status: string | null; health_register: string | null; appcc: string | null }>(
     "admin_supplier_records",
-    `?select=id,supplier&supplier=ilike.${encodeURIComponent(supplier.trim())}&limit=1`,
+    "?select=id,supplier,cif,status,health_register,appcc&order=supplier.asc&limit=1000",
+  );
+
+  if (!result.ok) return result;
+
+  return {
+    ok: true,
+    data: result.data.map((supplier) => ({
+      id: supplier.id,
+      name: supplier.supplier,
+      tax_id: supplier.cif,
+      status: supplier.status,
+      health_register: supplier.health_register,
+      appcc: supplier.appcc,
+    })),
+  };
+}
+
+async function findSupplierByNameOrTaxId(supplier: string, taxId?: string) {
+  const clauses = [
+    supplier.trim() ? `supplier.ilike.${encodeURIComponent(supplier.trim())}` : "",
+    taxId?.trim() ? `cif.ilike.${encodeURIComponent(taxId.trim())}` : "",
+  ].filter(Boolean).join(",");
+
+  if (!clauses) return { ok: true as const, data: [] as Array<{ id: string; supplier: string; cif: string | null }> };
+
+  return getRows<{ id: string; supplier: string; cif: string | null }>(
+    "admin_supplier_records",
+    `?select=id,supplier,cif&or=(${clauses})&limit=1`,
   );
 }
 
@@ -1191,7 +1273,7 @@ export async function ensureSupplierRecord(data: SupplierRecordInput) {
     return { ok: true, data: null };
   }
 
-  const existing = await findSupplierByName(data.supplier);
+  const existing = await findSupplierByNameOrTaxId(data.supplier, data.cif);
 
   if (!existing.ok) {
     return { ok: true, data: null };
@@ -1204,6 +1286,11 @@ export async function ensureSupplierRecord(data: SupplierRecordInput) {
   const created = await insertRecordReturning<{ id: string; supplier: string }>("admin_supplier_records", {
     supplier: data.supplier.trim(),
     cif: cleanText(data.cif),
+    status: cleanText(data.status) || "pendiente_datos_administrativos",
+    contact: cleanText(data.contact),
+    phone: cleanText(data.phone),
+    email: cleanText(data.email),
+    responsible_person: cleanText(data.responsible_person),
     category: cleanText(data.category) || "Proveedor IA",
     observations: cleanText(data.observations),
   }, "id,supplier");
@@ -1479,6 +1566,75 @@ export async function getInventoryMovements(productId?: string): Promise<DbResul
   return getRows<InventoryMovement>("admin_inventory_movements", `?${filters.join("&")}`);
 }
 
+export async function getProductionMaterialOptions(): Promise<DbResult<ProductionMaterialOption[]>> {
+  const [productsResult, movementsResult] = await Promise.all([
+    getInventoryProducts({ status: "activos" }),
+    getRows<InventoryMovement>(
+      "admin_inventory_movements",
+      "?select=id,created_at,product_id,movement_type,quantity,unit,purchase_price,supplier,batch_number,expiry_date,source_document_id,observations,source,admin_inventory_products(id,name,current_stock,unit)&movement_type=eq.entrada&order=expiry_date.asc.nullslast,created_at.desc&limit=1000",
+    ),
+  ]);
+
+  if (!productsResult.ok) return productsResult;
+  if (!movementsResult.ok) return movementsResult;
+
+  const activeProducts = productsResult.data.filter((product) => product.active && Number(product.current_stock || 0) > 0);
+  const options = new Map<string, ProductionMaterialOption>();
+
+  for (const product of activeProducts) {
+    const key = `${product.id}:${product.current_batch || "stock"}:${product.expiry_date || ""}`;
+    options.set(key, {
+      key,
+      product_id: product.id,
+      product: product.name,
+      supplier: product.usual_supplier,
+      batch: product.current_batch,
+      stock: product.current_stock,
+      unit: product.unit,
+      expiry_date: product.expiry_date,
+      location: product.location,
+      source_document_id: null,
+      fefo: false,
+    });
+  }
+
+  for (const movement of movementsResult.data) {
+    const product = activeProducts.find((item) => item.id === movement.product_id);
+    if (!product) continue;
+    const key = `${product.id}:${movement.batch_number || product.current_batch || "stock"}:${movement.expiry_date || product.expiry_date || ""}`;
+    options.set(key, {
+      key,
+      product_id: product.id,
+      product: product.name,
+      supplier: movement.supplier || product.usual_supplier,
+      batch: movement.batch_number || product.current_batch,
+      stock: product.current_stock,
+      unit: movement.unit || product.unit,
+      expiry_date: movement.expiry_date || product.expiry_date,
+      location: product.location,
+      source_document_id: movement.source_document_id,
+      fefo: false,
+    });
+  }
+
+  const rows = Array.from(options.values()).sort((a, b) => {
+    if (!a.expiry_date && !b.expiry_date) return a.product.localeCompare(b.product);
+    if (!a.expiry_date) return 1;
+    if (!b.expiry_date) return -1;
+    return a.expiry_date.localeCompare(b.expiry_date);
+  });
+  const firstByProduct = new Set<string>();
+
+  return {
+    ok: true,
+    data: rows.map((option) => {
+      const fefo = !firstByProduct.has(option.product_id);
+      firstByProduct.add(option.product_id);
+      return { ...option, fefo };
+    }),
+  };
+}
+
 export async function upsertInventoryFromAiReception(data: InventoryReceptionInput) {
   if (!hasRequiredText(data.name)) {
     return { ok: true as const, data: null };
@@ -1682,32 +1838,19 @@ export async function getLabelRecordsByBatch(batch?: string): Promise<DbResult<L
   );
 }
 
-function productionCodePrefix(product: string) {
-  const normalized = product
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9 ]/g, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  const firstWord = normalized[0] || "LOTE";
-  return firstWord.slice(0, 8).toUpperCase();
-}
-
-async function generateProductionBatchCode(product: string, date: string) {
-  const prefix = productionCodePrefix(product);
+async function generateProductionBatchCode(date: string) {
   const compactDate = date.replaceAll("-", "");
   const rows = await getRows<{ id: string }>(
     "admin_production_batches",
-    `?select=id&batch_code=ilike.${encodeURIComponent(`${prefix}-${compactDate}-%`)}&limit=1000`,
+    `?select=id&batch_code=ilike.${encodeURIComponent(`KA-${compactDate}-%`)}&limit=1000`,
   );
   const sequence = rows.ok ? rows.data.length + 1 : 1;
-  return `${prefix}-${compactDate}-${String(sequence).padStart(3, "0")}`;
+  return `KA-${compactDate}-${String(sequence).padStart(3, "0")}`;
 }
 
 const productionBatchSelect = "id,created_at,production_date,production_time,responsible,batch_code,source_supplier,source_product,source_batch_number,input_quantity,input_unit,output_product,output_quantity,output_unit,unit_weight,storage_state,expiry_date,observations,source_document_id,source";
 const productionMovementSelect = "id,created_at,batch_id,movement_date,movement_time,movement_type,quantity,unit,from_state,to_state,reason,responsible,observations";
-const recipeSelect = "id,created_at,recipe_name,output_product,expected_yield,output_unit,unit_weight,instructions,active";
+const recipeSelect = "id,created_at,recipe_name,output_product,expected_yield,output_unit,unit_weight,expected_waste,final_weight,prep_time_minutes,shelf_life_refrigerated_hours,shelf_life_frozen_days,conservation_type,status,instructions,active";
 
 async function getProductionBatchById(id: string): Promise<DbResult<ProductionBatch | null>> {
   if (!hasRequiredText(id)) return { ok: true, data: null };
@@ -1766,10 +1909,12 @@ async function upsertProductionOutputInventory(data: ProductionBatchInput, batch
 }
 
 async function consumeProductionInputInventory(data: ProductionBatchInput, batchCode: string) {
-  const source = await findInventoryProductByProductionName(data.source_product);
+  const source = data.source_product_id
+    ? await getInventoryProductById(data.source_product_id)
+    : await findInventoryProductByProductionName(data.source_product);
   if (!source.ok) return `Materia prima no actualizada en inventario: ${source.error}`;
 
-  const product = source.data[0];
+  const product = Array.isArray(source.data) ? source.data[0] : source.data;
   if (!product) {
     return "Materia prima registrada en producción. Producto origen no localizado en inventario; stock no descontado automáticamente.";
   }
@@ -1792,17 +1937,33 @@ export async function createProductionBatch(data: ProductionBatchInput): Promise
     return { ok: false, error: "Fecha y elaboración resultante son obligatorias." };
   }
 
-  const batchCode = await generateProductionBatchCode(data.output_product, data.production_date);
+  const sourceProduct = data.source_product_id ? await getInventoryProductById(data.source_product_id) : null;
+  if (sourceProduct && !sourceProduct.ok) return sourceProduct;
+  const selectedSource = sourceProduct?.ok ? sourceProduct.data : null;
+  const sourceProductName = selectedSource?.name || cleanText(data.source_product);
+  const sourceSupplier = selectedSource?.usual_supplier || cleanText(data.source_supplier);
+  const sourceBatch = cleanText(data.source_batch_number) || selectedSource?.current_batch || undefined;
+  const sourceUnit = cleanText(data.input_unit) || selectedSource?.unit || "ud";
+  const sourceDocumentId = cleanText(data.source_document_id);
+  const resolvedData = {
+    ...data,
+    source_supplier: sourceSupplier,
+    source_product: sourceProductName,
+    source_batch_number: sourceBatch,
+    input_unit: sourceUnit,
+    source_document_id: sourceDocumentId,
+  };
+  const batchCode = await generateProductionBatchCode(data.production_date);
   const inserted = await insertRecordReturning<{ id: string; batch_code: string }>("admin_production_batches", {
     production_date: data.production_date,
     production_time: cleanText(data.production_time),
     responsible: cleanText(data.responsible),
     batch_code: batchCode,
-    source_supplier: cleanText(data.source_supplier),
-    source_product: cleanText(data.source_product),
-    source_batch_number: cleanText(data.source_batch_number),
+    source_supplier: sourceSupplier,
+    source_product: sourceProductName,
+    source_batch_number: sourceBatch,
     input_quantity: normalizeNumber(data.input_quantity),
-    input_unit: cleanText(data.input_unit),
+    input_unit: sourceUnit,
     output_product: data.output_product.trim(),
     output_quantity: normalizeNumber(data.output_quantity),
     output_unit: cleanText(data.output_unit) || "ud",
@@ -1810,7 +1971,7 @@ export async function createProductionBatch(data: ProductionBatchInput): Promise
     storage_state: cleanText(data.storage_state) || "refrigerado",
     expiry_date: cleanText(data.expiry_date),
     observations: cleanText(data.observations),
-    source_document_id: cleanText(data.source_document_id),
+    source_document_id: sourceDocumentId,
     source: "admin-kiosko-production",
   }, "id,batch_code");
 
@@ -1833,11 +1994,25 @@ export async function createProductionBatch(data: ProductionBatchInput): Promise
     observations: cleanText(data.observations),
   });
 
-  const inputWarning = await consumeProductionInputInventory(data, batch.batch_code);
+  const inputWarning = await consumeProductionInputInventory(resolvedData, batch.batch_code);
   if (inputWarning) warnings.push(inputWarning);
 
-  const outputResult = await upsertProductionOutputInventory(data, batch.batch_code);
+  const outputResult = await upsertProductionOutputInventory(resolvedData, batch.batch_code);
   if (!outputResult.ok) warnings.push(outputResult.warning);
+
+  await createLabelRecord({
+    model: "Elaboración",
+    product: resolvedData.output_product,
+    batch: batch.batch_code,
+    supplier: resolvedData.source_supplier,
+    elaboration_date: resolvedData.production_date,
+    best_before_date: resolvedData.expiry_date,
+    responsible: resolvedData.responsible,
+    print_format: "termica",
+    copies: 1,
+    template: "elaboracion",
+    zpl_version: "ZPL II",
+  });
 
   if (warnings.length) {
     await patchRecord("admin_production_batches", batch.id, {
@@ -1966,18 +2141,33 @@ export async function getProductionMetrics(): Promise<DbResult<{
   productsToConsumeSoon: number;
   expiredDefrostedBatches: number;
   monthlyWasteMovements: number;
+  productionToday: number;
+  productionWeek: number;
+  productionMonth: number;
+  transformedKgMonth: number;
+  producedUnitsMonth: number;
+  wasteQuantityMonth: number;
+  rawMaterialCostMonth: number;
+  averageProductionCost: number;
+  producedStock: number;
   recentProductions: ProductionBatch[];
 }>> {
   const today = getMadridDate();
   const soon = addDays(today, 3);
   const monthStart = firstDayOfMonth(today);
-  const [batches, waste] = await Promise.all([
+  const weekStart = addDays(today, -6);
+  const [batches, waste, inventory] = await Promise.all([
     getProductionBatches(200),
-    getRows<{ id: string }>("admin_production_movements", `?select=id&movement_type=eq.merma&movement_date=gte.${monthStart}&limit=1000`),
+    getRows<{ id: string; quantity: number | null }>("admin_production_movements", `?select=id,quantity&movement_type=eq.merma&movement_date=gte.${monthStart}&limit=1000`),
+    getInventoryProducts(),
   ]);
   if (!batches.ok) return batches;
 
   const active = batches.data.filter((batch) => Number(batch.output_quantity || 0) > 0 && !["consumido", "mermado", "personal"].includes(batch.storage_state || ""));
+  const monthBatches = batches.data.filter((batch) => batch.production_date >= monthStart);
+  const costByProduct = new Map((inventory.ok ? inventory.data : []).map((product) => [product.name.toLowerCase(), Number(product.average_purchase_price || product.last_purchase_price || 0)]));
+  const rawMaterialCostMonth = monthBatches.reduce((sum, batch) => sum + (Number(batch.input_quantity || 0) * (costByProduct.get((batch.source_product || "").toLowerCase()) || 0)), 0);
+  const producedUnitsMonth = monthBatches.reduce((sum, batch) => sum + Number(batch.output_quantity || 0), 0);
   return {
     ok: true,
     data: {
@@ -1986,6 +2176,15 @@ export async function getProductionMetrics(): Promise<DbResult<{
       productsToConsumeSoon: active.filter((batch) => Boolean(batch.expiry_date && batch.expiry_date >= today && batch.expiry_date <= soon)).length,
       expiredDefrostedBatches: active.filter((batch) => batch.storage_state === "descongelado" && Boolean(batch.expiry_date && batch.expiry_date < today)).length,
       monthlyWasteMovements: waste.ok ? waste.data.length : 0,
+      productionToday: batches.data.filter((batch) => batch.production_date === today).length,
+      productionWeek: batches.data.filter((batch) => batch.production_date >= weekStart).length,
+      productionMonth: monthBatches.length,
+      transformedKgMonth: monthBatches.reduce((sum, batch) => sum + (batch.input_unit === "kg" ? Number(batch.input_quantity || 0) : 0), 0),
+      producedUnitsMonth,
+      wasteQuantityMonth: waste.ok ? waste.data.reduce((sum, item) => sum + Number(item.quantity || 0), 0) : 0,
+      rawMaterialCostMonth,
+      averageProductionCost: producedUnitsMonth ? Number((rawMaterialCostMonth / producedUnitsMonth).toFixed(2)) : 0,
+      producedStock: active.reduce((sum, batch) => sum + Number(batch.output_quantity || 0), 0),
       recentProductions: batches.data.slice(0, 5),
     },
   };
@@ -1996,21 +2195,36 @@ export async function createInternalRecipe(data: InternalRecipeInput) {
     return { ok: false, error: "Nombre de receta y elaboración resultante son obligatorios." };
   }
 
-  const inserted = await insertRecordReturning<{ id: string }>("admin_internal_recipes", {
+  const payload = {
     recipe_name: data.recipe_name.trim(),
     output_product: data.output_product.trim(),
     expected_yield: normalizeNumber(data.expected_yield),
     output_unit: cleanText(data.output_unit) || "ud",
     unit_weight: normalizeNumber(data.unit_weight),
+    expected_waste: normalizeNumber(data.expected_waste),
+    final_weight: normalizeNumber(data.final_weight),
+    prep_time_minutes: normalizeNumber(data.prep_time_minutes),
+    shelf_life_refrigerated_hours: normalizeNumber(data.shelf_life_refrigerated_hours),
+    shelf_life_frozen_days: normalizeNumber(data.shelf_life_frozen_days),
+    conservation_type: cleanText(data.conservation_type) || "refrigerado",
+    status: cleanText(data.status) || "activa",
     instructions: cleanText(data.instructions),
     active: data.active !== false,
-  }, "id");
-  if (!inserted.ok) return inserted;
+  };
 
-  const recipeId = inserted.data[0]?.id;
+  let recipeId = data.id;
+  if (data.id) {
+    const updated = await patchRecord("admin_internal_recipes", data.id, payload);
+    if (!updated.ok) return updated;
+  } else {
+    const inserted = await insertRecordReturning<{ id: string }>("admin_internal_recipes", payload, "id");
+    if (!inserted.ok) return inserted;
+    recipeId = inserted.data[0]?.id;
+  }
   if (recipeId && hasRequiredText(data.input_product)) {
     await insertRecord("admin_internal_recipe_inputs", {
       recipe_id: recipeId,
+      input_product_id: cleanText(data.input_product_id),
       input_product: data.input_product?.trim(),
       quantity: normalizeNumber(data.input_quantity),
       unit: cleanText(data.input_unit),
@@ -2028,9 +2242,9 @@ export async function getInternalRecipes(): Promise<DbResult<InternalRecipe[]>> 
   if (!result.ok) return result;
 
   const recipes = await Promise.all(result.data.map(async (recipe) => {
-    const inputs = await getRows<{ id: string; input_product: string; quantity: number | null; unit: string | null }>(
+    const inputs = await getRows<{ id: string; input_product_id: string | null; input_product: string; quantity: number | null; unit: string | null }>(
       "admin_internal_recipe_inputs",
-      `?select=id,input_product,quantity,unit&recipe_id=eq.${encodeURIComponent(recipe.id)}&order=input_product.asc`,
+      `?select=id,input_product_id,input_product,quantity,unit&recipe_id=eq.${encodeURIComponent(recipe.id)}&order=input_product.asc`,
     );
     return { ...recipe, inputs: inputs.ok ? inputs.data : [] };
   }));
@@ -2039,9 +2253,9 @@ export async function getInternalRecipes(): Promise<DbResult<InternalRecipe[]>> 
 }
 
 export async function getSupplierProfiles(q?: string): Promise<DbResult<SupplierProfile[]>> {
-  const suppliers = await getRows<{ id: string; supplier: string; cif: string | null; phone: string | null; email: string | null; category: string | null; status: string | null }>(
+  const suppliers = await getRows<{ id: string; supplier: string; cif: string | null; phone: string | null; email: string | null; category: string | null; status: string | null; certificates: string | null; health_register: string | null; appcc: string | null }>(
     "admin_supplier_records",
-    "?select=id,supplier,cif,phone,email,category,status&order=supplier.asc&limit=100",
+    "?select=id,supplier,cif,phone,email,category,status,certificates,health_register,appcc&order=supplier.asc&limit=100",
   );
   if (!suppliers.ok) return suppliers;
 
@@ -3174,6 +3388,15 @@ export async function getExecutiveDashboardMetrics(): Promise<DbResult<Executive
       productsToConsumeSoon: productionMetrics.ok ? productionMetrics.data.productsToConsumeSoon : 0,
       expiredDefrostedBatches: productionMetrics.ok ? productionMetrics.data.expiredDefrostedBatches : 0,
       monthlyWasteMovements: productionMetrics.ok ? productionMetrics.data.monthlyWasteMovements : 0,
+      productionToday: productionMetrics.ok ? productionMetrics.data.productionToday : 0,
+      productionWeek: productionMetrics.ok ? productionMetrics.data.productionWeek : 0,
+      productionMonth: productionMetrics.ok ? productionMetrics.data.productionMonth : 0,
+      transformedKgMonth: productionMetrics.ok ? productionMetrics.data.transformedKgMonth : 0,
+      producedUnitsMonth: productionMetrics.ok ? productionMetrics.data.producedUnitsMonth : 0,
+      wasteQuantityMonth: productionMetrics.ok ? productionMetrics.data.wasteQuantityMonth : 0,
+      rawMaterialCostMonth: productionMetrics.ok ? productionMetrics.data.rawMaterialCostMonth : 0,
+      averageProductionCost: productionMetrics.ok ? productionMetrics.data.averageProductionCost : 0,
+      producedStock: productionMetrics.ok ? productionMetrics.data.producedStock : 0,
       recentProductions: productionMetrics.ok ? productionMetrics.data.recentProductions : [],
       temperatureCompliancePercent: Math.max(0, Math.min(100, Math.round((1 - (outOfRangeEquipment / Math.max(1, temperatureEquipment.filter((equipment) => equipment.active).length))) * 100))),
       receptionCompliancePercent: rejectedReceptions > 0 ? 0 : 100,

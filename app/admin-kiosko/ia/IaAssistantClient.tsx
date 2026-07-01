@@ -7,6 +7,15 @@ import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
 import { ZebraPrintButton } from "../_components/ZebraPrintButton";
 import { saveAiReceptionAction } from "../actions";
 
+type SupplierOption = {
+  id: string;
+  name: string;
+  tax_id: string | null;
+  status: string | null;
+  health_register: string | null;
+  appcc: string | null;
+};
+
 type Card = {
   kind: OcrExtractorKind;
   icon: string;
@@ -67,6 +76,10 @@ function firstText(data: Record<string, unknown>, keys: string[]) {
   return "";
 }
 
+function normalizeForMatch(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+}
+
 function normalizedProducts(data: Record<string, unknown>) {
   const products = Array.isArray(data.productos) ? data.productos : [];
 
@@ -75,10 +88,14 @@ function normalizedProducts(data: Record<string, unknown>) {
     : { nombre: product });
 }
 
-function EditableResult({ result }: { result: OcrUploadResult }) {
+function EditableResult({ result, suppliers }: { result: OcrUploadResult; suppliers: SupplierOption[] }) {
   const data = result.result as Record<string, unknown>;
   const products = normalizedProducts(data);
   const supplier = firstText(data, ["proveedor", "supplier", "supplier_name"]);
+  const registeredSupplier = supplier
+    ? suppliers.find((item) => normalizeForMatch(item.name) === normalizeForMatch(supplier) || (item.tax_id && normalizeForMatch(item.tax_id) === normalizeForMatch(firstText(data, ["cif", "CIF", "supplier_tax_id"]))))
+    : undefined;
+  const resolvedSupplier = registeredSupplier?.name || supplier;
   const cif = firstText(data, ["cif", "CIF", "supplier_tax_id"]);
   const documentDate = firstText(data, ["fecha", "document_date"]);
   const documentNumber = firstText(data, ["numero", "número", "document_number"]);
@@ -101,7 +118,7 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
     template: "recepcion",
     product: receptionProduct,
     batch: receptionBatch,
-    supplier,
+    supplier: resolvedSupplier,
     sourceBatch: receptionBatch,
     receptionDate: documentDate,
     expiryDate: receptionExpiry,
@@ -122,7 +139,7 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
           Confirmación requerida
         </span>
       </div>
-      {receptionProduct || supplier ? (
+      {receptionProduct || resolvedSupplier ? (
         <div className="mt-5 rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
           <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">Etiqueta recepción</p>
           <ZebraPrintButton
@@ -134,7 +151,7 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
               template: "recepcion",
               product: receptionProduct,
               batch: receptionBatch,
-              supplier,
+              supplier: resolvedSupplier,
               expiry_date: receptionExpiry,
               copies: 1,
             }}
@@ -144,7 +161,7 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
 
       <div className="mt-6 grid gap-4 rounded-[1.5rem] border border-white/10 bg-[#0d0d0d] p-4 md:grid-cols-4">
         {[
-          ["Proveedor", supplier || "No visible"],
+          ["Proveedor", registeredSupplier ? `${registeredSupplier.name} · Proveedor registrado` : supplier ? `${supplier} · Proveedor detectado no registrado. Añadir proveedor al confirmar.` : "No visible"],
           ["CIF", cif || "No visible"],
           ["Fecha documento", documentDate || "No visible"],
           ["Número", documentNumber || "No visible"],
@@ -181,12 +198,16 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
         <input type="hidden" name="detected_type" value={result.detectedType} />
         <input type="hidden" name="document_type" value={result.detectedType} />
         <input type="hidden" name="product_count" value={products.length} />
+        <input type="hidden" name="supplier_id" value={registeredSupplier?.id || (supplier ? "__new__" : "")} />
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="grid gap-2 text-sm font-semibold text-stone-200">
-            Proveedor
-            <input name="supplier_name" defaultValue={supplier} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+            Proveedor autorizado
+            <input name="supplier_name" defaultValue={resolvedSupplier} list="ocr-suppliers" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
           </label>
+          <datalist id="ocr-suppliers">
+            {suppliers.map((item) => <option key={item.id} value={item.name} />)}
+          </datalist>
           <label className="grid gap-2 text-sm font-semibold text-stone-200">
             CIF
             <input name="supplier_tax_id" defaultValue={cif} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
@@ -260,7 +281,7 @@ function EditableResult({ result }: { result: OcrUploadResult }) {
   );
 }
 
-export function IaAssistantClient({ saved, errorMessage }: { saved?: boolean; errorMessage?: string }) {
+export function IaAssistantClient({ saved, errorMessage, suppliers }: { saved?: boolean; errorMessage?: string; suppliers: SupplierOption[] }) {
   const [activeKind, setActiveKind] = useState<OcrExtractorKind | null>(null);
   const [result, setResult] = useState<OcrUploadResult | null>(null);
   const [error, setError] = useState("");
@@ -423,7 +444,7 @@ export function IaAssistantClient({ saved, errorMessage }: { saved?: boolean; er
         </div>
       </section>
 
-      {result ? <EditableResult result={result} /> : null}
+      {result ? <EditableResult result={result} suppliers={suppliers} /> : null}
     </>
   );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getInternalRecipes, getProductionBatches } from "@/lib/admin-kiosko/database";
+import { getInternalRecipes, getProductionBatches, getProductionMaterialOptions, getProductionMetrics, getInventoryProducts, type InternalRecipe, type ProductionMaterialOption, type InventoryProduct } from "@/lib/admin-kiosko/database";
 import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
 import { ZebraPrintButton } from "../_components/ZebraPrintButton";
@@ -61,6 +61,72 @@ function TextArea({ name, label, value = "" }: { name: string; label: string; va
   );
 }
 
+function MaterialSelector({ materials }: { materials: ProductionMaterialOption[] }) {
+  return (
+    <div className="grid gap-3">
+      <label className="grid gap-2 text-sm font-semibold text-stone-200">
+        Materia prima disponible
+        <select name="source_material" required className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]">
+          {materials.map((item) => (
+            <option
+              key={item.key}
+              value={JSON.stringify({
+                product_id: item.product_id,
+                product: item.product,
+                supplier: item.supplier,
+                batch: item.batch,
+                unit: item.unit,
+                expiry_date: item.expiry_date,
+                source_document_id: item.source_document_id,
+              })}
+            >
+              {item.fefo ? "FEFO · " : ""}{item.product} · {item.supplier || "Proveedor registrado"} · lote {item.batch || "stock"} · {item.stock ?? 0} {item.unit || "ud"} · caduca {item.expiry_date || "sin fecha"} · {item.location || "ubicación registrada"}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="rounded-2xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-950">
+        El listado se ordena por caducidad para sugerir FEFO automáticamente.
+      </p>
+    </div>
+  );
+}
+
+function RecipeSummary({ recipe }: { recipe: InternalRecipe | undefined }) {
+  if (!recipe) {
+    return <p className="rounded-2xl border border-amber-300 bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-950">Registra una receta base antes de producir.</p>;
+  }
+
+  return (
+    <div className="grid gap-3 rounded-[1.3rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
+      <p className="font-black text-white">{recipe.recipe_name} · {recipe.output_product}</p>
+      <p>Resultado previsto: {recipe.expected_yield || 0} {recipe.output_unit || "ud"} · peso unitario {recipe.unit_weight || 0} g · merma {recipe.expected_waste || 0} g.</p>
+      <p>Vida útil: {recipe.shelf_life_refrigerated_hours || 0} h refrigerado · {recipe.shelf_life_frozen_days || 0} días congelado · conservación {recipe.conservation_type || "refrigerado"}.</p>
+    </div>
+  );
+}
+
+function InventoryProductSelect({ inventory, defaultName }: { inventory: InventoryProduct[]; defaultName?: string | null }) {
+  const selected = inventory.find((product) => product.name === defaultName) || inventory[0];
+
+  return (
+    <label className="grid gap-2 text-sm font-semibold text-stone-200">
+      Ingrediente desde inventario
+      <select
+        name="recipe_input_product"
+        defaultValue={selected ? JSON.stringify({ id: selected.id, name: selected.name, unit: selected.unit }) : ""}
+        className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]"
+      >
+        {inventory.map((product) => (
+          <option key={product.id} value={JSON.stringify({ id: product.id, name: product.name, unit: product.unit })}>
+            {product.name} · {product.current_stock ?? 0} {product.unit || "ud"} · lote {product.current_batch || "stock"}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function stateClass(state?: string | null) {
   if (state === "congelado") return "border-sky-300 bg-sky-100 text-sky-950";
   if (state === "descongelado") return "border-amber-300 bg-amber-100 text-amber-950";
@@ -71,16 +137,24 @@ function stateClass(state?: string | null) {
 export default async function ProduccionPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ saved?: string; error?: string; warning?: string; batch?: string }>;
+  searchParams?: Promise<{ saved?: string; error?: string; warning?: string; batch?: string; recipe?: string }>;
 }) {
   await requireAdminSession();
   const params = await searchParams;
-  const [batchesResult, recipesResult] = await Promise.all([
+  const [batchesResult, recipesResult, materialsResult, metricsResult, inventoryResult] = await Promise.all([
     getProductionBatches(80),
     getInternalRecipes(),
+    getProductionMaterialOptions(),
+    getProductionMetrics(),
+    getInventoryProducts({ status: "activos" }),
   ]);
   const batches = batchesResult.ok ? batchesResult.data : [];
   const recipes = recipesResult.ok ? recipesResult.data : [];
+  const materials = materialsResult.ok ? materialsResult.data : [];
+  const metrics = metricsResult.ok ? metricsResult.data : null;
+  const inventory = inventoryResult.ok ? inventoryResult.data : [];
+  const selectedRecipe = recipes.find((recipe) => recipe.id === params?.recipe) || recipes[0];
+  const recipeInput = selectedRecipe?.inputs?.[0];
   const todayValue = today();
 
   return (
@@ -94,6 +168,24 @@ export default async function ProduccionPage({
           {params?.saved === "1" ? <p className="rounded-2xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-black text-emerald-950">Producción interna registrada.</p> : null}
           {params?.warning ? <p className="rounded-2xl border border-amber-300 bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-950">{params.warning}</p> : null}
           {params?.error ? <p className="rounded-2xl border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-3 text-sm font-semibold text-[#f2c6bb]">{params.error}</p> : null}
+
+          <section className="grid gap-3 md:grid-cols-4 xl:grid-cols-8">
+            {[
+              ["Hoy", metrics?.productionToday ?? 0],
+              ["Semana", metrics?.productionWeek ?? 0],
+              ["Mes", metrics?.productionMonth ?? 0],
+              ["Kg transformados", `${metrics?.transformedKgMonth ?? 0} kg`],
+              ["Unidades", metrics?.producedUnitsMonth ?? 0],
+              ["Merma", metrics?.wasteQuantityMonth ?? 0],
+              ["Coste materia prima", `${(metrics?.rawMaterialCostMonth ?? 0).toFixed(2)} €`],
+              ["Stock producido", metrics?.producedStock ?? 0],
+            ].map(([label, value]) => (
+              <article key={label} className="rounded-[1.2rem] border border-white/10 bg-[#151515] p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">{label}</p>
+                <p className="mt-2 text-xl font-black text-white">{value}</p>
+              </article>
+            ))}
+          </section>
 
           <section className="grid gap-6 xl:grid-cols-[1fr_24rem]">
             <form action={saveProductionBatchAction} className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
@@ -109,27 +201,26 @@ export default async function ProduccionPage({
                 <section className="rounded-[1.4rem] border border-white/10 bg-white/6 p-4">
                   <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Materia prima</h3>
                   <div className="mt-4 grid gap-4">
-                    <Field name="source_supplier" label="Proveedor origen" />
-                    <Field name="source_product" label="Producto origen" required />
-                    <Field name="source_batch_number" label="Lote proveedor" />
+                    <MaterialSelector materials={materials} />
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <Field name="input_quantity" label="Cantidad usada" type="number" />
-                      <Field name="input_unit" label="Unidad" value="kg" />
+                      <Field name="input_quantity" label="Cantidad usada" type="number" value={recipeInput?.quantity || 1} />
+                      <Field name="input_unit" label="Unidad" value={recipeInput?.unit || "kg"} />
                     </div>
-                    <Field name="source_document_id" label="Documento origen si existe" />
                   </div>
                 </section>
 
                 <section className="rounded-[1.4rem] border border-white/10 bg-white/6 p-4">
                   <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Elaboración resultante</h3>
                   <div className="mt-4 grid gap-4">
-                    <Field name="output_product" label="Producto elaborado" required />
+                    <RecipeSummary recipe={selectedRecipe} />
+                    <input type="hidden" name="output_product" value={selectedRecipe?.output_product || ""} />
+                    <input type="hidden" name="shelf_life_refrigerated_hours" value={selectedRecipe?.shelf_life_refrigerated_hours || 0} />
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <Field name="output_quantity" label="Cantidad producida" type="number" />
-                      <Field name="output_unit" label="Unidad" value="ud" />
+                      <Field name="output_quantity" label="Cantidad producida" type="number" value={selectedRecipe?.expected_yield || ""} />
+                      <Field name="output_unit" label="Unidad" value={selectedRecipe?.output_unit || "ud"} />
                     </div>
-                    <Field name="unit_weight" label="Peso unitario" type="number" />
-                    <SelectField name="storage_state" label="Estado de conservación" value="refrigerado" options={["refrigerado", "congelado", "descongelado", "consumido", "mermado", "personal"]} />
+                    <Field name="unit_weight" label="Peso unitario" type="number" value={selectedRecipe?.unit_weight || ""} />
+                    <SelectField name="storage_state" label="Estado de conservación" value={selectedRecipe?.conservation_type || "refrigerado"} options={["refrigerado", "congelado", "descongelado"]} />
                   </div>
                 </section>
               </div>
@@ -147,17 +238,26 @@ export default async function ProduccionPage({
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Recetas base</h2>
               <form action={saveInternalRecipeAction} className="mt-5 grid gap-4">
                 <Field name="recipe_name" label="Nombre receta" value="Bolas smash" required />
-                <Field name="input_product" label="Materia prima" value="Carne fresca burgers" />
+                <InventoryProductSelect inventory={inventory} defaultName="Carne fresca burgers" />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field name="input_quantity" label="Cantidad input" type="number" value={1} />
                   <Field name="input_unit" label="Unidad input" value="kg" />
                 </div>
                 <Field name="output_product" label="Elaboración resultante" value="Bolas smash" required />
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field name="expected_yield" label="Rendimiento" type="number" />
+                  <Field name="expected_yield" label="Rendimiento" type="number" value={18} />
                   <Field name="output_unit" label="Unidad salida" value="ud" />
                 </div>
-                <Field name="unit_weight" label="Peso unitario" type="number" value={100} />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field name="unit_weight" label="Peso unitario g" type="number" value={100} />
+                  <Field name="expected_waste" label="Merma esperada g" type="number" value={40} />
+                  <Field name="final_weight" label="Peso final g" type="number" />
+                  <Field name="prep_time_minutes" label="Tiempo elaboración min" type="number" />
+                  <Field name="shelf_life_refrigerated_hours" label="Vida útil refrigerado h" type="number" value={48} />
+                  <Field name="shelf_life_frozen_days" label="Vida útil congelado días" type="number" value={90} />
+                </div>
+                <SelectField name="conservation_type" label="Tipo conservación" value="refrigerado" options={["refrigerado", "congelado"]} />
+                <SelectField name="status" label="Estado" value="activa" options={["activa", "revision", "inactiva"]} />
                 <TextArea name="instructions" label="Instrucciones" />
                 <button className="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Guardar receta</button>
               </form>
@@ -167,7 +267,35 @@ export default async function ProduccionPage({
                   <article key={recipe.id} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
                     <p className="font-black text-white">{recipe.recipe_name}</p>
                     <p className="mt-1">{recipe.inputs?.map((input) => `${input.input_product} ${input.quantity || ""} ${input.unit || ""}`.trim()).join(", ") || "Materia prima por definir"} → {recipe.output_product}</p>
-                    <p className="mt-1 text-xs text-stone-400">Rendimiento: {recipe.expected_yield || "por definir"} {recipe.output_unit || "ud"} · peso {recipe.unit_weight || "por definir"} g</p>
+                    <p className="mt-1 text-xs text-stone-400">Rendimiento: {recipe.expected_yield || "por definir"} {recipe.output_unit || "ud"} · peso {recipe.unit_weight || "por definir"} g · vida útil {recipe.shelf_life_refrigerated_hours || 0} h / {recipe.shelf_life_frozen_days || 0} días.</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Link href={`/admin-kiosko/produccion?recipe=${recipe.id}`} className="rounded-full border border-white/20 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Repetir elaboración</Link>
+                    </div>
+                    <details className="mt-3 rounded-xl border border-white/10 bg-[#0d0d0d] p-3">
+                      <summary className="cursor-pointer text-[11px] font-black uppercase tracking-[0.12em] text-[#f2c6bb]">Editar receta</summary>
+                      <form action={saveInternalRecipeAction} className="mt-3 grid gap-3">
+                        <input type="hidden" name="id" value={recipe.id} />
+                        <Field name="recipe_name" label="Nombre receta" value={recipe.recipe_name} required />
+                        <InventoryProductSelect inventory={inventory} defaultName={recipe.inputs?.[0]?.input_product} />
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <Field name="input_quantity" label="Cantidad input" type="number" value={recipe.inputs?.[0]?.quantity || ""} />
+                          <Field name="input_unit" label="Unidad input" value={recipe.inputs?.[0]?.unit || "kg"} />
+                          <Field name="output_product" label="Elaboración resultante" value={recipe.output_product} required />
+                          <Field name="expected_yield" label="Rendimiento" type="number" value={recipe.expected_yield || ""} />
+                          <Field name="output_unit" label="Unidad salida" value={recipe.output_unit || "ud"} />
+                          <Field name="unit_weight" label="Peso unitario g" type="number" value={recipe.unit_weight || ""} />
+                          <Field name="expected_waste" label="Merma esperada g" type="number" value={recipe.expected_waste || ""} />
+                          <Field name="final_weight" label="Peso final g" type="number" value={recipe.final_weight || ""} />
+                          <Field name="prep_time_minutes" label="Tiempo elaboración min" type="number" value={recipe.prep_time_minutes || ""} />
+                          <Field name="shelf_life_refrigerated_hours" label="Vida útil refrigerado h" type="number" value={recipe.shelf_life_refrigerated_hours || ""} />
+                          <Field name="shelf_life_frozen_days" label="Vida útil congelado días" type="number" value={recipe.shelf_life_frozen_days || ""} />
+                        </div>
+                        <SelectField name="conservation_type" label="Tipo conservación" value={recipe.conservation_type || "refrigerado"} options={["refrigerado", "congelado"]} />
+                        <SelectField name="status" label="Estado" value={recipe.status || "activa"} options={["activa", "revision", "inactiva"]} />
+                        <TextArea name="instructions" label="Instrucciones" value={recipe.instructions || ""} />
+                        <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Guardar cambios</button>
+                      </form>
+                    </details>
                   </article>
                 ))}
                 {!recipes.length ? <p className="text-sm text-stone-400">Recetario preparado para elaboraciones internas.</p> : null}
