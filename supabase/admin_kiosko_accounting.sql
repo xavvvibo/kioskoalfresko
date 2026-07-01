@@ -74,6 +74,18 @@ create table if not exists public.admin_accounting_reconciliations (
   reviewed_at timestamptz
 );
 
+create table if not exists public.admin_document_corrections (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz default now(),
+  document_id uuid references public.admin_uploaded_documents(id) on delete cascade,
+  accounting_document_id uuid references public.admin_accounting_documents(id) on delete cascade,
+  field_name text not null,
+  ocr_value text,
+  final_value text,
+  responsible text,
+  source text default 'admin-kiosko-ocr-review'
+);
+
 create table if not exists public.admin_user_profiles (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz default now(),
@@ -104,10 +116,30 @@ create table if not exists public.admin_printer_settings (
   observations text
 );
 
+alter table if exists public.admin_uploaded_documents
+  add column if not exists storage_bucket text,
+  add column if not exists storage_path text,
+  add column if not exists storage_status text default 'metadata_only',
+  add column if not exists review_status text default 'pendiente_revision',
+  add column if not exists corrections jsonb default '{}'::jsonb,
+  add column if not exists related_record_type text,
+  add column if not exists related_record_id uuid;
+
+alter table if exists public.admin_accounting_documents
+  add column if not exists uploaded_document_id uuid references public.admin_uploaded_documents(id) on delete set null,
+  add column if not exists reconciliation_status text default 'pendiente_conciliar',
+  add column if not exists review_status text default 'pendiente_revision',
+  add column if not exists observations text;
+
+alter table if exists public.admin_goods_reception_records
+  add column if not exists uploaded_document_id uuid references public.admin_uploaded_documents(id) on delete set null,
+  add column if not exists supplier_document_id uuid references public.admin_supplier_documents(id) on delete set null;
+
 alter table if exists public.admin_uploaded_documents enable row level security;
 alter table if exists public.admin_accounting_documents enable row level security;
 alter table if exists public.admin_accounting_document_items enable row level security;
 alter table if exists public.admin_accounting_reconciliations enable row level security;
+alter table if exists public.admin_document_corrections enable row level security;
 alter table if exists public.admin_user_profiles enable row level security;
 alter table if exists public.admin_printer_settings enable row level security;
 
@@ -115,6 +147,7 @@ revoke all on public.admin_uploaded_documents from anon, authenticated;
 revoke all on public.admin_accounting_documents from anon, authenticated;
 revoke all on public.admin_accounting_document_items from anon, authenticated;
 revoke all on public.admin_accounting_reconciliations from anon, authenticated;
+revoke all on public.admin_document_corrections from anon, authenticated;
 revoke all on public.admin_user_profiles from anon, authenticated;
 revoke all on public.admin_printer_settings from anon, authenticated;
 
@@ -122,6 +155,7 @@ grant all on public.admin_uploaded_documents to service_role;
 grant all on public.admin_accounting_documents to service_role;
 grant all on public.admin_accounting_document_items to service_role;
 grant all on public.admin_accounting_reconciliations to service_role;
+grant all on public.admin_document_corrections to service_role;
 grant all on public.admin_user_profiles to service_role;
 grant all on public.admin_printer_settings to service_role;
 
@@ -133,6 +167,8 @@ drop policy if exists "admin_accounting_document_items_service_role_all" on publ
 create policy "admin_accounting_document_items_service_role_all" on public.admin_accounting_document_items for all to service_role using (true) with check (true);
 drop policy if exists "admin_accounting_reconciliations_service_role_all" on public.admin_accounting_reconciliations;
 create policy "admin_accounting_reconciliations_service_role_all" on public.admin_accounting_reconciliations for all to service_role using (true) with check (true);
+drop policy if exists "admin_document_corrections_service_role_all" on public.admin_document_corrections;
+create policy "admin_document_corrections_service_role_all" on public.admin_document_corrections for all to service_role using (true) with check (true);
 drop policy if exists "admin_user_profiles_service_role_all" on public.admin_user_profiles;
 create policy "admin_user_profiles_service_role_all" on public.admin_user_profiles for all to service_role using (true) with check (true);
 drop policy if exists "admin_printer_settings_service_role_all" on public.admin_printer_settings;
@@ -144,8 +180,10 @@ create index if not exists admin_accounting_documents_date_idx on public.admin_a
 create index if not exists admin_accounting_documents_supplier_idx on public.admin_accounting_documents (lower(supplier_name));
 create index if not exists admin_accounting_documents_type_idx on public.admin_accounting_documents (document_type);
 create index if not exists admin_accounting_documents_status_idx on public.admin_accounting_documents (reconciliation_status);
+create index if not exists admin_accounting_documents_review_idx on public.admin_accounting_documents (review_status);
 create index if not exists admin_accounting_items_document_idx on public.admin_accounting_document_items (accounting_document_id);
 create index if not exists admin_accounting_reconciliations_invoice_idx on public.admin_accounting_reconciliations (invoice_document_id);
 create index if not exists admin_accounting_reconciliations_delivery_idx on public.admin_accounting_reconciliations (delivery_note_document_id);
+create index if not exists admin_document_corrections_document_idx on public.admin_document_corrections (document_id, created_at desc);
 create index if not exists admin_user_profiles_role_idx on public.admin_user_profiles (role);
 create index if not exists admin_printer_settings_active_idx on public.admin_printer_settings (active);

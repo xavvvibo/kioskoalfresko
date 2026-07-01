@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getInventoryMovements, getRecentGoodsReceptionRecords, getSupplierProfiles, getExecutiveDashboardMetrics } from "@/lib/admin-kiosko/database";
+import { getAccountingDocuments, getInventoryMovements, getRecentGoodsReceptionRecords, getSupplierProfiles, getExecutiveDashboardMetrics, getUploadedDocuments } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../_components/AdminHeader";
 
 export const metadata: Metadata = {
@@ -11,17 +11,25 @@ export const metadata: Metadata = {
 
 export default async function ComprasPage() {
   await requireAdminSession();
-  const [metricsResult, receptionsResult, suppliersResult, movementsResult] = await Promise.all([
+  const [metricsResult, receptionsResult, suppliersResult, movementsResult, accountingResult, uploadsResult] = await Promise.all([
     getExecutiveDashboardMetrics(),
     getRecentGoodsReceptionRecords(),
     getSupplierProfiles(),
     getInventoryMovements(),
+    getAccountingDocuments(),
+    getUploadedDocuments(8),
   ]);
   const metrics = metricsResult.ok ? metricsResult.data : null;
   const receptions = receptionsResult.ok ? receptionsResult.data : [];
   const suppliers = suppliersResult.ok ? suppliersResult.data : [];
   const movements = movementsResult.ok ? movementsResult.data.filter((movement) => movement.movement_type === "entrada").slice(0, 8) : [];
+  const accounting = accountingResult.ok ? accountingResult.data : [];
+  const uploads = uploadsResult.ok ? uploadsResult.data : [];
   const incompleteSuppliers = suppliers.filter((supplier) => !supplier.cif || !supplier.certificates);
+  const pendingReview = accounting.filter((document) => document.review_status === "pendiente_revision").length + uploads.filter((upload) => upload.review_status === "pendiente_revision").length;
+  const pendingConciliation = accounting.filter((document) => document.reconciliation_status === "pendiente_conciliar").length;
+  const differences = accounting.filter((document) => String(document.reconciliation_status || "").includes("diferencia")).length;
+  const reconciled = accounting.filter((document) => document.reconciliation_status === "conciliado").length;
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
@@ -36,6 +44,10 @@ export default async function ComprasPage() {
               ["Proveedores", suppliers.length],
               ["Pendientes completar", incompleteSuppliers.length],
               ["Stock bajo", metrics?.lowStockProducts || 0],
+              ["Doc. revisión", pendingReview],
+              ["Pend. conciliar", pendingConciliation],
+              ["Conciliados", reconciled],
+              ["Diferencias", differences],
             ].map(([label, value]) => (
               <article key={label} className="rounded-[1.3rem] border border-white/10 bg-[#151515] p-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{label}</p>
@@ -79,6 +91,32 @@ export default async function ComprasPage() {
                   </Link>
                 ))}
                 {!incompleteSuppliers.length ? <p className="text-sm text-stone-400">Proveedores principales completos.</p> : null}
+              </div>
+            </div>
+          </section>
+
+          <section className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-[2rem] border border-white/10 bg-[#151515] p-5">
+              <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Documentos pendientes</h2>
+              <div className="mt-4 grid gap-3">
+                {accounting.filter((document) => document.review_status === "pendiente_revision" || document.reconciliation_status === "pendiente_conciliar").slice(0, 8).map((document) => (
+                  <Link key={document.id} href={`/admin-kiosko/contabilidad/documentos/${document.id}`} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
+                    <span className="block font-black text-white">{document.supplier_name || "Proveedor no consignado"}</span>
+                    <span className="mt-1 block">{document.document_type || "Documento"} {document.document_number || ""} · {document.reconciliation_status || "pendiente_conciliar"}</span>
+                  </Link>
+                ))}
+                {!pendingReview && !pendingConciliation ? <p className="text-sm text-stone-400">No constan documentos pendientes de revisión o conciliación.</p> : null}
+              </div>
+            </div>
+            <div className="rounded-[2rem] border border-white/10 bg-[#151515] p-5">
+              <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Originales recientes</h2>
+              <div className="mt-4 grid gap-3">
+                {uploads.map((upload) => (
+                  <a key={upload.id} href={`/admin-kiosko/contabilidad/documentos/${upload.id}/original`} target="_blank" rel="noreferrer" className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
+                    <span className="block font-black text-white">{upload.original_filename || "Documento original"}</span>
+                    <span className="mt-1 block">{upload.detected_type || "tipo pendiente"} · {upload.review_status || "pendiente_revision"}</span>
+                  </a>
+                ))}
               </div>
             </div>
           </section>

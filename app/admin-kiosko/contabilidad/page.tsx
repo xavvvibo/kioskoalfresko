@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getAccountingDocuments, getUploadedDocuments, getSupplierOptions } from "@/lib/admin-kiosko/database";
 import { requireOwnerRole } from "@/lib/admin-kiosko/roles";
 import { AdminHeader } from "../_components/AdminHeader";
+import { updateAccountingReconciliationAction } from "../actions";
 
 export const metadata: Metadata = {
   title: "Contabilidad y compras | Panel interno",
@@ -12,12 +13,12 @@ export const metadata: Metadata = {
 export default async function ContabilidadPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ from?: string; to?: string; supplier?: string; type?: string; status?: string }>;
+  searchParams?: Promise<{ from?: string; to?: string; supplier?: string; type?: string; status?: string; review?: string; iva?: string; category?: string }>;
 }) {
   await requireOwnerRole();
   const params = await searchParams;
   const [documentsResult, uploadsResult, suppliersResult] = await Promise.all([
-    getAccountingDocuments({ dateFrom: params?.from, dateTo: params?.to, supplier: params?.supplier, type: params?.type, status: params?.status }),
+    getAccountingDocuments({ dateFrom: params?.from, dateTo: params?.to, supplier: params?.supplier, type: params?.type, status: params?.status, review: params?.review, iva: params?.iva, category: params?.category }),
     getUploadedDocuments(20),
     getSupplierOptions(),
   ]);
@@ -30,6 +31,7 @@ export default async function ContabilidadPage({
     total: acc.total + Number(document.total_amount || 0),
   }), { taxable: 0, vat: 0, total: 0 });
   const pending = documents.filter((document) => document.reconciliation_status === "pendiente_conciliar").length;
+  const pendingReview = documents.filter((document) => document.review_status === "pendiente_revision").length;
   const reconciled = documents.filter((document) => document.reconciliation_status === "conciliado").length;
   const differences = documents.filter((document) => String(document.reconciliation_status || "").includes("diferencia")).length;
   const bySupplier = Array.from(documents.reduce((map, document) => {
@@ -49,7 +51,8 @@ export default async function ContabilidadPage({
               ["Base imponible", `${totals.taxable.toFixed(2)} €`],
               ["IVA soportado", `${totals.vat.toFixed(2)} €`],
               ["Documentos", documents.length],
-              ["Pendientes", pending],
+              ["Pendientes revisión", pendingReview],
+              ["Pendientes conciliar", pending],
               ["Conciliados", reconciled],
               ["Diferencias", differences],
             ].map(([label, value]) => (
@@ -67,7 +70,7 @@ export default async function ContabilidadPage({
               <Link href="/admin-kiosko/proveedores" className="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Proveedores</Link>
               <Link href="/admin-kiosko/inventario" className="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Inventario</Link>
             </div>
-            <form className="mt-5 grid gap-3 md:grid-cols-6">
+            <form className="mt-5 grid gap-3 md:grid-cols-4 xl:grid-cols-8">
               <input name="from" type="date" defaultValue={params?.from || ""} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950" />
               <input name="to" type="date" defaultValue={params?.to || ""} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950" />
               <input name="supplier" list="accounting-suppliers" defaultValue={params?.supplier || ""} placeholder="Proveedor" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950" />
@@ -84,8 +87,19 @@ export default async function ContabilidadPage({
                 <option value="diferencia_importe">Diferencia importe</option>
                 <option value="diferencia_producto">Diferencia producto</option>
                 <option value="diferencia_cantidad">Diferencia cantidad</option>
-                <option value="revisado_manualmente">Revisado manualmente</option>
+                <option value="revisado_manual">Revisado manualmente</option>
               </select>
+              <select name="review" defaultValue={params?.review || "todos"} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
+                <option value="todos">Estado revisión</option>
+                <option value="pendiente_revision">Pendiente revisión</option>
+                <option value="revisado">Revisado</option>
+              </select>
+              <select name="iva" defaultValue={params?.iva || "todos"} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
+                <option value="todos">IVA</option>
+                <option value="con_iva">Con IVA</option>
+                <option value="sin_iva">Sin IVA</option>
+              </select>
+              <input name="category" defaultValue={params?.category || ""} placeholder="Categoría" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950" />
               <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Filtrar</button>
             </form>
           </section>
@@ -96,7 +110,7 @@ export default async function ContabilidadPage({
               <div className="mt-5 overflow-x-auto">
                 <table className="min-w-[70rem] w-full border-separate border-spacing-y-2 text-left text-sm">
                   <thead className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">
-                    <tr><th className="px-3 py-2">Fecha</th><th className="px-3 py-2">Tipo</th><th className="px-3 py-2">Número</th><th className="px-3 py-2">Proveedor</th><th className="px-3 py-2">Base</th><th className="px-3 py-2">IVA</th><th className="px-3 py-2">Total</th><th className="px-3 py-2">Estado</th></tr>
+                    <tr><th className="px-3 py-2">Fecha</th><th className="px-3 py-2">Tipo</th><th className="px-3 py-2">Número</th><th className="px-3 py-2">Proveedor</th><th className="px-3 py-2">Base</th><th className="px-3 py-2">IVA</th><th className="px-3 py-2">Total</th><th className="px-3 py-2">Revisión</th><th className="px-3 py-2">Conciliación</th><th className="px-3 py-2">Acción</th></tr>
                   </thead>
                   <tbody>
                     {documents.map((document) => (
@@ -108,7 +122,25 @@ export default async function ContabilidadPage({
                         <td className="px-3 py-3">{Number(document.taxable_base || 0).toFixed(2)} €</td>
                         <td className="px-3 py-3">{Number(document.vat_amount || 0).toFixed(2)} €</td>
                         <td className="px-3 py-3">{Number(document.total_amount || 0).toFixed(2)} €</td>
-                        <td className="rounded-r-2xl px-3 py-3">{document.reconciliation_status || "pendiente_conciliar"}</td>
+                        <td className="px-3 py-3">{document.review_status || "pendiente_revision"}</td>
+                        <td className="px-3 py-3">
+                          <form action={updateAccountingReconciliationAction} className="flex min-w-52 gap-2">
+                            <input type="hidden" name="document_id" value={document.id} />
+                            <input type="hidden" name="observations" value={document.observations || ""} />
+                            <select name="reconciliation_status" defaultValue={document.reconciliation_status || "pendiente_conciliar"} className="rounded-xl border border-stone-200 bg-white px-2 py-2 text-xs">
+                              <option value="pendiente_conciliar">Pendiente</option>
+                              <option value="conciliado">Conciliado</option>
+                              <option value="diferencia_importe">Diferencia importe</option>
+                              <option value="diferencia_producto">Diferencia producto</option>
+                              <option value="diferencia_cantidad">Diferencia cantidad</option>
+                              <option value="revisado_manual">Revisado manual</option>
+                            </select>
+                            <button className="rounded-xl border border-stone-950 px-3 py-2 text-xs font-black uppercase">Guardar</button>
+                          </form>
+                        </td>
+                        <td className="rounded-r-2xl px-3 py-3">
+                          <Link href={`/admin-kiosko/contabilidad/documentos/${document.id}`} className="font-black text-[#d94b2b]">Abrir</Link>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -125,7 +157,11 @@ export default async function ContabilidadPage({
               <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5">
                 <h2 className="text-xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Originales OCR</h2>
                 <div className="mt-4 grid gap-2">
-                  {uploads.slice(0, 8).map((upload) => <p key={upload.id} className="rounded-xl border border-white/10 bg-white/6 px-3 py-2 text-sm text-stone-200">{upload.original_filename} · {upload.storage_status}</p>)}
+                  {uploads.slice(0, 8).map((upload) => (
+                    <a key={upload.id} href={`/admin-kiosko/contabilidad/documentos/${upload.id}/original`} target="_blank" rel="noreferrer" className="rounded-xl border border-white/10 bg-white/6 px-3 py-2 text-sm text-stone-200">
+                      {upload.original_filename} · {upload.review_status} · {upload.storage_status}
+                    </a>
+                  ))}
                 </div>
               </section>
             </div>

@@ -9,17 +9,17 @@ export async function GET() {
   await requireOwnerRole();
   const result = await getAccountingDocuments();
   const rows = result.ok ? result.data : [];
-  const header = ["fecha", "tipo", "numero", "proveedor", "cif", "base_imponible", "iva", "total", "estado"];
+  const header = ["fecha", "proveedor", "cif", "documento", "base", "iva", "total", "estado_conciliacion", "estado_revision"];
   const body = rows.map((row) => [
     row.document_date,
-    row.document_type,
-    row.document_number,
     row.supplier_name,
     row.supplier_tax_id,
+    [row.document_type, row.document_number].filter(Boolean).join(" "),
     row.taxable_base,
     row.vat_amount,
     row.total_amount,
     row.reconciliation_status,
+    row.review_status,
   ].map(csvCell).join(","));
 
   return new Response([header.join(","), ...body].join("\n"), {

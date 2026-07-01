@@ -169,6 +169,8 @@ type GoodsReceptionRecordInput = CommonRecordInput & {
   accepted?: boolean;
   batch_number?: string;
   expiry_date?: string;
+  uploaded_document_id?: string;
+  supplier_document_id?: string;
 };
 
 type IncidentRecordInput = CommonRecordInput & {
@@ -376,6 +378,23 @@ export type AccountingDocumentInput = {
   observations?: string;
 };
 
+export type AccountingDocumentItemInput = {
+  accounting_document_id?: string;
+  product_name?: string;
+  category?: string;
+  quantity?: number;
+  unit?: string;
+  unit_price?: number;
+  taxable_base?: number;
+  vat_rate?: number;
+  vat_amount?: number;
+  total_amount?: number;
+  batch_number?: string;
+  expiry_date?: string;
+  inventory_product_id?: string;
+  traceability_item_id?: string;
+};
+
 export type AccountingDocument = {
   id: string;
   created_at: string;
@@ -391,6 +410,21 @@ export type AccountingDocument = {
   reconciliation_status: string | null;
   review_status: string | null;
   observations: string | null;
+};
+
+export type AccountingDocumentItem = {
+  id: string;
+  accounting_document_id: string | null;
+  product_name: string | null;
+  quantity: number | null;
+  unit: string | null;
+  unit_price: number | null;
+  taxable_base: number | null;
+  vat_rate: number | null;
+  vat_amount: number | null;
+  total_amount: number | null;
+  batch_number: string | null;
+  expiry_date: string | null;
 };
 
 export type AiSupplierDocument = {
@@ -1006,6 +1040,47 @@ async function uploadStorageObject(bucket: string, path: string, buffer: Buffer,
   }
 }
 
+async function createStorageSignedUrl(bucket: string, path: string, expiresIn = 600) {
+  const configResult = assertSupabaseConfig();
+  if (!configResult.ok) return configResult;
+
+  try {
+    const response = await fetch(`${configResult.config.url}/storage/v1/object/sign/${bucket}/${path}`, {
+      method: "POST",
+      headers: {
+        apikey: configResult.config.serviceRoleKey,
+        Authorization: `Bearer ${configResult.config.serviceRoleKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ expiresIn }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return { ok: false as const, error: await response.text() || `Storage HTTP ${response.status}` };
+    }
+
+    const data = await response.json() as { signedURL?: string; signedUrl?: string };
+    const signedPath = data.signedURL || data.signedUrl;
+    if (!signedPath) return { ok: false as const, error: "Supabase no devolvió URL firmada." };
+    const url = signedPath.startsWith("http") ? signedPath : `${configResult.config.url}/storage/v1${signedPath}`;
+    return { ok: true as const, data: { url } };
+  } catch (error) {
+    return { ok: false as const, error: error instanceof Error ? error.message : "No se pudo crear URL firmada." };
+  }
+}
+
+function storageFolderForDocumentType(type: string) {
+  const normalized = type.trim().toLowerCase();
+  if (normalized.includes("factura")) return "facturas";
+  if (normalized.includes("albaran") || normalized.includes("albarán")) return "albaranes";
+  if (normalized.includes("recepcion") || normalized.includes("recepción")) return "recepciones";
+  if (normalized.includes("etiqueta")) return "etiquetas";
+  if (normalized.includes("certificado")) return "certificados";
+  if (normalized.includes("appcc") || normalized.includes("memoria") || normalized.includes("agua") || normalized.includes("ddd")) return "appcc";
+  return "otros";
+}
+
 async function getRecentRows<T>(table: string, select: string) {
   return supabaseRequest<T[]>(
     table,
@@ -1215,6 +1290,8 @@ export async function createGoodsReceptionRecord(data: GoodsReceptionRecordInput
     accepted: data.accepted !== false,
     batch_number: cleanText(data.batch_number),
     expiry_date: cleanText(data.expiry_date),
+    uploaded_document_id: cleanText(data.uploaded_document_id),
+    supplier_document_id: cleanText(data.supplier_document_id),
   });
 }
 
@@ -1489,15 +1566,15 @@ export async function createUploadedDocument(data: UploadedDocumentInput): Promi
 export async function updateUploadedDocumentReview(id: string, data: UploadedDocumentInput): Promise<DbResult<null>> {
   if (!id) return { ok: true, data: null };
 
-  const updated = await patchRecord("admin_uploaded_documents", id, {
-    detected_type: cleanText(data.detected_type),
-    ocr_json: data.ocr_json || {},
-    review_status: cleanText(data.review_status),
-    corrections: data.corrections || {},
-    related_record_type: cleanText(data.related_record_type),
-    related_record_id: cleanText(data.related_record_id),
-    updated_at: new Date().toISOString(),
-  });
+  const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (data.detected_type !== undefined) payload.detected_type = cleanText(data.detected_type);
+  if (data.ocr_json !== undefined) payload.ocr_json = data.ocr_json || {};
+  if (data.review_status !== undefined) payload.review_status = cleanText(data.review_status);
+  if (data.corrections !== undefined) payload.corrections = data.corrections || {};
+  if (data.related_record_type !== undefined) payload.related_record_type = cleanText(data.related_record_type);
+  if (data.related_record_id !== undefined) payload.related_record_id = cleanText(data.related_record_id);
+
+  const updated = await patchRecord("admin_uploaded_documents", id, payload);
 
   if (!updated.ok) return { ok: true, data: null };
   return { ok: true, data: null };
@@ -1517,8 +1594,10 @@ export async function storeOriginalOcrDocument({
   buffer: Buffer;
 }) {
   const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const storageBucket = process.env.SUPABASE_ADMIN_DOCUMENTS_BUCKET || "admin-kiosko-documents";
-  const storagePath = `ocr/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${safeName}`;
+  const now = new Date();
+  const storageBucket = "admin-kiosko-documents";
+  const folder = storageFolderForDocumentType(detectedType);
+  const storagePath = `${folder}/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${Date.now()}-${safeName}`;
   const upload = await uploadStorageObject(storageBucket, storagePath, buffer, mimeType);
   const created = await createUploadedDocument({
     original_filename: filename,
@@ -1562,7 +1641,67 @@ export async function createAccountingDocument(data: AccountingDocumentInput): P
   return { ok: true, data: inserted.data[0] || null };
 }
 
-export async function getAccountingDocuments(filters?: { dateFrom?: string; dateTo?: string; supplier?: string; type?: string; status?: string }): Promise<DbResult<AccountingDocument[]>> {
+export async function createAccountingDocumentItem(data: AccountingDocumentItemInput): Promise<DbResult<{ id: string } | null>> {
+  if (!data.accounting_document_id) return { ok: true, data: null };
+
+  const inserted = await insertRecordReturning<{ id: string }>("admin_accounting_document_items", {
+    accounting_document_id: cleanText(data.accounting_document_id),
+    product_name: cleanText(data.product_name),
+    category: cleanText(data.category),
+    quantity: normalizeNumber(data.quantity),
+    unit: cleanText(data.unit) || "ud",
+    unit_price: normalizeNumber(data.unit_price),
+    taxable_base: normalizeNumber(data.taxable_base),
+    vat_rate: normalizeNumber(data.vat_rate),
+    vat_amount: normalizeNumber(data.vat_amount),
+    total_amount: normalizeNumber(data.total_amount),
+    batch_number: cleanText(data.batch_number),
+    expiry_date: cleanText(data.expiry_date),
+    inventory_product_id: cleanText(data.inventory_product_id),
+    traceability_item_id: cleanText(data.traceability_item_id),
+  }, "id");
+
+  if (!inserted.ok) return { ok: true, data: null };
+  return { ok: true, data: inserted.data[0] || null };
+}
+
+export async function createDocumentCorrections(data: {
+  document_id?: string;
+  accounting_document_id?: string;
+  corrections: Array<{ field: string; ocrValue?: unknown; finalValue?: unknown }>;
+  responsible?: string;
+}) {
+  if (!data.document_id || !data.corrections.length) return { ok: true as const, data: null };
+
+  for (const correction of data.corrections) {
+    if (String(correction.ocrValue ?? "") === String(correction.finalValue ?? "")) continue;
+    await insertRecord("admin_document_corrections", {
+      document_id: data.document_id,
+      accounting_document_id: cleanText(data.accounting_document_id),
+      field_name: correction.field,
+      ocr_value: cleanText(correction.ocrValue === undefined ? undefined : String(correction.ocrValue)),
+      final_value: cleanText(correction.finalValue === undefined ? undefined : String(correction.finalValue)),
+      responsible: cleanText(data.responsible) || "F. Javier Bocanegra Sanjuan",
+    });
+  }
+
+  return { ok: true as const, data: null };
+}
+
+export async function updateAccountingReconciliationStatus(data: { id: string; status: string; observations?: string }) {
+  if (!hasRequiredText(data.id)) return { ok: false as const, error: "Falta documento contable." };
+
+  const result = await patchRecord("admin_accounting_documents", data.id, {
+    updated_at: new Date().toISOString(),
+    reconciliation_status: cleanText(data.status) || "revisado_manual",
+    observations: cleanText(data.observations),
+  });
+
+  if (!result.ok) return result;
+  return { ok: true as const, data: null };
+}
+
+export async function getAccountingDocuments(filters?: { dateFrom?: string; dateTo?: string; supplier?: string; type?: string; status?: string; review?: string; iva?: string; category?: string }): Promise<DbResult<AccountingDocument[]>> {
   const params = [
     "select=id,created_at,uploaded_document_id,supplier_name,supplier_tax_id,document_type,document_number,document_date,taxable_base,vat_amount,total_amount,reconciliation_status,review_status,observations",
     "order=document_date.desc,created_at.desc",
@@ -1573,7 +1712,32 @@ export async function getAccountingDocuments(filters?: { dateFrom?: string; date
   if (filters?.supplier) params.push(`supplier_name=ilike.*${encodeURIComponent(filters.supplier)}*`);
   if (filters?.type && filters.type !== "todos") params.push(`document_type=eq.${encodeURIComponent(filters.type)}`);
   if (filters?.status && filters.status !== "todos") params.push(`reconciliation_status=eq.${encodeURIComponent(filters.status)}`);
+  if (filters?.review && filters.review !== "todos") params.push(`review_status=eq.${encodeURIComponent(filters.review)}`);
+  if (filters?.iva && filters.iva !== "todos") {
+    if (filters.iva === "con_iva") params.push("vat_amount=gt.0");
+    if (filters.iva === "sin_iva") params.push("vat_amount=eq.0");
+  }
   return getRows<AccountingDocument>("admin_accounting_documents", `?${params.join("&")}`);
+}
+
+export async function getAccountingDocumentById(id: string): Promise<DbResult<AccountingDocument | null>> {
+  if (!hasRequiredText(id)) return { ok: true, data: null };
+
+  const result = await getRows<AccountingDocument>(
+    "admin_accounting_documents",
+    `?select=id,created_at,uploaded_document_id,supplier_name,supplier_tax_id,document_type,document_number,document_date,taxable_base,vat_amount,total_amount,reconciliation_status,review_status,observations&id=eq.${encodeURIComponent(id)}&limit=1`,
+  );
+  if (!result.ok) return result;
+  return { ok: true, data: result.data[0] || null };
+}
+
+export async function getAccountingDocumentItems(documentId: string): Promise<DbResult<AccountingDocumentItem[]>> {
+  if (!hasRequiredText(documentId)) return { ok: true, data: [] };
+
+  return getRows<AccountingDocumentItem>(
+    "admin_accounting_document_items",
+    `?select=id,accounting_document_id,product_name,quantity,unit,unit_price,taxable_base,vat_rate,vat_amount,total_amount,batch_number,expiry_date&accounting_document_id=eq.${encodeURIComponent(documentId)}&order=created_at.asc`,
+  );
 }
 
 export async function getUploadedDocuments(limit = 50): Promise<DbResult<UploadedDocument[]>> {
@@ -1581,6 +1745,36 @@ export async function getUploadedDocuments(limit = 50): Promise<DbResult<Uploade
     "admin_uploaded_documents",
     `?select=id,created_at,original_filename,mime_type,file_size,uploaded_at,uploaded_by,detected_type,review_status,storage_bucket,storage_path,storage_status&order=uploaded_at.desc&limit=${limit}`,
   );
+}
+
+export async function getUploadedDocumentById(id: string): Promise<DbResult<UploadedDocument | null>> {
+  if (!hasRequiredText(id)) return { ok: true, data: null };
+
+  const result = await getRows<UploadedDocument>(
+    "admin_uploaded_documents",
+    `?select=id,created_at,original_filename,mime_type,file_size,uploaded_at,uploaded_by,detected_type,review_status,storage_bucket,storage_path,storage_status&id=eq.${encodeURIComponent(id)}&limit=1`,
+  );
+  if (!result.ok) return result;
+  return { ok: true, data: result.data[0] || null };
+}
+
+export async function getUploadedDocumentSignedUrl(id: string, expiresIn = 600): Promise<DbResult<{ url: string; filename: string; mimeType: string } | null>> {
+  const document = await getUploadedDocumentById(id);
+  if (!document.ok) return document;
+  if (!document.data?.storage_bucket || !document.data.storage_path) {
+    return { ok: false, error: "Documento original no disponible en Storage privado." };
+  }
+
+  const signed = await createStorageSignedUrl(document.data.storage_bucket, document.data.storage_path, expiresIn);
+  if (!signed.ok) return signed;
+  return {
+    ok: true,
+    data: {
+      url: signed.data.url,
+      filename: document.data.original_filename || "documento-original",
+      mimeType: document.data.mime_type || "application/octet-stream",
+    },
+  };
 }
 
 const inventorySelect = "id,created_at,updated_at,name,category,usual_supplier,unit,current_stock,minimum_stock,recommended_stock,average_purchase_price,last_purchase_price,location,current_batch,expiry_date,last_entry_date,last_exit_date,observations,active";

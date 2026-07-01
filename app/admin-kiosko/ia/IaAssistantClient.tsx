@@ -139,6 +139,21 @@ function EditableResult({ result, suppliers }: { result: OcrUploadResult; suppli
           Confirmación requerida
         </span>
       </div>
+      {result.originalDocument?.id ? (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[1.3rem] border border-emerald-300/30 bg-emerald-100 px-4 py-3 text-emerald-950">
+          <p className="text-sm font-semibold">
+            Original guardado en bucket privado: {result.originalDocument.storage_status === "stored" ? "almacenado correctamente" : "metadata registrada; revisar Storage"}.
+          </p>
+          <a
+            href={`/admin-kiosko/contabilidad/documentos/${result.originalDocument.id}/original`}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full border border-emerald-950 px-4 py-2 text-xs font-black uppercase tracking-[0.14em]"
+          >
+            Abrir original
+          </a>
+        </div>
+      ) : null}
       {receptionProduct || resolvedSupplier ? (
         <div className="mt-5 rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
           <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">Etiqueta recepción</p>
@@ -393,14 +408,7 @@ export function IaAssistantClient({ saved, errorMessage, suppliers }: { saved?: 
         {error ? (
           <div className="mt-5 rounded-[1.3rem] border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-3 text-sm font-semibold text-[#f2c6bb]">
             <p>{error}</p>
-            {rawDiagnostic ? (
-              <textarea
-                readOnly
-                value={rawDiagnostic}
-                rows={8}
-                className="mt-4 w-full rounded-2xl border border-white/12 bg-white px-4 py-3 font-mono text-xs text-stone-950 outline-none"
-              />
-            ) : null}
+            {rawDiagnostic ? <p className="mt-2 text-xs text-stone-300">Diagnóstico técnico disponible en registros internos del servidor.</p> : null}
           </div>
         ) : null}
 

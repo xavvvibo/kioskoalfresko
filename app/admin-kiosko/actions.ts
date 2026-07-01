@@ -21,6 +21,8 @@ import {
   createAiSupplierDocument,
   createAiTraceabilityItem,
   createAccountingDocument,
+  createAccountingDocumentItem,
+  createDocumentCorrections,
   createInventoryProduct,
   createInternalRecipe,
   createLabelRecord,
@@ -31,6 +33,7 @@ import {
   updateInventoryProduct,
   upsertInventoryFromAiReception,
   updateEquipmentAlertStatus,
+  updateAccountingReconciliationStatus,
   updateUploadedDocumentReview,
 } from "@/lib/admin-kiosko/database";
 
@@ -110,6 +113,12 @@ function optionalDate(value: string) {
 }
 
 function optionalMoney(value: string) {
+  const normalized = value.replace(",", ".").replace(/[^\d.-]/g, "");
+  const number = normalized ? Number(normalized) : undefined;
+  return Number.isFinite(number) ? number : undefined;
+}
+
+function optionalQuantity(value: string) {
   const normalized = value.replace(",", ".").replace(/[^\d.-]/g, "");
   const number = normalized ? Number(normalized) : undefined;
   return Number.isFinite(number) ? number : undefined;
@@ -328,7 +337,7 @@ export async function saveAiReceptionAction(formData: FormData) {
     },
   });
 
-  await createAccountingDocument({
+  const accountingDocument = await createAccountingDocument({
     uploaded_document_id: uploadedDocumentId,
     supplier_name: supplier,
     supplier_tax_id: text(formData, "supplier_tax_id"),
@@ -341,6 +350,23 @@ export async function saveAiReceptionAction(formData: FormData) {
     reconciliation_status: "pendiente_conciliar",
     review_status: "revisado",
     observations: observations,
+  });
+  const accountingDocumentId = accountingDocument.ok ? accountingDocument.data?.id : undefined;
+
+  await createDocumentCorrections({
+    document_id: uploadedDocumentId,
+    accounting_document_id: accountingDocumentId,
+    responsible: "F. Javier Bocanegra Sanjuan",
+    corrections: [
+      { field: "proveedor", ocrValue: ocrJson.proveedor || ocrJson.supplier || ocrJson.supplier_name, finalValue: supplier },
+      { field: "cif", ocrValue: ocrJson.cif || ocrJson.supplier_tax_id, finalValue: text(formData, "supplier_tax_id") },
+      { field: "fecha_documento", ocrValue: ocrJson.fecha || ocrJson.document_date, finalValue: documentDate },
+      { field: "numero_documento", ocrValue: ocrJson.numero || ocrJson.document_number, finalValue: text(formData, "document_number") },
+      { field: "base_imponible", ocrValue: ocrJson.base_imponible || ocrJson.taxable_base, finalValue: text(formData, "taxable_base") },
+      { field: "iva", ocrValue: ocrJson.iva || ocrJson.vat_amount, finalValue: text(formData, "vat_amount") },
+      { field: "total", ocrValue: ocrJson.total || ocrJson.total_amount, finalValue: text(formData, "total_amount") },
+      { field: "temperatura_recepcion", ocrValue: ocrJson.temperatura, finalValue: text(formData, "temperature") },
+    ],
   });
 
   await ensureSupplierRecord({
@@ -366,7 +392,7 @@ export async function saveAiReceptionAction(formData: FormData) {
       redirect(`/admin-kiosko/ia?error=${encodeURIComponent(traceability.error.slice(0, 240))}`);
     }
 
-    await upsertInventoryFromAiReception({
+    const inventory = await upsertInventoryFromAiReception({
       name: product.name,
       quantity: product.quantity,
       supplier,
@@ -376,6 +402,18 @@ export async function saveAiReceptionAction(formData: FormData) {
       location: product.location,
       entryDate: documentDate,
       documentId: supplierDocument.data.id,
+    });
+
+    await createAccountingDocumentItem({
+      accounting_document_id: accountingDocumentId,
+      product_name: product.name,
+      quantity: optionalQuantity(product.quantity),
+      unit: "ud",
+      unit_price: product.price,
+      total_amount: product.price && optionalQuantity(product.quantity) ? Number((product.price * Number(optionalQuantity(product.quantity))).toFixed(2)) : product.price,
+      batch_number: product.batch,
+      expiry_date: product.expiry,
+      inventory_product_id: inventory.ok ? inventory.data?.id : undefined,
     });
   }
 
@@ -392,6 +430,8 @@ export async function saveAiReceptionAction(formData: FormData) {
     observations: cleanSummary,
     responsible: "F. Javier Bocanegra Sanjuan",
     created_by: "F. Javier Bocanegra Sanjuan",
+    uploaded_document_id: uploadedDocumentId,
+    supplier_document_id: supplierDocument.data.id,
   });
 
   if (!goodsReception.ok) {
@@ -472,6 +512,18 @@ export async function saveAiReceptionAction(formData: FormData) {
   }
 
   redirect("/admin-kiosko/ia?saved=1");
+}
+
+export async function updateAccountingReconciliationAction(formData: FormData) {
+  await requireAdminSession();
+
+  const result = await updateAccountingReconciliationStatus({
+    id: text(formData, "document_id"),
+    status: text(formData, "reconciliation_status"),
+    observations: text(formData, "observations"),
+  });
+
+  redirectAfterSave("/admin-kiosko/contabilidad", result);
 }
 
 export async function saveIncidentRecordAction(formData: FormData) {
