@@ -11,6 +11,7 @@ export * from "./repositories/accounting.repository";
 export * from "./repositories/appcc.repository";
 export * from "./repositories/dashboard.repository";
 export * from "./repositories/documents.repository";
+export * from "./repositories/events.repository";
 export * from "./repositories/inventory.repository";
 export * from "./repositories/labels.repository";
 export * from "./repositories/ocr.repository";

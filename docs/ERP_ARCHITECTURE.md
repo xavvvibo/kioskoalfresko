@@ -95,7 +95,8 @@ Los flujos existentes empiezan a emitir eventos de dominio despues de completar 
 
 - si un evento falla, la operacion principal no se revierte ni se rompe para el usuario;
 - los handlers siguen siendo boundaries sin efectos reales;
-- no hay event sourcing persistente todavia;
+- los eventos se persisten en `admin_domain_events` para auditoria interna;
+- no hay event sourcing operativo todavia;
 - no hay cola externa;
 - no se crean inventario, contabilidad, etiquetas ni APPCC desde handlers.
 
@@ -106,6 +107,39 @@ ADMIN_KIOSKO_DOMAIN_EVENTS_DEBUG=true
 ```
 
 Esta fase valida que los procesos reales generan eventos coherentes antes de mover efectos secundarios a handlers.
+
+## Event Store
+
+El Event Store interno vive en la tabla `admin_domain_events`, definida por:
+
+- `supabase/admin_kiosko_event_store.sql`
+
+Finalidad:
+
+- auditoria sanitaria y operativa;
+- trazabilidad de procesos OCR, documentos, inventario, APPCC, produccion y contabilidad;
+- debugging de flujos;
+- reconstruccion futura de expedientes;
+- observabilidad de handlers.
+
+No es todavia event sourcing: las tablas operativas actuales siguen siendo la fuente de verdad para el comportamiento de la aplicacion. Tampoco hay cola externa ni reintentos automaticos. La persistencia del evento y el estado por handler son pasivos y no deben duplicar efectos secundarios.
+
+```mermaid
+flowchart TD
+  Action[Accion actual completada] --> Emit[emitDomainEventSafe]
+  Emit --> Store[admin_domain_events]
+  Emit --> Dispatch[DomainEventDispatcher]
+  Dispatch --> Handlers[Handlers sin efectos reales]
+  Handlers --> Status[handler_status]
+  Store --> Audit[Auditoria / Inspeccion / Debug]
+```
+
+Estados del Event Store:
+
+- `recorded`: evento guardado.
+- `handled`: handlers ejecutados sin error.
+- `failed`: fallo al ejecutar o marcar algun handler.
+- `ignored`: reservado para descartes futuros.
 
 ```mermaid
 sequenceDiagram
