@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  GlobalWorkerOptions,
   getDocument,
   InvalidPDFException,
 } from "pdfjs-dist/legacy/build/pdf.mjs";
@@ -9,8 +10,25 @@ import type { OcrPageInput } from "./types";
 
 const maxPdfPages = 10;
 const pdfScale = 2.4;
+const pdfWorkerModule = "pdfjs-dist/legacy/build/pdf.worker.mjs";
+
+GlobalWorkerOptions.workerPort = null;
+GlobalWorkerOptions.workerSrc = pdfWorkerModule;
+
+function isPdfWorkerError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /fake worker|pdf\.worker|workerSrc|cannot find module|setting up fake worker/i.test(message);
+}
 
 function mapPdfError(error: unknown): never {
+  if (isPdfWorkerError(error)) {
+    throw new OcrProcessingError(
+      "No se ha podido leer automáticamente este PDF en servidor. El documento original se ha guardado y puede revisarse manualmente.",
+      "pdf_worker",
+      503,
+    );
+  }
+
   if (error instanceof Error && (error.name === "PasswordException" || error.message.toLowerCase().includes("password"))) {
     throw new OcrProcessingError("PDF protegido", "pdf_load", 400);
   }
@@ -42,6 +60,8 @@ export async function renderPdfToImages({
   const loadingTask = getDocument({
     data: bytes,
     useSystemFonts: true,
+    useWorkerFetch: false,
+    useWasm: false,
   });
 
   let document;

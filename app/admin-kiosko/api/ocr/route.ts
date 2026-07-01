@@ -2,7 +2,7 @@ import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { storeOriginalOcrDocument, updateUploadedDocumentReview } from "@/lib/admin-kiosko/database";
 import { isAcceptedDirectImageMimeType, isAcceptedOcrMimeType, isPdfMimeType, runAppccOcr } from "@/lib/ai/ocr";
 import { OcrProcessingError, getOpenAiServerConfig } from "@/lib/ai/openai";
-import type { OcrExtractorKind, OcrProgressEvent } from "@/lib/ai/types";
+import type { AiDocumentKind, OcrExtractorKind, OcrProgressEvent, OcrUploadResult } from "@/lib/ai/types";
 
 export const runtime = "nodejs";
 
@@ -51,6 +51,41 @@ function errorMessage(error: unknown) {
 
 function rawOpenAIText(error: unknown) {
   return error instanceof OcrProcessingError ? error.rawOpenAIText : undefined;
+}
+
+function fallbackDetectedType(kind: OcrExtractorKind): AiDocumentKind {
+  if (kind === "factura") return "factura";
+  if (kind === "albaran") return "albaran";
+  if (kind === "etiqueta") return "etiqueta_lote";
+  if (kind === "termometro") return "termometro";
+  if (kind === "aceite") return "aceite";
+  return "otro";
+}
+
+function isPdfManualFallbackError(error: unknown) {
+  if (error instanceof OcrProcessingError) {
+    return error.stage === "pdf_worker" || error.stage === "pdf_dependency" || /leer automáticamente este PDF|fake worker|pdf\.worker|Cannot find module/i.test(error.message);
+  }
+
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /fake worker|pdf\.worker|Cannot find module|Setting up fake worker/i.test(message);
+}
+
+function createPdfManualReviewResult(file: File, kind: OcrExtractorKind): OcrUploadResult {
+  const detectedType = fallbackDetectedType(kind);
+  return {
+    documentName: file.name,
+    requestedKind: kind,
+    detectedType,
+    status: "prepared",
+    message: "No se ha podido leer automáticamente este PDF en servidor. El documento original se ha guardado y puede revisarse manualmente.",
+    result: {
+      kind: detectedType,
+      confidence: 0,
+      summary: "PDF guardado en el repositorio documental privado. Revisión manual requerida antes de registrar contabilidad, inventario o APPCC.",
+      suggestedRoute: "/admin-kiosko/contabilidad",
+    },
+  };
 }
 
 export async function POST(request: Request) {
@@ -126,10 +161,31 @@ export async function POST(request: Request) {
           detectedType: kind,
           buffer,
         });
+        if (isPdfMimeType(file.type)) {
+          console.info("[PDF STORAGE SAVED]", {
+            id: originalDocument.data.id,
+            bucket: originalDocument.data.storage_bucket,
+            path: originalDocument.data.storage_path,
+            status: originalDocument.data.storage_status,
+          });
+        }
 
-        const result = isPdfMimeType(file.type)
-          ? await processPdf({ file, buffer, kind, send })
-          : await processImage({ file, buffer, kind, model: config.model, send });
+        let result: OcrUploadResult;
+        if (isPdfMimeType(file.type)) {
+          try {
+            result = await processPdf({ file, buffer, kind, send });
+          } catch (error) {
+            if (!isPdfManualFallbackError(error)) throw error;
+            console.error("[PDF OCR ERROR]", error);
+            console.info("[PDF FALLBACK MANUAL REVIEW]", {
+              filename: file.name,
+              storageDocumentId: originalDocument.data.id,
+            });
+            result = createPdfManualReviewResult(file, kind);
+          }
+        } else {
+          result = await processImage({ file, buffer, kind, model: config.model, send });
+        }
 
         console.info("[OCR]\nextracción completada", {
           documentName: result.documentName,
@@ -215,14 +271,14 @@ async function processPdf({
   try {
     pdf = await import("@/lib/ai/pdf");
   } catch (error) {
-    console.error("[OCR ERROR]\nPDF OCR dependency import failed", error);
-    throw new OcrProcessingError("PDF OCR temporalmente no disponible en producción", "pdf_dependency", 503);
+    console.error("[PDF OCR ERROR]", error);
+    throw new OcrProcessingError("No se ha podido leer automáticamente este PDF en servidor. El documento original se ha guardado y puede revisarse manualmente.", "pdf_dependency", 503);
   }
 
   const { assertPdfSize, renderPdfToImages } = pdf;
   assertPdfSize(file.size);
   send({ type: "progress", message: "Convirtiendo PDF...", progress: 20 });
-  console.info("[OCR]\nconvirtiendo PDF...");
+  console.info("[PDF OCR]", { message: "Convirtiendo PDF", filename: file.name, bytes: buffer.byteLength });
 
   const pages = await renderPdfToImages({
     data: buffer,
