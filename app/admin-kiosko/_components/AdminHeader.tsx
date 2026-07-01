@@ -21,6 +21,7 @@ const navGroups = [
     label: "Compras",
     section: "compras",
     links: [
+      ["Contabilidad", "/admin-kiosko/contabilidad"],
       ["IA / OCR", "/admin-kiosko/ia"],
       ["Historial OCR", "/admin-kiosko/ia/historial"],
       ["Recepciones", "/admin-kiosko/recepcion-mercancia"],
@@ -63,6 +64,7 @@ const navGroups = [
     links: [
       ["Configuración", "/admin-kiosko/configuracion"],
       ["Impresoras", "/admin-kiosko/configuracion/impresoras"],
+      ["Usuarios", "/admin-kiosko/configuracion/usuarios"],
       ["Calendario operativo", "/admin-kiosko/configuracion/calendario"],
       ["Equipos", "/admin-kiosko/equipos"],
       ["Proveedores", "/admin-kiosko/proveedores"],

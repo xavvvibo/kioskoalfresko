@@ -10,12 +10,13 @@ export const metadata: Metadata = {
 
 const settings = [
   ["Impresoras", "/admin-kiosko/configuracion/impresoras", "Zebra ZD421, ZPL y copias por defecto."],
+  ["Usuarios", "/admin-kiosko/configuracion/usuarios", "Alta, baja, roles, permisos y restablecimiento de contraseña."],
   ["Equipos", "/admin-kiosko/equipos", "Cámaras, arcones, botelleros y mantenimiento."],
   ["Proveedores", "/admin-kiosko/proveedores", "Autorizaciones, certificados y datos administrativos."],
   ["Calendario operativo", "/admin-kiosko/configuracion/calendario", "Días abiertos, descanso, cierres y eventos especiales."],
   ["Datos establecimiento", "/admin-kiosko/configuracion", "Kiosko Alfresko, responsable y datos fiscales preparados."],
   ["Parámetros APPCC", "/admin-kiosko/configuracion", "Vida útil, controles diarios y reglas operativas."],
-  ["Usuarios y permisos", "/admin-kiosko/configuracion", "Arquitectura visual preparada para roles owner, empleado e inspector."],
+  ["Permisos", "/admin-kiosko/configuracion/usuarios", "Permisos por área preparados para roles owner, empleado e inspector."],
 ];
 
 export default async function ConfiguracionPage() {

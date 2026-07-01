@@ -51,6 +51,7 @@ export default async function ComprasPage() {
               ["Proveedores", "/admin-kiosko/proveedores"],
               ["Inventario", "/admin-kiosko/inventario"],
               ["Documentos OCR", "/admin-kiosko/ia/historial"],
+              ["Contabilidad", "/admin-kiosko/contabilidad"],
               ["Trazabilidad", "/admin-kiosko/trazabilidad"],
             ].map(([title, href]) => (
               <Link key={href} href={href} className="rounded-[1.5rem] border border-white/10 bg-[#fffaf4] p-5 text-xl font-black uppercase tracking-[-0.03em] text-stone-950">{title}</Link>

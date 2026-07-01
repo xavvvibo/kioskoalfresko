@@ -14,6 +14,7 @@ const areas = [
   ["Compras y proveedores", "/admin-kiosko/compras", "OCR, recepciones, proveedores, inventario y documentos."],
   ["Producción y trazabilidad", "/admin-kiosko/produccion", "Recetas, lotes internos, mermas, etiquetas y FEFO."],
   ["Inspección y APPCC", "/admin-kiosko/inspeccion", "Vista sanitaria, documentación, registros e informes."],
+  ["Contabilidad", "/admin-kiosko/contabilidad", "Facturas, albaranes, IVA, conciliación y compras."],
   ["Configuración", "/admin-kiosko/configuracion", "Impresoras, equipos, calendario operativo y parámetros."],
 ];
 
