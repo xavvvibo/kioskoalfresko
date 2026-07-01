@@ -7,8 +7,12 @@ create table if not exists public.admin_uploaded_documents (
   original_filename text,
   mime_type text,
   file_size bigint,
+  file_hash text,
   uploaded_at timestamptz default now(),
   uploaded_by text,
+  confirmed_by text,
+  confirmed_at timestamptz,
+  ai_model text,
   detected_type text,
   ocr_json jsonb default '{}'::jsonb,
   review_status text default 'pendiente_revision',
@@ -120,6 +124,10 @@ alter table if exists public.admin_uploaded_documents
   add column if not exists storage_bucket text,
   add column if not exists storage_path text,
   add column if not exists storage_status text default 'metadata_only',
+  add column if not exists file_hash text,
+  add column if not exists confirmed_by text,
+  add column if not exists confirmed_at timestamptz,
+  add column if not exists ai_model text,
   add column if not exists review_status text default 'pendiente_revision',
   add column if not exists corrections jsonb default '{}'::jsonb,
   add column if not exists related_record_type text,
@@ -174,8 +182,20 @@ create policy "admin_user_profiles_service_role_all" on public.admin_user_profil
 drop policy if exists "admin_printer_settings_service_role_all" on public.admin_printer_settings;
 create policy "admin_printer_settings_service_role_all" on public.admin_printer_settings for all to service_role using (true) with check (true);
 
+comment on table public.admin_uploaded_documents is 'Repositorio privado de documentos originales subidos al panel APPCC. Estados esperados review_status: pendiente_revision, revisado, confirmado, rechazado, anulado.';
+comment on column public.admin_uploaded_documents.file_hash is 'Hash del archivo original para deduplicación y auditoría documental. Debe calcularse antes o durante la subida si está disponible.';
+comment on column public.admin_uploaded_documents.confirmed_by is 'Responsable que confirmó la revisión documental antes de impactar contabilidad, inventario o APPCC.';
+comment on column public.admin_uploaded_documents.confirmed_at is 'Fecha y hora de confirmación documental.';
+comment on column public.admin_uploaded_documents.ai_model is 'Modelo de IA usado para OCR/extracción documental cuando aplique.';
+comment on column public.admin_uploaded_documents.review_status is 'Estado documental esperado: pendiente_revision, revisado, confirmado, rechazado, anulado.';
+comment on column public.admin_uploaded_documents.storage_bucket is 'Bucket privado de Supabase Storage donde se conserva el original.';
+comment on column public.admin_uploaded_documents.storage_path is 'Ruta privada del archivo original dentro del bucket. No debe exponerse como URL pública.';
+
 create index if not exists admin_uploaded_documents_uploaded_at_idx on public.admin_uploaded_documents (uploaded_at desc);
 create index if not exists admin_uploaded_documents_type_idx on public.admin_uploaded_documents (detected_type);
+create index if not exists admin_uploaded_documents_related_idx on public.admin_uploaded_documents (related_record_type, related_record_id);
+create index if not exists admin_uploaded_documents_storage_idx on public.admin_uploaded_documents (storage_bucket, storage_path);
+create unique index if not exists admin_uploaded_documents_hash_idx on public.admin_uploaded_documents (file_hash) where file_hash is not null;
 create index if not exists admin_accounting_documents_date_idx on public.admin_accounting_documents (document_date desc);
 create index if not exists admin_accounting_documents_supplier_idx on public.admin_accounting_documents (lower(supplier_name));
 create index if not exists admin_accounting_documents_type_idx on public.admin_accounting_documents (document_type);
