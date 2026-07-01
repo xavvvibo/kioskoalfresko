@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { getExpiryBuckets, getInventoryMovements, getInventoryProductById, getInventoryProducts } from "@/lib/admin-kiosko/database";
+import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
+import { ZebraPrintButton } from "../_components/ZebraPrintButton";
 import { saveInventoryMovementAction, saveInventoryProductAction } from "../actions";
 
 export const metadata: Metadata = {
@@ -218,6 +220,16 @@ export default async function InventarioPage({
                     <tbody>
                       {products.map((product) => {
                         const status = statusForProduct(product.expiry_date, product.current_stock, product.minimum_stock, product.active);
+                        const zpl = buildZebraLabelZpl({
+                          template: "recepcion",
+                          product: product.name,
+                          batch: product.current_batch || "",
+                          supplier: product.usual_supplier || "",
+                          sourceBatch: product.current_batch || "",
+                          receptionDate: product.last_entry_date || "",
+                          expiryDate: product.expiry_date || "",
+                          copies: 1,
+                        });
                         return (
                           <tr key={product.id} className="bg-[#fffaf4] text-stone-950">
                             <td className="rounded-l-2xl px-3 py-3 font-black">{product.name}<span className="block text-xs font-semibold text-stone-600">{product.category || product.location || ""}</span></td>
@@ -233,7 +245,22 @@ export default async function InventarioPage({
                             <td className="rounded-r-2xl px-3 py-3">
                               <div className="flex flex-wrap gap-2">
                                 <a href={`/admin-kiosko/inventario?product=${product.id}`} className="rounded-full border border-stone-950 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em]">Editar</a>
+                                <a href={`/admin-kiosko/inventario?product=${product.id}#movimientos`} className="rounded-full border border-stone-950 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em]">Movimientos</a>
                                 <a href={`/admin-kiosko/trazabilidad?q=${encodeURIComponent(product.current_batch || product.name)}`} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Trazar</a>
+                                <ZebraPrintButton
+                                  zpl={zpl}
+                                  filename={`${product.current_batch || product.name}.zpl`}
+                                  label="Imprimir"
+                                  historyPayload={{
+                                    model: "Recepción",
+                                    template: "recepcion",
+                                    product: product.name,
+                                    batch: product.current_batch || "",
+                                    supplier: product.usual_supplier || "",
+                                    expiry_date: product.expiry_date || "",
+                                    copies: 1,
+                                  }}
+                                />
                               </div>
                             </td>
                           </tr>
@@ -244,7 +271,7 @@ export default async function InventarioPage({
                 </div>
               </section>
 
-              <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+              <section id="movimientos" className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
                 <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Histórico de movimientos</h2>
                 <div className="mt-5 grid gap-3">
                   {movements.map((movement) => (

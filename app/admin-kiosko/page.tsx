@@ -135,6 +135,7 @@ export default async function AdminKioskoPage({
       <AdminHeader
         title="Panel APPCC KIOSKO ALFRESKO"
         description="Control sanitario digital · Responsable: F. Javier Bocanegra Sanjuan · DNI 75.136.778-X"
+        inspectorMode={inspectorMode}
       />
 
       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">

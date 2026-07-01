@@ -69,7 +69,7 @@ export default async function ModoInspeccionPage() {
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
-      <AdminHeader title="Modo inspección sanitaria" description="Vista rápida de documentación, registros y estado APPCC." />
+      <AdminHeader title="Modo inspección sanitaria" description="Vista rápida de documentación, registros y estado APPCC." inspectorMode />
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12">
         <div className="grid gap-6">
           <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5">

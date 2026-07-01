@@ -632,6 +632,19 @@ export type ProductionMaterialOption = {
   fefo: boolean;
 };
 
+export type LabelSourceOption = {
+  key: string;
+  kind: "internal" | "supplier";
+  model: string;
+  product: string;
+  batch: string;
+  supplier: string;
+  elaboration_date: string;
+  best_before_date: string;
+  responsible: string;
+  source_batch_number: string;
+};
+
 export type SupplierProfile = {
   id: string;
   supplier: string;
@@ -1260,11 +1273,11 @@ async function findSupplierByNameOrTaxId(supplier: string, taxId?: string) {
     taxId?.trim() ? `cif.ilike.${encodeURIComponent(taxId.trim())}` : "",
   ].filter(Boolean).join(",");
 
-  if (!clauses) return { ok: true as const, data: [] as Array<{ id: string; supplier: string; cif: string | null }> };
+  if (!clauses) return { ok: true as const, data: [] as Array<{ id: string; supplier: string; cif: string | null; status: string | null }> };
 
-  return getRows<{ id: string; supplier: string; cif: string | null }>(
+  return getRows<{ id: string; supplier: string; cif: string | null; status: string | null }>(
     "admin_supplier_records",
-    `?select=id,supplier,cif&or=(${clauses})&limit=1`,
+    `?select=id,supplier,cif,status&or=(${clauses})&limit=1`,
   );
 }
 
@@ -1280,6 +1293,16 @@ export async function ensureSupplierRecord(data: SupplierRecordInput) {
   }
 
   if (existing.data[0]) {
+    const supplier = existing.data[0];
+    await patchRecord("admin_supplier_records", supplier.id, {
+      cif: cleanText(data.cif) || supplier.cif,
+      contact: cleanText(data.contact),
+      phone: cleanText(data.phone),
+      email: cleanText(data.email),
+      responsible_person: cleanText(data.responsible_person),
+      status: supplier.status || cleanText(data.status) || "pendiente_datos_administrativos",
+      observations: cleanText(data.observations),
+    });
     return { ok: true, data: existing.data[0] };
   }
 
@@ -1836,6 +1859,48 @@ export async function getLabelRecordsByBatch(batch?: string): Promise<DbResult<L
     "admin_label_records",
     `?select=id,created_at,model,product,batch,supplier,elaboration_date,opening_date,freezing_date,defrosting_date,best_before_date,responsible,print_format,copies,printed_at,printer,template,zpl_version,qr_payload&batch=ilike.*${encodeURIComponent(safeBatch)}*&order=created_at.desc&limit=25`,
   );
+}
+
+export async function getLabelSourceOptions(): Promise<DbResult<LabelSourceOption[]>> {
+  const [batches, inventory] = await Promise.all([
+    getProductionBatches(200),
+    getInventoryProducts({ status: "activos" }),
+  ]);
+
+  if (!batches.ok) return batches;
+  if (!inventory.ok) return inventory;
+
+  const internal = batches.data
+    .filter((batch) => batch.batch_code)
+    .map<LabelSourceOption>((batch) => ({
+      key: `internal:${batch.id}`,
+      kind: "internal",
+      model: batch.storage_state === "congelado" ? "Congelación" : batch.storage_state === "descongelado" ? "Descongelación" : "Elaboración",
+      product: batch.output_product || "",
+      batch: batch.batch_code || "",
+      supplier: batch.source_supplier || "",
+      elaboration_date: batch.production_date,
+      best_before_date: batch.expiry_date || "",
+      responsible: batch.responsible || "F. Javier Bocanegra Sanjuan",
+      source_batch_number: batch.source_batch_number || "",
+    }));
+
+  const supplierLots = inventory.data
+    .filter((product) => product.current_batch)
+    .map<LabelSourceOption>((product) => ({
+      key: `supplier:${product.id}`,
+      kind: "supplier",
+      model: "Recepción",
+      product: product.name,
+      batch: product.current_batch || "",
+      supplier: product.usual_supplier || "",
+      elaboration_date: product.last_entry_date || "",
+      best_before_date: product.expiry_date || "",
+      responsible: "F. Javier Bocanegra Sanjuan",
+      source_batch_number: product.current_batch || "",
+    }));
+
+  return { ok: true, data: [...internal, ...supplierLots].sort((a, b) => (a.best_before_date || "9999").localeCompare(b.best_before_date || "9999")) };
 }
 
 async function generateProductionBatchCode(date: string) {

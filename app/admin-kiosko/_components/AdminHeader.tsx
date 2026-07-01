@@ -29,7 +29,25 @@ const adminNav = [
   ["IA APPCC", "/admin-kiosko/ia"],
 ];
 
-export function AdminHeader({ title, description }: { title: string; description: string }) {
+const inspectorNavLabels = new Set([
+  "Panel",
+  "Modo inspección",
+  "Registros",
+  "Documentación",
+  "Calendario",
+  "Inventario",
+  "Producción",
+  "Trazabilidad",
+  "Temperaturas",
+  "Limpieza",
+  "Mercancías",
+  "Incidencias",
+  "Equipos",
+]);
+
+export function AdminHeader({ title, description, inspectorMode = false }: { title: string; description: string; inspectorMode?: boolean }) {
+  const nav = inspectorMode ? adminNav.filter(([label]) => inspectorNavLabels.has(label)) : adminNav;
+
   return (
     <section className="border-b border-white/10 bg-[radial-gradient(circle_at_85%_10%,rgba(217,75,43,0.24),transparent_22%),linear-gradient(180deg,#171717_0%,#0d0d0d_100%)]">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
@@ -46,7 +64,7 @@ export function AdminHeader({ title, description }: { title: string; description
               {description}
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          {!inspectorMode ? <div className="flex flex-wrap gap-3">
             <Link
               href="/admin-kiosko"
               className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12"
@@ -61,15 +79,15 @@ export function AdminHeader({ title, description }: { title: string; description
                 Cerrar sesión
               </button>
             </form>
-          </div>
+          </div> : null}
         </div>
-        <form action="/admin-kiosko/buscar" className="mt-6 grid gap-3 rounded-[1.2rem] border border-white/10 bg-black/20 p-3 md:grid-cols-[1fr_auto]">
+        {!inspectorMode ? <form action="/admin-kiosko/buscar" className="mt-6 grid gap-3 rounded-[1.2rem] border border-white/10 bg-black/20 p-3 md:grid-cols-[1fr_auto]">
           <input name="q" placeholder="Buscar producto, lote, proveedor, documento, equipo, incidencia o fecha" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-sm text-stone-950 outline-none focus:border-[#d94b2b]" />
           <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Buscar APPCC</button>
-        </form>
+        </form> : null}
         <nav className="mt-6 overflow-x-auto rounded-[1.2rem] border border-white/10 bg-black/20 p-2" aria-label="Navegación interna APPCC">
           <div className="flex min-w-max gap-2">
-            {adminNav.map(([label, href]) => (
+            {nav.map(([label, href]) => (
               <Link key={href} href={href} className="rounded-full border border-white/10 bg-white/6 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white transition hover:border-[#d94b2b] hover:bg-[#d94b2b]">
                 {label}
               </Link>

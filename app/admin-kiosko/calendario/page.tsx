@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getAdminDashboardSummary, getAppccRecords, type AppccRecord } from "@/lib/admin-kiosko/database";
+import { getAdminDashboardSummary, getAppccRecords, getLabelRecords, getProductionBatches, getTraceabilityRows, type AppccRecord } from "@/lib/admin-kiosko/database";
+import { getDocumentStats } from "@/lib/admin-kiosko/documents";
 import { AdminHeader } from "../_components/AdminHeader";
 
 export const metadata: Metadata = { title: "Calendario APPCC | Panel interno", description: "Vista mensual de registros APPCC." };
@@ -21,7 +22,22 @@ function monthRange(year: number, month: number) {
   return { days, start, end };
 }
 
-function dayStatus(records: AppccRecord[]) {
+function configuredClosedStatus(day: string) {
+  const date = new Date(`${day}T12:00:00`);
+  const weekday = date.getDay();
+  const dayNumber = date.getDate();
+
+  if (weekday === 1 || weekday === 2) return { label: "⚫ Descanso", className: "border-stone-500 bg-stone-200 text-stone-900" };
+  if ((weekday === 0 && [14, 21, 28].includes(dayNumber)) || (weekday === 6 && dayNumber === 20)) {
+    return { label: "⚪ Cerrado", className: "border-stone-300 bg-white text-stone-900" };
+  }
+
+  return null;
+}
+
+function dayStatus(day: string, records: AppccRecord[]) {
+  const configured = configuredClosedStatus(day);
+  if (configured) return configured;
   if (records.some((record) => record.status === "incidencia")) return { label: "🔴 Incidencias", className: "border-red-300 bg-red-50 text-red-900" };
   if (!records.length || records.some((record) => record.status === "revisar")) return { label: "🟡 Pendiente", className: "border-amber-300 bg-amber-50 text-amber-950" };
   return { label: "🟢 Completo", className: "border-emerald-300 bg-emerald-50 text-emerald-950" };
@@ -43,17 +59,30 @@ export default async function CalendarioAppccPage({
   const month = Number(params?.month) || current.month;
   const { days, start, end } = monthRange(year, month);
   const selectedDay = params?.day || start;
-  const result = await getAppccRecords({ dateFrom: start, dateTo: end });
-  const dashboard = await getAdminDashboardSummary();
+  const [result, dashboard, productionsResult, labelsResult, traceabilityResult] = await Promise.all([
+    getAppccRecords({ dateFrom: start, dateTo: end }),
+    getAdminDashboardSummary(),
+    getProductionBatches(200),
+    getLabelRecords(100),
+    getTraceabilityRows({ date: selectedDay }),
+  ]);
   const records = result.ok ? result.data : [];
+  const productions = productionsResult.ok ? productionsResult.data : [];
+  const labels = labelsResult.ok ? labelsResult.data : [];
+  const traceability = traceabilityResult.ok ? traceabilityResult.data : [];
+  const documents = getDocumentStats();
   const selectedRecords = records.filter((record) => record.record_date === selectedDay);
+  const selectedProductions = productions.filter((batch) => batch.production_date === selectedDay);
+  const selectedLabels = labels.filter((label) => label.created_at.slice(0, 10) === selectedDay);
   const dayGroups = Array.from({ length: days }, (_, index) => {
     const day = `${year}-${String(month).padStart(2, "0")}-${String(index + 1).padStart(2, "0")}`;
-    return { day, status: dayStatus(records.filter((record) => record.record_date === day)) };
+    return { day, status: dayStatus(day, records.filter((record) => record.record_date === day)) };
   });
   const completeDays = dayGroups.filter((day) => day.status.label.includes("Completo")).length;
   const pendingDays = dayGroups.filter((day) => day.status.label.includes("Pendiente")).length;
   const incidentDays = dayGroups.filter((day) => day.status.label.includes("Incidencias")).length;
+  const restDays = dayGroups.filter((day) => day.status.label.includes("Descanso")).length;
+  const closedDays = dayGroups.filter((day) => day.status.label.includes("Cerrado")).length;
   const latestReview = dashboard.ok && dashboard.data.latestMonthlySignature
     ? `${dashboard.data.latestMonthlySignature.month}/${dashboard.data.latestMonthlySignature.year} · ${dashboard.data.latestMonthlySignature.signed_by}`
     : "Pendiente";
@@ -71,7 +100,9 @@ export default async function CalendarioAppccPage({
                 ["Días completos", String(completeDays)],
                 ["Días pendientes", String(pendingDays)],
                 ["Días con incidencia", String(incidentDays)],
-                ["Última revisión APPCC", latestReview],
+                ["Descanso", String(restDays)],
+                ["Cerrados", String(closedDays)],
+                ["Última revisión", latestReview],
               ].map(([label, value]) => (
                 <article key={label} className="rounded-[1.1rem] border border-white/10 bg-white/6 p-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">{label}</p>
@@ -83,7 +114,7 @@ export default async function CalendarioAppccPage({
               {Array.from({ length: days }, (_, index) => {
                 const day = `${year}-${String(month).padStart(2, "0")}-${String(index + 1).padStart(2, "0")}`;
                 const dayRecords = records.filter((record) => record.record_date === day);
-                const status = dayStatus(dayRecords);
+                const status = dayStatus(day, dayRecords);
                 return (
                   <Link key={day} href={`/admin-kiosko/calendario?year=${year}&month=${month}&day=${day}`} className={`rounded-2xl border p-3 ${status.className}`}>
                     <p className="text-2xl font-black">{index + 1}</p>
@@ -111,6 +142,41 @@ export default async function CalendarioAppccPage({
                 </div>
               );
             })}
+            <div className="mt-5 rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
+              <h3 className="text-sm font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Producción</h3>
+              {selectedProductions.length ? (
+                <div className="mt-3 grid gap-2">
+                  {selectedProductions.map((batch) => (
+                    <Link key={batch.id} href={`/admin-kiosko/produccion?batch=${batch.id}`} className="text-sm text-stone-200">{batch.batch_code} · {batch.output_product} · {batch.output_quantity ?? 0} {batch.output_unit || "ud"}</Link>
+                  ))}
+                </div>
+              ) : <p className="mt-3 text-sm text-stone-400">Producción no registrada para esta jornada.</p>}
+            </div>
+            <div className="mt-5 rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
+              <h3 className="text-sm font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Etiquetas</h3>
+              {selectedLabels.length ? (
+                <div className="mt-3 grid gap-2">
+                  {selectedLabels.map((label) => (
+                    <Link key={label.id} href={`/admin-kiosko/etiquetas?id=${label.id}`} className="text-sm text-stone-200">{label.model} · {label.product || "Producto"} · lote {label.batch || "no consignado"}</Link>
+                  ))}
+                </div>
+              ) : <p className="mt-3 text-sm text-stone-400">Etiquetas no emitidas en esta jornada.</p>}
+            </div>
+            <div className="mt-5 rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
+              <h3 className="text-sm font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Documentación</h3>
+              <p className="mt-3 text-sm text-stone-300">{documents.available} disponibles · {documents.pending + documents.expired + documents.review} pendientes o en revisión.</p>
+              <Link href="/admin-kiosko/documentacion" className="mt-3 inline-flex rounded-full border border-white/20 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Abrir documentación</Link>
+            </div>
+            <div className="mt-5 rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
+              <h3 className="text-sm font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Trazabilidad</h3>
+              {traceability.length ? (
+                <div className="mt-3 grid gap-2">
+                  {traceability.slice(0, 6).map((row) => (
+                    <Link key={row.id} href={`/admin-kiosko/trazabilidad?q=${encodeURIComponent(row.batch_number || row.product_name || "")}`} className="text-sm text-stone-200">{row.product_name || "Producto"} · lote {row.batch_number || "no consignado"}</Link>
+                  ))}
+                </div>
+              ) : <p className="mt-3 text-sm text-stone-400">Trazabilidad sin movimientos en esta fecha.</p>}
+            </div>
           </section>
         </div>
       </section>

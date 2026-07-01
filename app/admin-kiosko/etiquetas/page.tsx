@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getLabelRecords, getSupplierOptions, type SupplierOption } from "@/lib/admin-kiosko/database";
+import { getLabelRecords, getLabelSourceOptions } from "@/lib/admin-kiosko/database";
 import { buildZebraLabelZpl, type ZebraTemplate } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
 import { ZebraPrintButton } from "../_components/ZebraPrintButton";
@@ -12,8 +12,6 @@ export const metadata: Metadata = {
   title: "Etiquetas APPCC | Panel interno",
   description: "Etiquetas APPCC listas para impresión térmica o A4.",
 };
-
-const models = ["Elaboración", "Apertura", "Congelación", "Descongelación", "Recepción", "Caducidad", "Lote"];
 
 function zebraTemplate(model: string): ZebraTemplate {
   if (model === "Congelación") return "congelacion";
@@ -51,37 +49,6 @@ function labelFromParams(params: Record<string, string>) {
   };
 }
 
-function SupplierSelector({ suppliers, current }: { suppliers: SupplierOption[]; current: string }) {
-  const selected = suppliers.find((supplier) => supplier.name.toLowerCase() === current.toLowerCase());
-
-  return (
-    <div className="grid gap-3">
-      <label className="grid gap-2 text-sm font-semibold text-stone-200">
-        Proveedor autorizado
-        <select name="supplier_name" defaultValue={selected?.name || current || suppliers[0]?.name || "__new__"} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
-          {current && !selected ? <option value={current}>Proveedor precargado: {current}</option> : null}
-          {suppliers.map((supplier) => (
-            <option key={supplier.id} value={supplier.name}>{supplier.name}{supplier.tax_id ? ` · ${supplier.tax_id}` : ""}</option>
-          ))}
-          <option value="__new__">Añadir nuevo proveedor</option>
-        </select>
-      </label>
-      <details className="rounded-2xl border border-amber-300/30 bg-amber-100 px-4 py-3 text-amber-950">
-        <summary className="cursor-pointer text-sm font-black uppercase tracking-[0.12em]">Añadir nuevo proveedor</summary>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <input name="new_supplier_name" placeholder="Nombre proveedor" className="rounded-xl border border-amber-950/15 bg-white px-3 py-2 text-sm text-stone-950" />
-          <input name="new_supplier_tax_id" placeholder="CIF/NIF" className="rounded-xl border border-amber-950/15 bg-white px-3 py-2 text-sm text-stone-950" />
-          <input name="new_supplier_phone" placeholder="Teléfono" className="rounded-xl border border-amber-950/15 bg-white px-3 py-2 text-sm text-stone-950" />
-          <input name="new_supplier_email" placeholder="Email" className="rounded-xl border border-amber-950/15 bg-white px-3 py-2 text-sm text-stone-950" />
-          <input name="new_supplier_contact" placeholder="Persona contacto" className="rounded-xl border border-amber-950/15 bg-white px-3 py-2 text-sm text-stone-950" />
-          <input name="new_supplier_observations" placeholder="Observaciones" className="rounded-xl border border-amber-950/15 bg-white px-3 py-2 text-sm text-stone-950" />
-        </div>
-        <p className="mt-3 text-sm font-semibold">Información administrativa pendiente de completar.</p>
-      </details>
-    </div>
-  );
-}
-
 function LabelCard({ label }: { label: ReturnType<typeof labelFromParams> }) {
   const qr = `/admin-kiosko/etiquetas/qr?p=${encodeURIComponent(label.qr_payload)}`;
   return (
@@ -115,13 +82,14 @@ export default async function EtiquetasPage({
 }) {
   await requireAdminSession();
   const params = await searchParams || {};
-  const [historyResult, suppliersResult] = await Promise.all([
+  const [historyResult, sourcesResult] = await Promise.all([
     getLabelRecords(20),
-    getSupplierOptions(),
+    getLabelSourceOptions(),
   ]);
   const history = historyResult.ok ? historyResult.data : [];
-  const suppliers = suppliersResult.ok ? suppliersResult.data : [];
+  const sources = sourcesResult.ok ? sourcesResult.data : [];
   const selected = history.find((record) => record.id === params.id);
+  const selectedSource = sources.find((source) => source.key === params.source);
   const current = selected
     ? {
         model: selected.model,
@@ -138,6 +106,28 @@ export default async function EtiquetasPage({
         copies: selected.copies || 8,
         qr_payload: selected.qr_payload || "",
       }
+    : selectedSource
+      ? {
+          model: selectedSource.model,
+          product: selectedSource.product,
+          batch: selectedSource.batch,
+          supplier: selectedSource.supplier,
+          elaboration_date: selectedSource.elaboration_date,
+          opening_date: "",
+          freezing_date: selectedSource.model === "Congelación" ? selectedSource.elaboration_date : "",
+          defrosting_date: selectedSource.model === "Descongelación" ? selectedSource.elaboration_date : "",
+          best_before_date: selectedSource.best_before_date,
+          responsible: selectedSource.responsible,
+          print_format: "termica",
+          copies: 1,
+          qr_payload: JSON.stringify({
+            type: "appcc-label",
+            product: selectedSource.product,
+            batch: selectedSource.batch,
+            supplier: selectedSource.supplier,
+            source_batch_number: selectedSource.source_batch_number,
+          }),
+        }
     : labelFromParams(params);
   const copies = Math.max(1, Math.min(48, current.copies || 8));
   const template = zebraTemplate(current.model);
@@ -151,7 +141,7 @@ export default async function EtiquetasPage({
     defrostingDate: current.defrosting_date,
     expiryDate: current.best_before_date,
     responsible: current.responsible,
-    copies: 1,
+    copies,
   });
 
   return (
@@ -161,40 +151,44 @@ export default async function EtiquetasPage({
         <div className="grid gap-6 lg:grid-cols-[25rem_1fr]">
           <div className="grid gap-6 print:hidden">
             <form action={saveLabelRecordAction} className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
-              <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Datos etiqueta</h2>
+              <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Etiqueta desde lote</h2>
               <div className="mt-5 grid gap-4">
-                <label className="grid gap-2 text-sm font-semibold text-stone-200">Modelo
-                  <select name="model" defaultValue={current.model} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
-                    {models.map((model) => <option key={model}>{model}</option>)}
+                <input type="hidden" name="model" value={current.model} />
+                <input type="hidden" name="product" value={current.product} />
+                <input type="hidden" name="batch" value={current.batch} />
+                <input type="hidden" name="supplier_name" value={current.supplier} />
+                <input type="hidden" name="elaboration_date" value={current.elaboration_date} />
+                <input type="hidden" name="opening_date" value={current.opening_date} />
+                <input type="hidden" name="freezing_date" value={current.freezing_date} />
+                <input type="hidden" name="defrosting_date" value={current.defrosting_date} />
+                <input type="hidden" name="best_before_date" value={current.best_before_date} />
+                <input type="hidden" name="responsible" value={current.responsible} />
+                <input type="hidden" name="print_format" value={current.print_format} />
+                <div className="rounded-[1.3rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
+                  <p className="font-black text-white">{current.model} · {current.product || "Selecciona un lote"}</p>
+                  <p className="mt-2">Lote {current.batch || "pendiente"} · proveedor {current.supplier || "pendiente"} · caducidad {current.best_before_date || "vida útil no consignada"}</p>
+                </div>
+                <label className="grid gap-2 text-sm font-semibold text-stone-200">Copias Zebra
+                  <select name="copies" defaultValue={String(copies)} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
+                    {[1, 2, 4, 8].map((copy) => <option key={copy} value={copy}>{copy} copia{copy > 1 ? "s" : ""}</option>)}
                   </select>
                 </label>
-                {[
-                  ["product", "Producto", current.product],
-                  ["batch", "Lote", current.batch],
-                  ["elaboration_date", "Fecha elaboración", current.elaboration_date],
-                  ["opening_date", "Fecha apertura", current.opening_date],
-                  ["freezing_date", "Fecha congelación", current.freezing_date],
-                  ["defrosting_date", "Fecha descongelación", current.defrosting_date],
-                  ["best_before_date", "Consumir antes de", current.best_before_date],
-                  ["responsible", "Responsable", current.responsible],
-                ].map(([name, label, value]) => (
-                  <label key={name} className="grid gap-2 text-sm font-semibold text-stone-200">{label}
-                    <input name={name} defaultValue={value} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950" />
-                  </label>
-                ))}
-                <SupplierSelector suppliers={suppliers} current={current.supplier} />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="grid gap-2 text-sm font-semibold text-stone-200">Formato
-                    <select name="print_format" defaultValue={current.print_format} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
-                      <option value="a4">A4</option>
-                      <option value="termica">Térmica</option>
-                    </select>
-                  </label>
-                  <label className="grid gap-2 text-sm font-semibold text-stone-200">Copias
-                    <input name="copies" type="number" min="1" max="48" defaultValue={copies} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950" />
-                  </label>
-                </div>
                 <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Guardar etiqueta</button>
+              </div>
+            </form>
+
+            <form className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+              <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Seleccionar lote</h2>
+              <div className="mt-5 grid gap-4">
+                <select name="source" defaultValue={params.source || ""} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
+                  <option value="">Lote interno o lote proveedor</option>
+                  {sources.map((source) => (
+                    <option key={source.key} value={source.key}>
+                      {source.kind === "internal" ? "Interno" : "Proveedor"} · {source.batch} · {source.product} · {source.supplier || "proveedor registrado"}
+                    </option>
+                  ))}
+                </select>
+                <button className="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Cargar lote</button>
               </div>
             </form>
 
@@ -230,7 +224,7 @@ export default async function EtiquetasPage({
                     defrosting_date: current.defrosting_date,
                     expiry_date: current.best_before_date,
                     responsible: current.responsible,
-                    copies: 1,
+                    copies,
                   }}
                 />
                 <PrintButton />

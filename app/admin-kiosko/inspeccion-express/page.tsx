@@ -119,7 +119,7 @@ export default async function InspeccionExpressPage({ searchParams }: { searchPa
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
-      <AdminHeader title="Inspección express" description="Resumen operativo APPCC para inspección sanitaria." />
+      <AdminHeader title="Inspección express" description="Resumen operativo APPCC para inspección sanitaria." inspectorMode />
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12">
         <div className="grid gap-6">
           <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">

@@ -407,15 +407,29 @@ export async function saveAiReceptionAction(formData: FormData) {
   ["/admin-kiosko/ia", "/admin-kiosko/recepcion-mercancia", "/admin-kiosko/registros", "/admin-kiosko/cronologia", "/admin-kiosko/inventario", "/admin-kiosko/trazabilidad"].forEach((path) => revalidatePath(path));
   const labelProduct = products.find((product) => product.name && product.batch) || products[0];
   if (labelProduct) {
+    await createLabelRecord({
+      model: "Recepción",
+      product: labelProduct.name,
+      batch: labelProduct.batch,
+      supplier,
+      opening_date: documentDate,
+      best_before_date: labelProduct.expiry,
+      responsible: "F. Javier Bocanegra Sanjuan",
+      print_format: "termica",
+      copies: 1,
+      template: "recepcion",
+      zpl_version: "ZPL II",
+    });
     const labelParams = new URLSearchParams({
-      model: labelProduct.expiry ? "Caducidad" : "Lote",
+      model: "Recepción",
       product: labelProduct.name,
       batch: labelProduct.batch,
       best_before_date: labelProduct.expiry,
       responsible: "F. Javier Bocanegra Sanjuan",
       supplier,
       opening_date: documentDate,
-      copies: "8",
+      print_format: "termica",
+      copies: "1",
     });
     redirect(`/admin-kiosko/etiquetas?${labelParams.toString()}`);
   }
