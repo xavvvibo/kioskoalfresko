@@ -402,6 +402,7 @@ export async function saveAiReceptionAction(formData: FormData) {
       location: product.location,
       entryDate: documentDate,
       documentId: supplierDocument.data.id,
+      uploadedDocumentId,
     });
 
     await createAccountingDocumentItem({
@@ -547,6 +548,7 @@ export async function saveIncidentRecordAction(formData: FormData) {
 export async function saveProductionBatchAction(formData: FormData) {
   await requireAdminSession();
   const material = parseJson<{
+    lot_id?: string;
     product_id?: string;
     product?: string;
     supplier?: string | null;
@@ -567,6 +569,7 @@ export async function saveProductionBatchAction(formData: FormData) {
     production_date: productionDate,
     production_time: text(formData, "production_time") || timeMadrid(),
     responsible: text(formData, "responsible"),
+    source_lot_id: material.lot_id,
     source_product_id: material.product_id,
     source_supplier: material.supplier || "",
     source_product: material.product || "",
@@ -840,6 +843,7 @@ export async function saveInventoryMovementAction(formData: FormData) {
     : "consumo";
   const result = await applyInventoryMovement({
     product_id: text(formData, "product_id"),
+    lot_id: text(formData, "lot_id"),
     movement_type: movementType,
     quantity: requiredNumber(formData, "quantity"),
     unit: text(formData, "unit"),

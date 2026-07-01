@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getExpiryBuckets, getInventoryMovements, getInventoryProductById, getInventoryProducts } from "@/lib/admin-kiosko/database";
+import { getExpiryBuckets, getInventoryLotMovements, getInventoryLots, getInventoryMovements, getInventoryProductById, getInventoryProducts } from "@/lib/admin-kiosko/database";
 import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
 import { ZebraPrintButton } from "../_components/ZebraPrintButton";
@@ -40,16 +40,27 @@ export default async function InventarioPage({
 }) {
   await requireAdminSession();
   const params = await searchParams;
-  const [productsResult, movementsResult, selectedResult, expiryResult] = await Promise.all([
+  const [productsResult, movementsResult, selectedResult, expiryResult, lotsResult, lotMovementsResult] = await Promise.all([
     getInventoryProducts({ q: params?.q, status: params?.status, stock: params?.stock, expiry: params?.expiry }),
     getInventoryMovements(params?.product),
     params?.product ? getInventoryProductById(params.product) : Promise.resolve({ ok: true as const, data: null }),
     getExpiryBuckets(),
+    getInventoryLots({ q: params?.q, activeOnly: false }),
+    getInventoryLotMovements(),
   ]);
   const products = productsResult.ok ? productsResult.data : [];
   const movements = movementsResult.ok ? movementsResult.data : [];
   const selected = selectedResult.ok ? selectedResult.data : null;
   const expiry = expiryResult.ok ? expiryResult.data : { expired: [], seven: [], fifteen: [], thirty: [] };
+  const lots = lotsResult.ok ? lotsResult.data : [];
+  const lotMovements = lotMovementsResult.ok ? lotMovementsResult.data : [];
+  const lotsByProduct = new Map(lots.map((lot) => [lot.product_id, [] as typeof lots]));
+  lots.forEach((lot) => {
+    if (!lot.product_id) return;
+    const rows = lotsByProduct.get(lot.product_id) || [];
+    rows.push(lot);
+    lotsByProduct.set(lot.product_id, rows);
+  });
   const stockLow = products.filter((product) => product.active && Number(product.current_stock || 0) <= Number(product.minimum_stock || 0)).length;
   const withoutMovements = products.filter((product) => product.active && !product.last_entry_date && !product.last_exit_date).length;
 
@@ -168,6 +179,19 @@ export default async function InventarioPage({
                       {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
                     </select>
                   </label>
+                  {selected ? (
+                    <label className="grid gap-2 text-sm font-semibold text-stone-200">
+                      Lote real
+                      <select name="lot_id" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
+                        <option value="">FEFO automático</option>
+                        {(lotsByProduct.get(selected.id) || []).filter((lot) => lot.status !== "agotado").map((lot) => (
+                          <option key={lot.id} value={lot.id}>
+                            {lot.batch_number || "sin lote"} · {lot.current_quantity ?? 0} {lot.unit || selected.unit || "ud"} · caduca {lot.expiry_date || "sin fecha"}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
                   <select name="movement_type" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
                     <option value="entrada">Entrada</option>
                     <option value="consumo">Consumo</option>
@@ -271,9 +295,56 @@ export default async function InventarioPage({
                 </div>
               </section>
 
+              <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+                <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Lotes activos y FEFO</h2>
+                <div className="mt-5 grid gap-3">
+                  {products.map((product) => {
+                    const productLots = (lotsByProduct.get(product.id) || [])
+                      .filter((lot) => lot.status !== "agotado")
+                      .sort((a, b) => {
+                        if (!a.expiry_date && !b.expiry_date) return 0;
+                        if (!a.expiry_date) return 1;
+                        if (!b.expiry_date) return -1;
+                        return a.expiry_date.localeCompare(b.expiry_date);
+                      });
+                    if (!productLots.length) return null;
+                    return (
+                      <details key={product.id} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
+                        <summary className="cursor-pointer text-sm font-black uppercase tracking-[0.12em] text-white">
+                          {product.name} · {productLots.length} lotes · FEFO {productLots[0]?.batch_number || "sin lote"}
+                        </summary>
+                        <div className="mt-4 grid gap-2">
+                          {productLots.map((lot, index) => (
+                            <article key={lot.id} className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3 text-sm text-stone-200">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="font-black text-white">{index === 0 ? "FEFO · " : ""}Lote {lot.batch_number || "sin lote"}</p>
+                                <a href={`/admin-kiosko/trazabilidad?q=${encodeURIComponent(lot.batch_number || product.name)}`} className="rounded-full border border-[#d94b2b] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#f2c6bb]">Trazar</a>
+                              </div>
+                              <p className="mt-2">{lot.current_quantity ?? 0} {lot.unit || product.unit || "ud"} · caduca {lot.expiry_date || "sin fecha"} · {lot.location || "ubicación registrada"}</p>
+                              <p className="mt-1 text-stone-400">Proveedor {lot.supplier_name || product.usual_supplier || "registrado"} · recibido {lot.received_date || "fecha no consignada"}</p>
+                            </article>
+                          ))}
+                        </div>
+                      </details>
+                    );
+                  })}
+                  {!lots.length ? <p className="text-sm text-stone-400">Ejecuta el SQL de lotes para activar el inventario FEFO por lote real.</p> : null}
+                </div>
+              </section>
+
               <section id="movimientos" className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
                 <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Histórico de movimientos</h2>
                 <div className="mt-5 grid gap-3">
+                  {lotMovements.slice(0, 80).map((movement) => (
+                    <article key={`lot-${movement.id}`} className="rounded-[1.2rem] border border-emerald-300/20 bg-emerald-100/10 p-4 text-sm text-stone-200">
+                      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                        <p className="font-black text-white">Lote real · {movement.movement_type}</p>
+                        <p className="text-xs text-stone-400">{movement.movement_date || ""} {movement.movement_time || ""}</p>
+                      </div>
+                      <p className="mt-2">{movement.quantity ?? 0} {movement.unit || "ud"} · {movement.reason || "Movimiento por lote"}</p>
+                      <p className="mt-1 text-stone-300">{movement.observations || "Movimiento trazable registrado"}</p>
+                    </article>
+                  ))}
                   {movements.map((movement) => (
                     <article key={movement.id} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
                       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">

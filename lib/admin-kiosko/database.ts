@@ -459,6 +459,49 @@ export type InventoryProduct = {
   active: boolean;
 };
 
+export type InventoryLot = {
+  id: string;
+  created_at: string;
+  updated_at: string | null;
+  product_id: string | null;
+  product_name: string | null;
+  supplier_id: string | null;
+  supplier_name: string | null;
+  supplier_document_id: string | null;
+  uploaded_document_id: string | null;
+  batch_number: string | null;
+  expiry_date: string | null;
+  received_date: string | null;
+  initial_quantity: number | null;
+  current_quantity: number | null;
+  unit: string | null;
+  location: string | null;
+  purchase_price: number | null;
+  average_unit_cost: number | null;
+  status: string | null;
+  observations: string | null;
+  source: string | null;
+};
+
+export type InventoryLotMovement = {
+  id: string;
+  created_at: string;
+  lot_id: string | null;
+  product_id: string | null;
+  movement_type: string | null;
+  movement_date: string | null;
+  movement_time: string | null;
+  quantity: number | null;
+  unit: string | null;
+  from_location: string | null;
+  to_location: string | null;
+  reason: string | null;
+  responsible: string | null;
+  related_record_type: string | null;
+  related_record_id: string | null;
+  observations: string | null;
+};
+
 export type InventoryProductInput = {
   id?: string;
   name: string;
@@ -479,6 +522,7 @@ export type InventoryProductInput = {
 
 export type InventoryMovementInput = {
   product_id: string;
+  lot_id?: string;
   movement_type: "entrada" | "consumo" | "merma" | "regularizacion" | "baja" | "edicion";
   quantity?: number;
   unit?: string;
@@ -521,6 +565,7 @@ export type InventoryReceptionInput = {
   location?: string;
   entryDate: string;
   documentId?: string;
+  uploadedDocumentId?: string;
 };
 
 export type TraceabilityRow = {
@@ -596,6 +641,7 @@ export type ProductionBatchInput = {
   production_date: string;
   production_time?: string;
   responsible?: string;
+  source_lot_id?: string;
   source_product_id?: string;
   source_supplier?: string;
   source_product?: string;
@@ -718,6 +764,7 @@ export type InternalRecipe = {
 
 export type ProductionMaterialOption = {
   key: string;
+  lot_id?: string | null;
   product_id: string;
   product: string;
   supplier: string | null;
@@ -782,6 +829,10 @@ export type ExecutiveDashboardMetrics = {
   ocrProcessed: number;
   activeProducts: number;
   activeLots: number;
+  expiredLots: number;
+  expiringLots: number;
+  exhaustedLots: number;
+  lotsWithoutExpiry: number;
   expiringProducts: number;
   openIncidents: number;
   outOfRangeEquipment: number;
@@ -1778,6 +1829,8 @@ export async function getUploadedDocumentSignedUrl(id: string, expiresIn = 600):
 }
 
 const inventorySelect = "id,created_at,updated_at,name,category,usual_supplier,unit,current_stock,minimum_stock,recommended_stock,average_purchase_price,last_purchase_price,location,current_batch,expiry_date,last_entry_date,last_exit_date,observations,active";
+const inventoryLotSelect = "id,created_at,updated_at,product_id,product_name,supplier_id,supplier_name,supplier_document_id,uploaded_document_id,batch_number,expiry_date,received_date,initial_quantity,current_quantity,unit,location,purchase_price,average_unit_cost,status,observations,source";
+const inventoryLotMovementSelect = "id,created_at,lot_id,product_id,movement_type,movement_date,movement_time,quantity,unit,from_location,to_location,reason,responsible,related_record_type,related_record_id,observations";
 
 export async function getInventoryProducts(filters?: { q?: string; status?: string; stock?: string; expiry?: string }): Promise<DbResult<InventoryProduct[]>> {
   const result = await getRows<InventoryProduct>(
@@ -1829,6 +1882,263 @@ async function findInventoryProductByName(name: string) {
     "admin_inventory_products",
     `?select=${inventorySelect}&name=ilike.${encodeURIComponent(name.trim())}&limit=1`,
   );
+}
+
+export async function getInventoryLots(filters?: { productId?: string; q?: string; activeOnly?: boolean; limit?: number }): Promise<DbResult<InventoryLot[]>> {
+  const params = [
+    `select=${inventoryLotSelect}`,
+    "order=expiry_date.asc.nullslast,received_date.asc.nullslast,created_at.asc",
+    `limit=${filters?.limit || 1000}`,
+  ];
+  if (filters?.productId) params.push(`product_id=eq.${encodeURIComponent(filters.productId)}`);
+  if (filters?.activeOnly !== false) {
+    params.push("status=eq.activo");
+    params.push("current_quantity=gt.0");
+  }
+
+  const result = await getRows<InventoryLot>("admin_inventory_lots", `?${params.join("&")}`);
+  if (!result.ok) return { ok: true, data: [] };
+
+  const q = filters?.q?.trim().toLowerCase();
+  const rows = q
+    ? result.data.filter((lot) => [lot.product_name, lot.supplier_name, lot.batch_number, lot.location]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(q))
+    : result.data;
+
+  return { ok: true, data: rows };
+}
+
+export async function getInventoryLotMovements(lotId?: string): Promise<DbResult<InventoryLotMovement[]>> {
+  const params = [
+    `select=${inventoryLotMovementSelect}`,
+    "order=movement_date.desc,created_at.desc",
+    "limit=300",
+  ];
+  if (lotId) params.push(`lot_id=eq.${encodeURIComponent(lotId)}`);
+
+  const result = await getRows<InventoryLotMovement>("admin_inventory_lot_movements", `?${params.join("&")}`);
+  if (!result.ok) return { ok: true, data: [] };
+  return result;
+}
+
+async function refreshInventoryProductSummary(productId: string) {
+  const lots = await getInventoryLots({ productId, activeOnly: true });
+  if (!lots.ok) return lots;
+
+  const total = lots.data.reduce((sum, lot) => sum + Number(lot.current_quantity || 0), 0);
+  const fefo = lots.data[0];
+  return patchRecord("admin_inventory_products", productId, {
+    updated_at: new Date().toISOString(),
+    current_stock: total,
+    current_batch: fefo?.batch_number || null,
+    expiry_date: fefo?.expiry_date || null,
+    location: fefo?.location || undefined,
+  });
+}
+
+async function insertInventoryLotMovement(data: {
+  lot_id?: string;
+  product_id?: string;
+  movement_type: string;
+  movement_date?: string;
+  movement_time?: string;
+  quantity?: number;
+  unit?: string;
+  from_location?: string;
+  to_location?: string;
+  reason?: string;
+  responsible?: string;
+  related_record_type?: string;
+  related_record_id?: string;
+  observations?: string;
+}) {
+  if (!data.lot_id || !data.product_id) return { ok: true as const, data: null };
+
+  const result = await insertRecord("admin_inventory_lot_movements", {
+    lot_id: data.lot_id,
+    product_id: data.product_id,
+    movement_type: data.movement_type,
+    movement_date: cleanText(data.movement_date) || getMadridDate(),
+    movement_time: cleanText(data.movement_time),
+    quantity: normalizeNumber(data.quantity),
+    unit: cleanText(data.unit) || "ud",
+    from_location: cleanText(data.from_location),
+    to_location: cleanText(data.to_location),
+    reason: cleanText(data.reason),
+    responsible: cleanText(data.responsible) || "F. Javier Bocanegra Sanjuan",
+    related_record_type: cleanText(data.related_record_type),
+    related_record_id: cleanText(data.related_record_id),
+    observations: cleanText(data.observations),
+  });
+
+  if (!result.ok) return { ok: true as const, data: null };
+  return result;
+}
+
+async function upsertInventoryLotFromReception(data: {
+  product_id?: string;
+  product_name?: string;
+  supplier_name?: string;
+  supplier_document_id?: string;
+  uploaded_document_id?: string;
+  batch_number?: string;
+  expiry_date?: string;
+  received_date?: string;
+  quantity?: number;
+  unit?: string;
+  location?: string;
+  purchase_price?: number;
+  related_record_id?: string;
+}) {
+  if (!data.product_id) return { ok: true as const, data: null };
+
+  const batch = cleanText(data.batch_number) || "sin-lote";
+  const expiry = cleanText(data.expiry_date);
+  const existing = await getRows<InventoryLot>(
+    "admin_inventory_lots",
+    `?select=${inventoryLotSelect}&product_id=eq.${encodeURIComponent(data.product_id)}&batch_number=eq.${encodeURIComponent(batch)}&limit=1`,
+  );
+  if (!existing.ok) return { ok: true as const, data: null };
+
+  const quantity = normalizeNumber(data.quantity);
+  const current = existing.data[0];
+  let lotId = current?.id;
+
+  if (current) {
+    const updated = await patchRecord("admin_inventory_lots", current.id, {
+      updated_at: new Date().toISOString(),
+      product_name: cleanText(data.product_name) || current.product_name,
+      supplier_name: cleanText(data.supplier_name) || current.supplier_name,
+      supplier_document_id: cleanText(data.supplier_document_id) || current.supplier_document_id,
+      uploaded_document_id: cleanText(data.uploaded_document_id) || current.uploaded_document_id,
+      expiry_date: expiry || current.expiry_date,
+      received_date: cleanText(data.received_date) || current.received_date,
+      initial_quantity: Number(current.initial_quantity || 0) + quantity,
+      current_quantity: Number(current.current_quantity || 0) + quantity,
+      unit: cleanText(data.unit) || current.unit || "ud",
+      location: cleanText(data.location) || current.location,
+      purchase_price: data.purchase_price ?? current.purchase_price,
+      average_unit_cost: data.purchase_price ? Number(((Number(current.average_unit_cost || data.purchase_price) + data.purchase_price) / 2).toFixed(2)) : current.average_unit_cost,
+      status: "activo",
+    });
+    if (!updated.ok) return { ok: true as const, data: null };
+  } else {
+    const inserted = await insertRecordReturning<{ id: string }>("admin_inventory_lots", {
+      product_id: data.product_id,
+      product_name: cleanText(data.product_name),
+      supplier_name: cleanText(data.supplier_name),
+      supplier_document_id: cleanText(data.supplier_document_id),
+      uploaded_document_id: cleanText(data.uploaded_document_id),
+      batch_number: batch,
+      expiry_date: expiry,
+      received_date: cleanText(data.received_date) || getMadridDate(),
+      initial_quantity: quantity,
+      current_quantity: quantity,
+      unit: cleanText(data.unit) || "ud",
+      location: cleanText(data.location) || "Almacén",
+      purchase_price: data.purchase_price,
+      average_unit_cost: data.purchase_price,
+      status: quantity > 0 ? "activo" : "agotado",
+      observations: "Lote creado desde recepción OCR/APPCC.",
+      source: "admin-kiosko-ocr",
+    }, "id");
+    if (!inserted.ok) return { ok: true as const, data: null };
+    lotId = inserted.data[0]?.id;
+  }
+
+  await insertInventoryLotMovement({
+    lot_id: lotId,
+    product_id: data.product_id,
+    movement_type: "entrada",
+    movement_date: cleanText(data.received_date) || getMadridDate(),
+    quantity,
+    unit: cleanText(data.unit) || "ud",
+    to_location: cleanText(data.location) || "Almacén",
+    reason: "Entrada recepción OCR/APPCC",
+    related_record_type: "admin_supplier_documents",
+    related_record_id: data.related_record_id,
+    observations: "Entrada registrada contra lote real de inventario.",
+  });
+
+  await refreshInventoryProductSummary(data.product_id);
+  return { ok: true as const, data: lotId ? { id: lotId } : null };
+}
+
+async function resolveInventoryLotForMovement(data: InventoryMovementInput): Promise<InventoryLot | null> {
+  if (data.lot_id) {
+    const byId = await getRows<InventoryLot>(
+      "admin_inventory_lots",
+      `?select=${inventoryLotSelect}&id=eq.${encodeURIComponent(data.lot_id)}&limit=1`,
+    );
+    if (byId.ok && byId.data[0]) return byId.data[0];
+  }
+
+  const lots = await getInventoryLots({ productId: data.product_id, activeOnly: true });
+  if (!lots.ok || !lots.data.length) return null;
+
+  if (data.batch_number) {
+    const normalizedBatch = data.batch_number.trim().toLowerCase();
+    const matching = lots.data.find((lot) => (lot.batch_number || "").trim().toLowerCase() === normalizedBatch);
+    if (matching) return matching;
+  }
+
+  return lots.data[0] || null;
+}
+
+async function applyInventoryLotMovement(data: InventoryMovementInput & { product_name?: string }) {
+  if (data.movement_type === "edicion") return { ok: true as const, data: null };
+
+  if (data.movement_type === "entrada") {
+    return upsertInventoryLotFromReception({
+      product_id: data.product_id,
+      product_name: data.product_name,
+      supplier_name: data.supplier,
+      batch_number: data.batch_number,
+      expiry_date: data.expiry_date,
+      received_date: getMadridDate(),
+      quantity: normalizeNumber(data.quantity),
+      unit: cleanText(data.unit) || "ud",
+      purchase_price: data.purchase_price,
+      location: undefined,
+    });
+  }
+
+  const lot = await resolveInventoryLotForMovement(data);
+  if (!lot) return { ok: true as const, data: null };
+
+  const quantity = normalizeNumber(data.quantity);
+  const current = Number(lot.current_quantity || 0);
+  const next = data.movement_type === "regularizacion"
+    ? Math.max(0, quantity)
+    : Math.max(0, current - Math.abs(quantity));
+  const status = next <= 0 ? "agotado" : lot.expiry_date && lot.expiry_date < getMadridDate() ? "caducado" : "activo";
+
+  const patched = await patchRecord("admin_inventory_lots", lot.id, {
+    updated_at: new Date().toISOString(),
+    current_quantity: next,
+    status,
+    observations: cleanText(data.observations) ? [lot.observations, data.observations].filter(Boolean).join("\n") : lot.observations,
+  });
+  if (!patched.ok) return { ok: true as const, data: null };
+
+  await insertInventoryLotMovement({
+    lot_id: lot.id,
+    product_id: data.product_id,
+    movement_type: data.movement_type,
+    movement_date: getMadridDate(),
+    quantity: data.movement_type === "regularizacion" ? next : quantity,
+    unit: cleanText(data.unit) || lot.unit || "ud",
+    from_location: lot.location || undefined,
+    reason: cleanText(data.observations) || data.movement_type,
+    related_record_type: "admin_inventory_movements",
+    observations: cleanText(data.observations),
+  });
+
+  await refreshInventoryProductSummary(data.product_id);
+  return { ok: true as const, data: { id: lot.id } };
 }
 
 export async function getInventoryProductById(id: string): Promise<DbResult<InventoryProduct | null>> {
@@ -1966,7 +2276,7 @@ export async function applyInventoryMovement(data: InventoryMovementInput) {
 
   if (!movement.ok) return movement;
 
-  return patchRecord("admin_inventory_products", data.product_id, {
+  const patched = await patchRecord("admin_inventory_products", data.product_id, {
     updated_at: new Date().toISOString(),
     current_stock: nextStock,
     usual_supplier: cleanText(data.supplier) || product.data.usual_supplier,
@@ -1978,6 +2288,20 @@ export async function applyInventoryMovement(data: InventoryMovementInput) {
     last_exit_date: ["consumo", "merma", "baja"].includes(data.movement_type) ? today : product.data.last_exit_date,
     active: data.movement_type === "baja" ? false : product.data.active,
   });
+  if (!patched.ok) return patched;
+
+  await applyInventoryLotMovement({
+    ...data,
+    product_name: product.data.name,
+    quantity,
+    unit: data.unit || product.data.unit || "ud",
+    purchase_price: data.purchase_price || product.data.last_purchase_price || undefined,
+    supplier: data.supplier || product.data.usual_supplier || undefined,
+    batch_number: data.batch_number || product.data.current_batch || undefined,
+    expiry_date: data.expiry_date || product.data.expiry_date || undefined,
+  });
+
+  return patched;
 }
 
 export async function getInventoryMovements(productId?: string): Promise<DbResult<InventoryMovement[]>> {
@@ -1993,6 +2317,33 @@ export async function getInventoryMovements(productId?: string): Promise<DbResul
 }
 
 export async function getProductionMaterialOptions(): Promise<DbResult<ProductionMaterialOption[]>> {
+  const lotsResult = await getInventoryLots({ activeOnly: true, limit: 1000 });
+  if (lotsResult.ok && lotsResult.data.length) {
+    const firstByProduct = new Set<string>();
+    return {
+      ok: true,
+      data: lotsResult.data.map((lot) => {
+        const productKey = lot.product_id || lot.product_name || lot.id;
+        const fefo = !firstByProduct.has(productKey);
+        firstByProduct.add(productKey);
+        return {
+          key: lot.id,
+          lot_id: lot.id,
+          product_id: lot.product_id || "",
+          product: lot.product_name || "Producto",
+          supplier: lot.supplier_name,
+          batch: lot.batch_number,
+          stock: lot.current_quantity,
+          unit: lot.unit,
+          expiry_date: lot.expiry_date,
+          location: lot.location,
+          source_document_id: lot.supplier_document_id,
+          fefo,
+        };
+      }).filter((option) => option.product_id),
+    };
+  }
+
   const [productsResult, movementsResult] = await Promise.all([
     getInventoryProducts({ status: "activos" }),
     getRows<InventoryMovement>(
@@ -2011,6 +2362,7 @@ export async function getProductionMaterialOptions(): Promise<DbResult<Productio
     const key = `${product.id}:${product.current_batch || "stock"}:${product.expiry_date || ""}`;
     options.set(key, {
       key,
+      lot_id: null,
       product_id: product.id,
       product: product.name,
       supplier: product.usual_supplier,
@@ -2030,6 +2382,7 @@ export async function getProductionMaterialOptions(): Promise<DbResult<Productio
     const key = `${product.id}:${movement.batch_number || product.current_batch || "stock"}:${movement.expiry_date || product.expiry_date || ""}`;
     options.set(key, {
       key,
+      lot_id: null,
       product_id: product.id,
       product: product.name,
       supplier: movement.supplier || product.usual_supplier,
@@ -2124,6 +2477,22 @@ export async function upsertInventoryFromAiReception(data: InventoryReceptionInp
     source_document_id: cleanText(data.documentId),
     observations: "Entrada registrada desde recepción IA.",
     source: "admin-kiosko-ai",
+  });
+
+  await upsertInventoryLotFromReception({
+    product_id: productId,
+    product_name: data.name,
+    supplier_name: data.supplier,
+    supplier_document_id: data.documentId,
+    uploaded_document_id: data.uploadedDocumentId,
+    batch_number: data.batch,
+    expiry_date: data.expiry,
+    received_date: data.entryDate,
+    quantity,
+    unit: "ud",
+    location: data.location,
+    purchase_price: data.purchasePrice,
+    related_record_id: data.documentId,
   });
 
   return { ok: true as const, data: productId ? { id: productId } : null };
@@ -2377,6 +2746,15 @@ async function upsertProductionOutputInventory(data: ProductionBatchInput, batch
 }
 
 async function consumeProductionInputInventory(data: ProductionBatchInput, batchCode: string) {
+  if (data.source_lot_id) {
+    const lots = await getInventoryLots({ productId: data.source_product_id, activeOnly: true });
+    const selectedLot = lots.ok ? lots.data.find((lot) => lot.id === data.source_lot_id) : null;
+    const requested = normalizeNumber(data.input_quantity);
+    if (selectedLot && Number(selectedLot.current_quantity || 0) < requested) {
+      return `Stock insuficiente en lote ${selectedLot.batch_number || "seleccionado"}: disponible ${selectedLot.current_quantity || 0} ${selectedLot.unit || "ud"}.`;
+    }
+  }
+
   const source = data.source_product_id
     ? await getInventoryProductById(data.source_product_id)
     : await findInventoryProductByProductionName(data.source_product);
@@ -2389,6 +2767,7 @@ async function consumeProductionInputInventory(data: ProductionBatchInput, batch
 
   const movement = await applyInventoryMovement({
     product_id: product.id,
+    lot_id: data.source_lot_id,
     movement_type: "consumo",
     quantity: normalizeNumber(data.input_quantity),
     unit: cleanText(data.input_unit) || product.unit || "ud",
@@ -2413,6 +2792,17 @@ export async function createProductionBatch(data: ProductionBatchInput): Promise
   const sourceBatch = cleanText(data.source_batch_number) || selectedSource?.current_batch || undefined;
   const sourceUnit = cleanText(data.input_unit) || selectedSource?.unit || "ud";
   const sourceDocumentId = cleanText(data.source_document_id);
+  if (data.source_lot_id) {
+    const sourceLots = await getInventoryLots({ productId: data.source_product_id, activeOnly: true });
+    const sourceLot = sourceLots.ok ? sourceLots.data.find((lot) => lot.id === data.source_lot_id) : null;
+    const requested = normalizeNumber(data.input_quantity);
+    if (!sourceLot) {
+      return { ok: false, error: "Lote de materia prima no disponible. Revisa inventario antes de producir." };
+    }
+    if (Number(sourceLot.current_quantity || 0) < requested) {
+      return { ok: false, error: `Stock insuficiente en lote ${sourceLot.batch_number || "seleccionado"}: disponible ${sourceLot.current_quantity || 0} ${sourceLot.unit || "ud"}.` };
+    }
+  }
   const resolvedData = {
     ...data,
     source_supplier: sourceSupplier,
@@ -3805,16 +4195,23 @@ export async function getExecutiveDashboardMetrics(): Promise<DbResult<Executive
   const weekStart = startOfWeek(today);
   const monthStart = firstDayOfMonth(today);
   const soon = addDays(today, 7);
-  const [inventory, alerts, latestInspection, productionMetrics] = await Promise.all([
+  const [inventory, alerts, latestInspection, productionMetrics, inventoryLots] = await Promise.all([
     getInventoryProducts(),
     getOperationalAlerts(),
     getRecentInspectionRecords(),
     getProductionMetrics(),
+    getInventoryLots({ activeOnly: false }),
   ]);
 
   const documentStats = getDocumentStats();
   const activeProducts = inventory.ok ? inventory.data.filter((product) => product.active).length : 0;
   const activeLots = inventory.ok ? new Set(inventory.data.filter((product) => product.active && product.current_batch).map((product) => product.current_batch)).size : 0;
+  const realLots = inventoryLots.ok ? inventoryLots.data : [];
+  const activeRealLots = realLots.filter((lot) => lot.status === "activo" && Number(lot.current_quantity || 0) > 0);
+  const expiredLots = activeRealLots.filter((lot) => Boolean(lot.expiry_date && lot.expiry_date < today)).length;
+  const expiringLots = activeRealLots.filter((lot) => Boolean(lot.expiry_date && lot.expiry_date >= today && lot.expiry_date <= soon)).length;
+  const exhaustedLots = realLots.filter((lot) => lot.status === "agotado" || Number(lot.current_quantity || 0) <= 0).length;
+  const lotsWithoutExpiry = activeRealLots.filter((lot) => !lot.expiry_date).length;
   const expiringProducts = inventory.ok ? inventory.data.filter((product) => product.active && product.expiry_date && product.expiry_date <= soon).length : 0;
   const lowStockProducts = inventory.ok ? inventory.data.filter((product) => product.active && Number(product.current_stock || 0) <= Number(product.minimum_stock || 0)).length : 0;
   const criticalStockProducts = inventory.ok ? inventory.data.filter((product) => product.active && Number(product.current_stock || 0) <= 0).length : 0;
@@ -3836,7 +4233,11 @@ export async function getExecutiveDashboardMetrics(): Promise<DbResult<Executive
       receptionsThisMonth: await countRows("admin_goods_reception_records", `&record_date=gte.${monthStart}`),
       ocrProcessed: await countRows("admin_ai_processing_logs", "&status=not.eq.error"),
       activeProducts,
-      activeLots,
+      activeLots: activeRealLots.length || activeLots,
+      expiredLots,
+      expiringLots,
+      exhaustedLots,
+      lotsWithoutExpiry,
       expiringProducts,
       openIncidents,
       outOfRangeEquipment,

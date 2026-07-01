@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getProductionTraceabilityRows, getTraceabilityRows } from "@/lib/admin-kiosko/database";
+import { getInventoryLots, getInventoryLotMovements, getProductionTraceabilityRows, getTraceabilityRows } from "@/lib/admin-kiosko/database";
 import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
 import { ZebraPrintButton } from "../_components/ZebraPrintButton";
@@ -17,12 +17,16 @@ export default async function TrazabilidadPage({
 }) {
   await requireAdminSession();
   const params = await searchParams;
-  const [result, productionResult] = await Promise.all([
+  const [result, productionResult, lotsResult, lotMovementsResult] = await Promise.all([
     getTraceabilityRows({ q: params?.q, date: params?.date }),
     getProductionTraceabilityRows({ q: params?.q }),
+    getInventoryLots({ q: params?.q, activeOnly: false }),
+    getInventoryLotMovements(),
   ]);
   const rows = result.ok ? result.data : [];
   const productionRows = productionResult.ok ? productionResult.data : [];
+  const lotRows = lotsResult.ok ? lotsResult.data : [];
+  const lotMovements = lotMovementsResult.ok ? lotMovementsResult.data : [];
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
@@ -38,6 +42,51 @@ export default async function TrazabilidadPage({
           </section>
 
           <section className="grid gap-4">
+            {lotRows.map((lot) => {
+              const movements = lotMovements.filter((movement) => movement.lot_id === lot.id);
+              return (
+                <article key={lot.id} className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Lote real de inventario</p>
+                      <h2 className="mt-2 text-3xl font-black uppercase tracking-[-0.04em] text-[#fff8ef]">{lot.batch_number || "sin lote"}</h2>
+                      <p className="mt-2 text-sm leading-6 text-stone-300">{lot.product_name} · {lot.current_quantity ?? 0} {lot.unit || "ud"} · {lot.status || "activo"}</p>
+                    </div>
+                    <a href={`/admin-kiosko/inventario?product=${lot.product_id || ""}`} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Abrir inventario</a>
+                  </div>
+                  <div className="mt-5 grid gap-3 md:grid-cols-6">
+                    {[
+                      ["Proveedor", lot.supplier_name || "Proveedor registrado"],
+                      ["Producto", lot.product_name || "Producto"],
+                      ["Recepción", lot.received_date || "Fecha no consignada"],
+                      ["Caducidad", lot.expiry_date || "Sin caducidad consignada"],
+                      ["Ubicación", lot.location || "Ubicación registrada"],
+                      ["Stock", `${lot.current_quantity ?? 0} ${lot.unit || "ud"}`],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-2xl border border-white/10 bg-[#fffaf4] p-4 text-stone-950">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#d94b2b]">{label}</p>
+                        <p className="mt-2 text-sm font-black">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <section className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/6 p-4">
+                    <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Cadena trazable</h3>
+                    <div className="mt-3 grid gap-2 text-sm text-stone-200">
+                      <p className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2">Proveedor → {lot.supplier_name || "registrado"}</p>
+                      <p className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2">Documento OCR → {lot.supplier_document_id || lot.uploaded_document_id || "pendiente de vínculo"}</p>
+                      <p className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2">Recepción → {lot.received_date || "fecha registrada en documento"}</p>
+                      <p className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2">Lote inventario → {lot.batch_number || "sin lote"}</p>
+                      {movements.map((movement) => (
+                        <p key={movement.id} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2">
+                          {movement.movement_date} · {movement.movement_type} · {movement.quantity ?? 0} {movement.unit || lot.unit || "ud"} · {movement.reason || "movimiento"}
+                        </p>
+                      ))}
+                    </div>
+                  </section>
+                </article>
+              );
+            })}
+
             {productionRows.map((batch) => {
               const movements = batch.movements || [];
               const byType = (type: string) => movements.filter((movement) => movement.movement_type === type);
@@ -240,7 +289,7 @@ export default async function TrazabilidadPage({
                 </section>
               </article>
             ))}
-            {!rows.length && !productionRows.length ? <p className="rounded-[1.5rem] border border-white/10 bg-[#151515] p-5 text-sm text-stone-300">Trazabilidad preparada para el filtro indicado. Registra recepciones, producciones o lotes para completar la ficha.</p> : null}
+            {!rows.length && !productionRows.length && !lotRows.length ? <p className="rounded-[1.5rem] border border-white/10 bg-[#151515] p-5 text-sm text-stone-300">Trazabilidad preparada para el filtro indicado. Registra recepciones, producciones o lotes para completar la ficha.</p> : null}
           </section>
         </div>
       </section>

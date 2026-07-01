@@ -71,6 +71,7 @@ function MaterialSelector({ materials }: { materials: ProductionMaterialOption[]
             <option
               key={item.key}
               value={JSON.stringify({
+                lot_id: item.lot_id,
                 product_id: item.product_id,
                 product: item.product,
                 supplier: item.supplier,

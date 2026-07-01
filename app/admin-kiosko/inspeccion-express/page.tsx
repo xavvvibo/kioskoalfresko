@@ -167,6 +167,11 @@ export default async function InspeccionExpressPage({ searchParams }: { searchPa
               <Row label="Incidencias" value={kpis?.openIncidents ?? dashboard?.openIncidents ?? 0} />
               <Row label="Stock crítico" value={kpis?.criticalStockProducts ?? 0} />
               <Row label="Caducidades" value={kpis?.expiringProducts ?? 0} />
+              <Row label="Lotes activos" value={kpis?.activeLots ?? 0} />
+              <Row label="Lotes caducados" value={kpis?.expiredLots ?? 0} />
+              <Row label="Lotes próximos" value={kpis?.expiringLots ?? 0} />
+              <Row label="Lotes agotados" value={kpis?.exhaustedLots ?? 0} />
+              <Row label="Lotes sin caducidad" value={kpis?.lotsWithoutExpiry ?? 0} />
               <Row label="Lotes internos activos" value={kpis?.activeInternalBatches ?? 0} />
               <Row label="Descongelados abiertos" value={kpis?.openDefrostedBatches ?? 0} />
               <Row label="Próximos a consumir" value={kpis?.productsToConsumeSoon ?? 0} />
