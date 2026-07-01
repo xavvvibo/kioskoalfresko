@@ -1,5 +1,6 @@
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { storeOriginalOcrDocument, updateUploadedDocumentReview } from "@/lib/admin-kiosko/database";
+import { createDomainEvent, emitDomainEventSafe } from "@/lib/admin-kiosko/domain";
 import { isAcceptedDirectImageMimeType, isAcceptedOcrMimeType, isPdfMimeType, runAppccOcr } from "@/lib/ai/ocr";
 import { OcrProcessingError, getOpenAiServerConfig } from "@/lib/ai/openai";
 import type { AiDocumentKind, OcrExtractorKind, OcrProgressEvent, OcrUploadResult } from "@/lib/ai/types";
@@ -88,6 +89,11 @@ function createPdfManualReviewResult(file: File, kind: OcrExtractorKind): OcrUpl
   };
 }
 
+function ocrConfidence(result: OcrUploadResult) {
+  const data = result.result as { confidence?: unknown };
+  return typeof data.confidence === "number" ? data.confidence : undefined;
+}
+
 export async function POST(request: Request) {
   console.info("[OCR REQUEST]");
   await requireAdminSession();
@@ -169,6 +175,20 @@ export async function POST(request: Request) {
             status: originalDocument.data.storage_status,
           });
         }
+        if (originalDocument.data.id) {
+          await emitDomainEventSafe(createDomainEvent("DocumentUploaded", {
+            source: "ocr",
+            trace: { documentId: originalDocument.data.id },
+            payload: {
+              uploadedDocumentId: originalDocument.data.id,
+              filename: file.name,
+              mimeType: file.type,
+              fileSize: file.size,
+              storageBucket: originalDocument.data.storage_bucket,
+              storagePath: originalDocument.data.storage_path,
+            },
+          }));
+        }
 
         let result: OcrUploadResult;
         if (isPdfMimeType(file.type)) {
@@ -199,6 +219,16 @@ export async function POST(request: Request) {
             ocr_json: result,
             review_status: "pendiente_revision",
           });
+          await emitDomainEventSafe(createDomainEvent("DocumentClassified", {
+            source: "ocr",
+            trace: { documentId: originalDocument.data.id },
+            payload: {
+              uploadedDocumentId: originalDocument.data.id,
+              detectedType: result.detectedType,
+              confidence: ocrConfidence(result),
+              model: config.model,
+            },
+          }));
         }
 
         send({ type: "progress", message: "Preparando revisión...", progress: 95 });

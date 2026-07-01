@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { clearAdminSession, createAdminSession, isCorrectAdminPassword, requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { createDomainEvent, emitDomainEventSafe } from "@/lib/admin-kiosko/domain";
 import {
   createChecklistRecord,
   createCleaningRecord,
@@ -172,6 +173,21 @@ function redirectAfterSave(path: string, result: { ok: true } | { ok: false; err
   redirect(`${path}?error=${error}`);
 }
 
+async function redirectAfterSaveWithEvent(
+  path: string,
+  result: { ok: true } | { ok: false; error: string },
+  onSuccess: () => Promise<unknown>,
+): Promise<never> {
+  revalidatePath(path);
+  if (result.ok) {
+    await onSuccess();
+    redirect(`${path}?saved=1`);
+  }
+
+  const error = encodeURIComponent(result.error.slice(0, 240));
+  redirect(`${path}?error=${error}`);
+}
+
 export async function saveTemperatureRecordAction(formData: FormData) {
   await requireAdminSession();
 
@@ -185,7 +201,14 @@ export async function saveTemperatureRecordAction(formData: FormData) {
     responsible: text(formData, "responsible"),
   });
 
-  redirectAfterSave("/admin-kiosko/temperaturas", result);
+  await redirectAfterSaveWithEvent("/admin-kiosko/temperaturas", result, () => emitDomainEventSafe(createDomainEvent("TemperatureRecorded", {
+    source: "appcc",
+    payload: {
+      equipment: text(formData, "equipment"),
+      temperature: Number(text(formData, "temperature").replace(",", ".")),
+      status: text(formData, "status"),
+    },
+  })));
 }
 
 export async function updateEquipmentAlertStatusAction(formData: FormData) {
@@ -217,7 +240,13 @@ export async function saveCleaningRecordAction(formData: FormData) {
     responsible: text(formData, "responsible"),
   });
 
-  redirectAfterSave("/admin-kiosko/limpieza", result);
+  await redirectAfterSaveWithEvent("/admin-kiosko/limpieza", result, () => emitDomainEventSafe(createDomainEvent("CleaningRecorded", {
+    source: "appcc",
+    payload: {
+      area: text(formData, "area"),
+      status: text(formData, "status"),
+    },
+  })));
 }
 
 export async function saveFryerOilRecordAction(formData: FormData) {
@@ -257,7 +286,18 @@ export async function saveGoodsReceptionRecordAction(formData: FormData) {
     responsible: text(formData, "responsible"),
   });
 
-  redirectAfterSave("/admin-kiosko/recepcion-mercancia", result);
+  await redirectAfterSaveWithEvent("/admin-kiosko/recepcion-mercancia", result, () => emitDomainEventSafe(createDomainEvent("GoodsReceived", {
+    source: "appcc",
+    payload: {
+      supplierName: supplier,
+      items: [{
+        productName: text(formData, "product"),
+        batchNumber: text(formData, "batch_number"),
+        quantity: undefined,
+        expiryDate: text(formData, "expiry_date"),
+      }],
+    },
+  })));
 }
 
 export async function saveAiReceptionAction(formData: FormData) {
@@ -336,6 +376,20 @@ export async function saveAiReceptionAction(formData: FormData) {
       products,
     },
   });
+  await emitDomainEventSafe(createDomainEvent("DocumentConfirmed", {
+    source: "ocr",
+    trace: { documentId: uploadedDocumentId, supplierDocumentId: supplierDocument.data?.id },
+    payload: {
+      uploadedDocumentId,
+      confirmedType: text(formData, "document_type") || text(formData, "detected_type") || "other",
+      corrections: {
+        supplier,
+        document_number: text(formData, "document_number"),
+        document_date: documentDate,
+        products,
+      },
+    },
+  }));
 
   const accountingDocument = await createAccountingDocument({
     uploaded_document_id: uploadedDocumentId,
@@ -352,6 +406,19 @@ export async function saveAiReceptionAction(formData: FormData) {
     observations: observations,
   });
   const accountingDocumentId = accountingDocument.ok ? accountingDocument.data?.id : undefined;
+  if (accountingDocument.ok && accountingDocumentId) {
+    await emitDomainEventSafe(createDomainEvent("AccountingDocumentCreated", {
+      source: "accounting",
+      trace: { documentId: uploadedDocumentId, accountingDocumentId },
+      payload: {
+        accountingDocumentId,
+        uploadedDocumentId,
+        documentType: text(formData, "document_type"),
+        supplierName: supplier,
+        totalAmount: optionalMoney(text(formData, "total_amount")),
+      },
+    }));
+  }
 
   await createDocumentCorrections({
     document_id: uploadedDocumentId,
@@ -376,6 +443,15 @@ export async function saveAiReceptionAction(formData: FormData) {
     status: "pendiente_datos_administrativos",
     observations: "Proveedor registrado desde recepción IA OCR. Información administrativa pendiente de completar.",
   });
+  await emitDomainEventSafe(createDomainEvent("SupplierCreated", {
+    source: "ocr",
+    trace: { documentId: uploadedDocumentId },
+    payload: {
+      name: supplier,
+      taxId: text(formData, "supplier_tax_id"),
+      status: "pendiente_datos_administrativos",
+    },
+  }));
 
   for (const product of products) {
     const traceability = await createAiTraceabilityItem({
@@ -404,6 +480,20 @@ export async function saveAiReceptionAction(formData: FormData) {
       documentId: supplierDocument.data.id,
       uploadedDocumentId,
     });
+    if (inventory.ok) {
+      await emitDomainEventSafe(createDomainEvent("InventoryLotCreated", {
+        source: "inventory",
+        trace: { documentId: uploadedDocumentId, productId: inventory.data?.id },
+        payload: {
+          productId: inventory.data?.id,
+          productName: product.name,
+          batchNumber: product.batch,
+          quantity: optionalQuantity(product.quantity),
+          unit: "ud",
+          expiryDate: product.expiry,
+        },
+      }));
+    }
 
     await createAccountingDocumentItem({
       accounting_document_id: accountingDocumentId,
@@ -446,6 +536,21 @@ export async function saveAiReceptionAction(formData: FormData) {
     });
     redirect(`/admin-kiosko/ia?error=${encodeURIComponent(goodsReception.error.slice(0, 240))}`);
   }
+  await emitDomainEventSafe(createDomainEvent("GoodsReceived", {
+    source: "ocr",
+    trace: { documentId: uploadedDocumentId, supplierDocumentId: supplierDocument.data.id, accountingDocumentId },
+    payload: {
+      supplierName: supplier,
+      uploadedDocumentId,
+      items: products.map((product) => ({
+        productName: product.name,
+        batchNumber: product.batch,
+        quantity: optionalQuantity(product.quantity),
+        unit: "ud",
+        expiryDate: product.expiry,
+      })),
+    },
+  }));
 
   const expiredProducts = products.filter((product) => product.expiry && product.expiry < todayMadrid());
   const rejectedProducts = products.filter((product) => !product.accepted);
@@ -455,7 +560,7 @@ export async function saveAiReceptionAction(formData: FormData) {
     || hasCriticalObservation(observations);
 
   if (needsIncident) {
-    await createIncidentRecord({
+    const incident = await createIncidentRecord({
       record_date: documentDate,
       record_time: recordTime,
       incident_type: "recepción mercancía",
@@ -472,6 +577,16 @@ export async function saveAiReceptionAction(formData: FormData) {
       responsible: "F. Javier Bocanegra Sanjuan",
       created_by: "F. Javier Bocanegra Sanjuan",
     });
+    if (incident.ok) {
+      await emitDomainEventSafe(createDomainEvent("IncidentCreated", {
+        source: "appcc",
+        trace: { documentId: uploadedDocumentId, supplierDocumentId: supplierDocument.data.id },
+        payload: {
+          incidentType: "recepción mercancía",
+          severity: rejectedProducts.length || hasCriticalObservation(observations) ? "incidencia" : "revisar",
+        },
+      }));
+    }
   }
 
   await createAiProcessingLog({
@@ -485,7 +600,7 @@ export async function saveAiReceptionAction(formData: FormData) {
   ["/admin-kiosko/ia", "/admin-kiosko/recepcion-mercancia", "/admin-kiosko/registros", "/admin-kiosko/cronologia", "/admin-kiosko/inventario", "/admin-kiosko/trazabilidad"].forEach((path) => revalidatePath(path));
   const labelProduct = products.find((product) => product.name && product.batch) || products[0];
   if (labelProduct) {
-    await createLabelRecord({
+    const label = await createLabelRecord({
       model: "Recepción",
       product: labelProduct.name,
       batch: labelProduct.batch,
@@ -498,6 +613,17 @@ export async function saveAiReceptionAction(formData: FormData) {
       template: "recepcion",
       zpl_version: "ZPL II",
     });
+    if (label.ok) {
+      await emitDomainEventSafe(createDomainEvent("LabelPrinted", {
+        source: "labels",
+        trace: { documentId: uploadedDocumentId, supplierDocumentId: supplierDocument.data.id },
+        payload: {
+          template: "recepcion",
+          copies: 1,
+          printer: "Zebra ZD421",
+        },
+      }));
+    }
     const labelParams = new URLSearchParams({
       model: "Recepción",
       product: labelProduct.name,
@@ -524,7 +650,14 @@ export async function updateAccountingReconciliationAction(formData: FormData) {
     observations: text(formData, "observations"),
   });
 
-  redirectAfterSave("/admin-kiosko/contabilidad", result);
+  await redirectAfterSaveWithEvent("/admin-kiosko/contabilidad", result, () => emitDomainEventSafe(createDomainEvent("AccountingDocumentReconciled", {
+    source: "accounting",
+    trace: { accountingDocumentId: text(formData, "document_id") },
+    payload: {
+      accountingDocumentId: text(formData, "document_id"),
+      status: text(formData, "reconciliation_status"),
+    },
+  })));
 }
 
 export async function saveIncidentRecordAction(formData: FormData) {
@@ -542,7 +675,13 @@ export async function saveIncidentRecordAction(formData: FormData) {
     responsible: text(formData, "responsible"),
   });
 
-  redirectAfterSave("/admin-kiosko/incidencias", result);
+  await redirectAfterSaveWithEvent("/admin-kiosko/incidencias", result, () => emitDomainEventSafe(createDomainEvent("IncidentCreated", {
+    source: "appcc",
+    payload: {
+      incidentType: text(formData, "incident_type"),
+      severity: text(formData, "severity"),
+    },
+  })));
 }
 
 export async function saveProductionBatchAction(formData: FormData) {
@@ -592,6 +731,18 @@ export async function saveProductionBatchAction(formData: FormData) {
   revalidatePath("/admin-kiosko/etiquetas");
 
   if (result.ok) {
+    await emitDomainEventSafe(createDomainEvent("ProductionBatchCreated", {
+      source: "production",
+      trace: { productionBatchId: result.data.id, inventoryLotId: material.lot_id },
+      payload: {
+        productionBatchId: result.data.id,
+        batchCode: result.data.batch_code,
+        outputProduct: text(formData, "output_product"),
+        outputQuantity: optionalNumber(formData, "output_quantity"),
+        outputUnit: text(formData, "output_unit"),
+        sourceInventoryLotId: material.lot_id,
+      },
+    }));
     const params = new URLSearchParams({
       model: "Elaboración",
       product: text(formData, "output_product"),
@@ -774,7 +925,13 @@ export async function saveInspectionRecordAction(formData: FormData) {
     documentation: text(formData, "documentation"),
   });
 
-  redirectAfterSave("/admin-kiosko/inspecciones", result);
+  await redirectAfterSaveWithEvent("/admin-kiosko/inspecciones", result, () => emitDomainEventSafe(createDomainEvent("InspectionRecordCreated", {
+    source: "inspection",
+    payload: {
+      inspectionDate: text(formData, "inspection_date"),
+      result: text(formData, "result"),
+    },
+  })));
 }
 
 export async function saveSupplierRecordAction(formData: FormData) {
@@ -804,7 +961,14 @@ export async function saveSupplierRecordAction(formData: FormData) {
     observations: text(formData, "observations"),
   });
 
-  redirectAfterSave("/admin-kiosko/proveedores", result);
+  await redirectAfterSaveWithEvent("/admin-kiosko/proveedores", result, () => emitDomainEventSafe(createDomainEvent("SupplierCreated", {
+    source: "appcc",
+    payload: {
+      name: text(formData, "supplier"),
+      taxId: text(formData, "cif"),
+      status: text(formData, "status") || "pendiente_datos_administrativos",
+    },
+  })));
 }
 
 export async function saveInventoryProductAction(formData: FormData) {
@@ -854,7 +1018,30 @@ export async function saveInventoryMovementAction(formData: FormData) {
   });
 
   ["/admin-kiosko/inventario", "/admin-kiosko/trazabilidad", "/admin-kiosko", "/admin-kiosko/inspeccion-express"].forEach((path) => revalidatePath(path));
-  redirectAfterSave("/admin-kiosko/inventario", result);
+  await redirectAfterSaveWithEvent("/admin-kiosko/inventario", result, () => emitDomainEventSafe(createDomainEvent(
+    movementType === "entrada" ? "InventoryLotCreated" : "InventoryLotConsumed",
+    {
+      source: "inventory",
+      trace: { productId: text(formData, "product_id"), inventoryLotId: text(formData, "lot_id") },
+      payload: movementType === "entrada"
+        ? {
+            inventoryLotId: text(formData, "lot_id") || undefined,
+            productId: text(formData, "product_id"),
+            productName: text(formData, "product_name") || text(formData, "product_id"),
+            batchNumber: text(formData, "batch_number"),
+            quantity: requiredNumber(formData, "quantity"),
+            unit: text(formData, "unit"),
+            expiryDate: text(formData, "expiry_date"),
+          }
+        : {
+            inventoryLotId: text(formData, "lot_id") || undefined,
+            productId: text(formData, "product_id"),
+            quantity: requiredNumber(formData, "quantity"),
+            unit: text(formData, "unit"),
+            reason: movementType,
+          },
+    },
+  )));
 }
 
 export async function saveLabelRecordAction(formData: FormData) {
@@ -877,7 +1064,14 @@ export async function saveLabelRecordAction(formData: FormData) {
   });
 
   revalidatePath("/admin-kiosko/etiquetas");
-  redirectAfterSave("/admin-kiosko/etiquetas", result);
+  await redirectAfterSaveWithEvent("/admin-kiosko/etiquetas", result, () => emitDomainEventSafe(createDomainEvent("LabelPrinted", {
+    source: "labels",
+    payload: {
+      template: text(formData, "model") || text(formData, "template") || "etiqueta",
+      copies: Math.max(1, Math.min(48, Math.round(requiredNumber(formData, "copies") || 8))),
+      printer: text(formData, "printer") || "Zebra ZD421",
+    },
+  })));
 }
 
 export async function saveEquipmentAssetAction(formData: FormData) {
@@ -929,7 +1123,13 @@ export async function saveWaterRecordAction(formData: FormData) {
     responsible: text(formData, "responsible"),
   });
 
-  redirectAfterSave("/admin-kiosko/agua", result);
+  await redirectAfterSaveWithEvent("/admin-kiosko/agua", result, () => emitDomainEventSafe(createDomainEvent("WaterControlRecorded", {
+    source: "appcc",
+    payload: {
+      recordDate: text(formData, "record_date"),
+      status: text(formData, "status") || text(formData, "chlorine") || "registrado",
+    },
+  })));
 }
 
 export async function saveAnnualVerificationAction(formData: FormData) {

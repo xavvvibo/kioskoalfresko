@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { createLabelRecord } from "@/lib/admin-kiosko/database";
+import { createDomainEvent, emitDomainEventSafe } from "@/lib/admin-kiosko/domain";
 import { zebraDefaultConfig } from "@/lib/admin-kiosko/zebra";
 
 export async function POST(request: Request) {
@@ -28,6 +29,15 @@ export async function POST(request: Request) {
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 500 });
   }
+
+  await emitDomainEventSafe(createDomainEvent("LabelPrinted", {
+    source: "labels",
+    payload: {
+      template: String(body.template || "elaboracion"),
+      copies: Number(body.copies || zebraDefaultConfig.defaultCopies),
+      printer: String(body.printer || zebraDefaultConfig.model),
+    },
+  }));
 
   return NextResponse.json({ ok: true });
 }

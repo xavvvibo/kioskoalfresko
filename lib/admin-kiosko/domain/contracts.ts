@@ -43,6 +43,7 @@ export type EntityRef = {
 
 export type TraceRef = {
   documentId?: string;
+  supplierDocumentId?: string;
   supplierId?: string;
   productId?: string;
   inventoryLotId?: string;

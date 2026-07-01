@@ -39,14 +39,14 @@ export type DocumentConfirmedPayload = {
 };
 
 export type SupplierCreatedPayload = {
-  supplierId: string;
+  supplierId?: string;
   name: string;
   taxId?: string;
   status?: string;
 };
 
 export type GoodsReceivedPayload = {
-  receptionId: string;
+  receptionId?: string;
   supplierId?: string;
   supplierName: string;
   uploadedDocumentId?: string;
@@ -60,7 +60,7 @@ export type GoodsReceivedPayload = {
 };
 
 export type InventoryLotCreatedPayload = {
-  inventoryLotId: string;
+  inventoryLotId?: string;
   productId?: string;
   productName: string;
   batchNumber?: string;
@@ -70,7 +70,7 @@ export type InventoryLotCreatedPayload = {
 };
 
 export type InventoryLotConsumedPayload = {
-  inventoryLotId: string;
+  inventoryLotId?: string;
   productId?: string;
   quantity: number;
   unit?: string;
@@ -87,7 +87,7 @@ export type ProductionBatchCreatedPayload = {
 };
 
 export type LabelPrintedPayload = {
-  labelRecordId: string;
+  labelRecordId?: string;
   template: string;
   copies: number;
   printer?: string;
@@ -105,37 +105,37 @@ export type AccountingDocumentCreatedPayload = {
 
 export type AccountingDocumentReconciledPayload = {
   reconciliationId?: string;
-  accountingDocumentId: string;
+  accountingDocumentId?: string;
   status: string;
 };
 
 export type InspectionRecordCreatedPayload = {
-  inspectionRecordId: string;
+  inspectionRecordId?: string;
   result?: string;
   inspectionDate: string;
 };
 
 export type IncidentCreatedPayload = {
-  incidentId: string;
+  incidentId?: string;
   severity?: string;
   incidentType: string;
 };
 
 export type WaterControlRecordedPayload = {
-  waterRecordId: string;
+  waterRecordId?: string;
   recordDate: string;
   status?: string;
 };
 
 export type TemperatureRecordedPayload = {
-  temperatureRecordId: string;
+  temperatureRecordId?: string;
   equipment: string;
   temperature: number;
   status: string;
 };
 
 export type CleaningRecordedPayload = {
-  cleaningRecordId: string;
+  cleaningRecordId?: string;
   area: string;
   status?: string;
 };

@@ -89,6 +89,24 @@ La infraestructura inicial vive en:
 
 El dispatcher es sincrono. En el futuro puede persistir eventos o delegar en una cola sin cambiar los eventos publicos.
 
+### Fase actual: emision paralela sin efectos
+
+Los flujos existentes empiezan a emitir eventos de dominio despues de completar su operacion principal. Esta emision es observabilidad pasiva:
+
+- si un evento falla, la operacion principal no se revierte ni se rompe para el usuario;
+- los handlers siguen siendo boundaries sin efectos reales;
+- no hay event sourcing persistente todavia;
+- no hay cola externa;
+- no se crean inventario, contabilidad, etiquetas ni APPCC desde handlers.
+
+El helper `emitDomainEventSafe` captura errores y permite activar trazas con:
+
+```bash
+ADMIN_KIOSKO_DOMAIN_EVENTS_DEBUG=true
+```
+
+Esta fase valida que los procesos reales generan eventos coherentes antes de mover efectos secundarios a handlers.
+
 ```mermaid
 sequenceDiagram
   participant Action as Server Action
