@@ -1,4 +1,5 @@
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { storeOriginalOcrDocument, updateUploadedDocumentReview } from "@/lib/admin-kiosko/database";
 import { isAcceptedDirectImageMimeType, isAcceptedOcrMimeType, isPdfMimeType, runAppccOcr } from "@/lib/ai/ocr";
 import { OcrProcessingError, getOpenAiServerConfig } from "@/lib/ai/openai";
 import type { OcrExtractorKind, OcrProgressEvent } from "@/lib/ai/types";
@@ -118,6 +119,14 @@ export async function POST(request: Request) {
           throw new OcrProcessingError(`Buffer conversion error: ${message}`, "buffer_conversion", 500);
         }
 
+        const originalDocument = await storeOriginalOcrDocument({
+          filename: file.name,
+          mimeType: file.type,
+          size: file.size,
+          detectedType: kind,
+          buffer,
+        });
+
         const result = isPdfMimeType(file.type)
           ? await processPdf({ file, buffer, kind, send })
           : await processImage({ file, buffer, kind, model: config.model, send });
@@ -128,8 +137,16 @@ export async function POST(request: Request) {
           status: result.status,
         });
 
+        if (originalDocument.data.id) {
+          await updateUploadedDocumentReview(originalDocument.data.id, {
+            detected_type: result.detectedType,
+            ocr_json: result,
+            review_status: "pendiente_revision",
+          });
+        }
+
         send({ type: "progress", message: "Preparando revisión...", progress: 95 });
-        send({ type: "done", data: result });
+        send({ type: "done", data: { ...result, originalDocument: originalDocument.data } });
       } catch (error) {
         const message = errorMessage(error);
         logOcrError(message, error instanceof OcrProcessingError ? { stage: error.stage } : error);

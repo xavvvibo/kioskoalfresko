@@ -195,6 +195,8 @@ function EditableResult({ result, suppliers }: { result: OcrUploadResult; suppli
       <form action={saveAiReceptionAction} className="mt-6 grid gap-5">
         <input type="hidden" name="ocr_json" value={JSON.stringify(result.result)} />
         <input type="hidden" name="original_filename" value={result.documentName} />
+        <input type="hidden" name="uploaded_document_id" value={result.originalDocument?.id || ""} />
+        <input type="hidden" name="original_storage_status" value={result.originalDocument?.storage_status || "metadata_only"} />
         <input type="hidden" name="detected_type" value={result.detectedType} />
         <input type="hidden" name="document_type" value={result.detectedType} />
         <input type="hidden" name="product_count" value={products.length} />
@@ -223,6 +225,14 @@ function EditableResult({ result, suppliers }: { result: OcrUploadResult; suppli
           <label className="grid gap-2 text-sm font-semibold text-stone-200">
             Importe total
             <input name="total_amount" defaultValue={totalAmount} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-stone-200">
+            Base imponible
+            <input name="taxable_base" defaultValue={firstText(data, ["base_imponible", "taxable_base"])} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-stone-200">
+            IVA
+            <input name="vat_amount" defaultValue={firstText(data, ["iva", "vat_amount"])} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
           </label>
           <label className="grid gap-2 text-sm font-semibold text-stone-200">
             Temperatura recepción

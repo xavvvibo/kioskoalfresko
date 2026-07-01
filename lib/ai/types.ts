@@ -124,6 +124,12 @@ export type OcrUploadResult = {
   message: string;
   pages?: OcrPageSummary[];
   rawOpenAIText?: string;
+  originalDocument?: {
+    id?: string;
+    storage_bucket?: string;
+    storage_path?: string;
+    storage_status?: string;
+  };
 };
 
 export type AiResult<T> = { ok: true; data: T; rawOpenAIText?: string } | { ok: false; error: string; data?: T };

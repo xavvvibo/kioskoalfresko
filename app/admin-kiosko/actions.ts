@@ -20,6 +20,7 @@ import {
   createAiProcessingLog,
   createAiSupplierDocument,
   createAiTraceabilityItem,
+  createAccountingDocument,
   createInventoryProduct,
   createInternalRecipe,
   createLabelRecord,
@@ -30,6 +31,7 @@ import {
   updateInventoryProduct,
   upsertInventoryFromAiReception,
   updateEquipmentAlertStatus,
+  updateUploadedDocumentReview,
 } from "@/lib/admin-kiosko/database";
 
 export async function loginAdminKioskoAction(formData: FormData) {
@@ -305,6 +307,41 @@ export async function saveAiReceptionAction(formData: FormData) {
     });
     redirect(`/admin-kiosko/ia?error=${encodeURIComponent(supplierDocument.error.slice(0, 240))}`);
   }
+
+  const uploadedDocumentId = text(formData, "uploaded_document_id");
+  await updateUploadedDocumentReview(uploadedDocumentId, {
+    review_status: "revisado",
+    related_record_type: "admin_ai_supplier_documents",
+    related_record_id: supplierDocument.data?.id,
+    corrections: {
+      supplier,
+      supplier_tax_id: text(formData, "supplier_tax_id"),
+      document_type: text(formData, "document_type"),
+      document_number: text(formData, "document_number"),
+      document_date: documentDate,
+      taxable_base: text(formData, "taxable_base"),
+      vat_amount: text(formData, "vat_amount"),
+      total_amount: text(formData, "total_amount"),
+      reception_temperature: text(formData, "reception_temperature"),
+      observations,
+      products,
+    },
+  });
+
+  await createAccountingDocument({
+    uploaded_document_id: uploadedDocumentId,
+    supplier_name: supplier,
+    supplier_tax_id: text(formData, "supplier_tax_id"),
+    document_type: text(formData, "document_type"),
+    document_number: text(formData, "document_number"),
+    document_date: documentDate,
+    taxable_base: optionalMoney(text(formData, "taxable_base")),
+    vat_amount: optionalMoney(text(formData, "vat_amount")),
+    total_amount: optionalMoney(text(formData, "total_amount")),
+    reconciliation_status: "pendiente_conciliar",
+    review_status: "revisado",
+    observations: observations,
+  });
 
   await ensureSupplierRecord({
     supplier,

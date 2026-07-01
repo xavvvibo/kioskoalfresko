@@ -329,6 +329,70 @@ export type AiProcessingLog = {
   error_message: string | null;
 };
 
+export type UploadedDocumentInput = {
+  original_filename?: string;
+  mime_type?: string;
+  file_size?: number;
+  uploaded_by?: string;
+  detected_type?: string;
+  ocr_json?: unknown;
+  review_status?: string;
+  corrections?: unknown;
+  related_record_type?: string;
+  related_record_id?: string;
+  storage_bucket?: string;
+  storage_path?: string;
+  storage_status?: string;
+};
+
+export type UploadedDocument = {
+  id: string;
+  created_at: string;
+  original_filename: string | null;
+  mime_type: string | null;
+  file_size: number | null;
+  uploaded_at: string | null;
+  uploaded_by: string | null;
+  detected_type: string | null;
+  review_status: string | null;
+  storage_bucket: string | null;
+  storage_path: string | null;
+  storage_status: string | null;
+};
+
+export type AccountingDocumentInput = {
+  uploaded_document_id?: string;
+  supplier_id?: string;
+  supplier_name?: string;
+  supplier_tax_id?: string;
+  document_type?: string;
+  document_number?: string;
+  document_date?: string;
+  taxable_base?: number;
+  vat_amount?: number;
+  total_amount?: number;
+  reconciliation_status?: string;
+  review_status?: string;
+  observations?: string;
+};
+
+export type AccountingDocument = {
+  id: string;
+  created_at: string;
+  uploaded_document_id: string | null;
+  supplier_name: string | null;
+  supplier_tax_id: string | null;
+  document_type: string | null;
+  document_number: string | null;
+  document_date: string | null;
+  taxable_base: number | null;
+  vat_amount: number | null;
+  total_amount: number | null;
+  reconciliation_status: string | null;
+  review_status: string | null;
+  observations: string | null;
+};
+
 export type AiSupplierDocument = {
   id: string;
   created_at: string;
@@ -915,6 +979,33 @@ async function patchRecord(table: string, id: string, payload: Record<string, un
   });
 }
 
+async function uploadStorageObject(bucket: string, path: string, buffer: Buffer, mimeType: string) {
+  const configResult = assertSupabaseConfig();
+  if (!configResult.ok) return configResult;
+
+  try {
+    const response = await fetch(`${configResult.config.url}/storage/v1/object/${bucket}/${path}`, {
+      method: "POST",
+      headers: {
+        apikey: configResult.config.serviceRoleKey,
+        Authorization: `Bearer ${configResult.config.serviceRoleKey}`,
+        "Content-Type": mimeType || "application/octet-stream",
+        "x-upsert": "true",
+      },
+      body: new Blob([new Uint8Array(buffer)], { type: mimeType || "application/octet-stream" }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return { ok: false as const, error: await response.text() || `Storage HTTP ${response.status}` };
+    }
+
+    return { ok: true as const, data: { bucket, path } };
+  } catch (error) {
+    return { ok: false as const, error: error instanceof Error ? error.message : "No se pudo guardar el documento original." };
+  }
+}
+
 async function getRecentRows<T>(table: string, select: string) {
   return supabaseRequest<T[]>(
     table,
@@ -1372,6 +1463,124 @@ export async function createAiProcessingLog(data: AiProcessingLogInput) {
     raw_json: data.raw_json || {},
     error_message: cleanText(data.error_message),
   });
+}
+
+export async function createUploadedDocument(data: UploadedDocumentInput): Promise<DbResult<{ id: string } | null>> {
+  const inserted = await insertRecordReturning<{ id: string }>("admin_uploaded_documents", {
+    original_filename: cleanText(data.original_filename),
+    mime_type: cleanText(data.mime_type),
+    file_size: data.file_size,
+    uploaded_by: cleanText(data.uploaded_by) || "F. Javier Bocanegra Sanjuan",
+    detected_type: cleanText(data.detected_type),
+    ocr_json: data.ocr_json || {},
+    review_status: cleanText(data.review_status) || "pendiente_revision",
+    corrections: data.corrections || {},
+    related_record_type: cleanText(data.related_record_type),
+    related_record_id: cleanText(data.related_record_id),
+    storage_bucket: cleanText(data.storage_bucket),
+    storage_path: cleanText(data.storage_path),
+    storage_status: cleanText(data.storage_status) || "metadata_only",
+  }, "id");
+
+  if (!inserted.ok) return { ok: true, data: null };
+  return { ok: true, data: inserted.data[0] || null };
+}
+
+export async function updateUploadedDocumentReview(id: string, data: UploadedDocumentInput): Promise<DbResult<null>> {
+  if (!id) return { ok: true, data: null };
+
+  const updated = await patchRecord("admin_uploaded_documents", id, {
+    detected_type: cleanText(data.detected_type),
+    ocr_json: data.ocr_json || {},
+    review_status: cleanText(data.review_status),
+    corrections: data.corrections || {},
+    related_record_type: cleanText(data.related_record_type),
+    related_record_id: cleanText(data.related_record_id),
+    updated_at: new Date().toISOString(),
+  });
+
+  if (!updated.ok) return { ok: true, data: null };
+  return { ok: true, data: null };
+}
+
+export async function storeOriginalOcrDocument({
+  filename,
+  mimeType,
+  size,
+  detectedType,
+  buffer,
+}: {
+  filename: string;
+  mimeType: string;
+  size: number;
+  detectedType: string;
+  buffer: Buffer;
+}) {
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const storageBucket = process.env.SUPABASE_ADMIN_DOCUMENTS_BUCKET || "admin-kiosko-documents";
+  const storagePath = `ocr/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${safeName}`;
+  const upload = await uploadStorageObject(storageBucket, storagePath, buffer, mimeType);
+  const created = await createUploadedDocument({
+    original_filename: filename,
+    mime_type: mimeType,
+    file_size: size,
+    detected_type: detectedType,
+    storage_bucket: storageBucket,
+    storage_path: upload.ok ? storagePath : undefined,
+    storage_status: upload.ok ? "stored" : "metadata_only",
+  });
+
+  return {
+    ok: true as const,
+    data: {
+      id: created.ok ? created.data?.id : undefined,
+      storage_bucket: storageBucket,
+      storage_path: upload.ok ? storagePath : undefined,
+      storage_status: upload.ok ? "stored" : "metadata_only",
+    },
+  };
+}
+
+export async function createAccountingDocument(data: AccountingDocumentInput): Promise<DbResult<{ id: string } | null>> {
+  const inserted = await insertRecordReturning<{ id: string }>("admin_accounting_documents", {
+    uploaded_document_id: cleanText(data.uploaded_document_id),
+    supplier_id: cleanText(data.supplier_id),
+    supplier_name: cleanText(data.supplier_name),
+    supplier_tax_id: cleanText(data.supplier_tax_id),
+    document_type: cleanText(data.document_type),
+    document_number: cleanText(data.document_number),
+    document_date: cleanText(data.document_date),
+    taxable_base: normalizeNumber(data.taxable_base),
+    vat_amount: normalizeNumber(data.vat_amount),
+    total_amount: normalizeNumber(data.total_amount),
+    reconciliation_status: cleanText(data.reconciliation_status) || "pendiente_conciliar",
+    review_status: cleanText(data.review_status) || "revisado",
+    observations: cleanText(data.observations),
+  }, "id");
+
+  if (!inserted.ok) return { ok: true, data: null };
+  return { ok: true, data: inserted.data[0] || null };
+}
+
+export async function getAccountingDocuments(filters?: { dateFrom?: string; dateTo?: string; supplier?: string; type?: string; status?: string }): Promise<DbResult<AccountingDocument[]>> {
+  const params = [
+    "select=id,created_at,uploaded_document_id,supplier_name,supplier_tax_id,document_type,document_number,document_date,taxable_base,vat_amount,total_amount,reconciliation_status,review_status,observations",
+    "order=document_date.desc,created_at.desc",
+    "limit=300",
+  ];
+  if (filters?.dateFrom) params.push(`document_date=gte.${encodeURIComponent(filters.dateFrom)}`);
+  if (filters?.dateTo) params.push(`document_date=lte.${encodeURIComponent(filters.dateTo)}`);
+  if (filters?.supplier) params.push(`supplier_name=ilike.*${encodeURIComponent(filters.supplier)}*`);
+  if (filters?.type && filters.type !== "todos") params.push(`document_type=eq.${encodeURIComponent(filters.type)}`);
+  if (filters?.status && filters.status !== "todos") params.push(`reconciliation_status=eq.${encodeURIComponent(filters.status)}`);
+  return getRows<AccountingDocument>("admin_accounting_documents", `?${params.join("&")}`);
+}
+
+export async function getUploadedDocuments(limit = 50): Promise<DbResult<UploadedDocument[]>> {
+  return getRows<UploadedDocument>(
+    "admin_uploaded_documents",
+    `?select=id,created_at,original_filename,mime_type,file_size,uploaded_at,uploaded_by,detected_type,review_status,storage_bucket,storage_path,storage_status&order=uploaded_at.desc&limit=${limit}`,
+  );
 }
 
 const inventorySelect = "id,created_at,updated_at,name,category,usual_supplier,unit,current_stock,minimum_stock,recommended_stock,average_purchase_price,last_purchase_price,location,current_batch,expiry_date,last_entry_date,last_exit_date,observations,active";
