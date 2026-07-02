@@ -260,6 +260,57 @@ flowchart TD
   Batch --> LabelIntent[Handler etiquetas]
 ```
 
+### Fichas técnicas y escalado productivo
+
+Las recetas internas evolucionan a fichas técnicas productivas. La capa vive en:
+
+- `lib/admin-kiosko/production/contracts.ts`
+- `lib/admin-kiosko/production/recipe-scaling.ts`
+- `lib/admin-kiosko/repositories/production.repository.ts`
+- `supabase/admin_kiosko_recipe_scaling.sql`
+
+El objetivo es poder pedir una cantidad objetivo, por ejemplo **3 kg de pico de gallo**, y obtener una vista previa productiva sin consumir stock todavía.
+
+```mermaid
+flowchart TD
+  Recipe[Receta técnica]
+  Target[Cantidad objetivo / raciones]
+  Scale[Motor de escalado]
+  Ingredients[Ingredientes escalados]
+  Cost[Coste estimado]
+  Waste[Merma prevista]
+  FEFO[Candidatos FEFO futuros]
+  Preview[Preview producción]
+  Batch[Lote interno futuro]
+  Label[Etiqueta futura]
+
+  Recipe --> Scale
+  Target --> Scale
+  Scale --> Ingredients
+  Scale --> Cost
+  Scale --> Waste
+  Scale --> FEFO
+  Scale --> Preview
+  Preview --> Batch
+  Preview --> Label
+```
+
+El motor calcula:
+
+- factor de escala;
+- ingredientes necesarios;
+- cantidades escaladas;
+- coste estimado cuando hay coste unitario;
+- merma prevista;
+- rendimiento final;
+- alérgenos;
+- pasos ordenados de elaboración;
+- caducidad según conservación y vida útil;
+- datos de etiqueta futura;
+- disponibilidad FEFO futura por ingrediente.
+
+En esta fase no se descuenta inventario real. La conexión FEFO se prepara con candidatos de lote, stock disponible, faltantes e ingrediente limitante. El consumo real debe ocurrir más adelante cuando el preview se confirme y se emita el flujo operativo correspondiente.
+
 ## Flujo APPCC
 
 Los controles diarios generan eventos sanitarios:
@@ -340,15 +391,73 @@ flowchart TD
 
 La carpeta `lib/admin-kiosko/inbox` define los contratos para la futura entrada unica documental.
 
+El backend real de la bandeja vive en:
+
+- `lib/admin-kiosko/repositories/inbox.repository.ts`
+- `uploadInboxDocumentsAction` en `app/admin-kiosko/actions.ts`
+
+No existe todavia una UI compleja. La accion server-side ya permite subir uno o varios archivos mezclando PDF e imagenes. Cada archivo crea un registro individual en `admin_uploaded_documents` y comparte `upload_group_id` cuando pertenece a la misma subida.
+
 Flujo:
 
 1. Subir uno o varios archivos.
 2. Crear un `admin_uploaded_documents` por archivo.
-3. Clasificar con IA.
-4. Permitir correccion manual del tipo.
-5. Confirmar.
-6. Emitir `DocumentConfirmed`.
-7. Derivar por handlers a contabilidad, compras, recepcion APPCC, inventario, trazabilidad, documentacion sanitaria o etiquetas.
+3. Emitir `DocumentUploaded`.
+4. Clasificar con IA en una fase posterior.
+5. Permitir correccion manual del tipo.
+6. Confirmar.
+7. Emitir `DocumentConfirmed`.
+8. Derivar por handlers a contabilidad, compras, recepcion APPCC, inventario, trazabilidad, documentacion sanitaria o etiquetas.
+
+### Upload groups
+
+Un `upload_group_id` agrupa documentos relacionados en una misma operacion.
+
+Ejemplo: **Compra Makro**
+
+- factura
+- albaran
+- etiquetas de trazabilidad
+- ficha tecnica o certificado del proveedor
+
+Todos son documentos independientes en `admin_uploaded_documents`, pero comparten grupo. Esto evita duplicar archivos en tablas especificas y permite construir expedientes futuros.
+
+```mermaid
+flowchart TD
+  Group[upload_group_id Compra Makro]
+  Group --> Invoice[admin_uploaded_documents Factura]
+  Group --> Delivery[admin_uploaded_documents Albaran]
+  Group --> Label[admin_uploaded_documents Etiqueta proveedor]
+  Invoice --> Event1[DocumentUploaded]
+  Delivery --> Event2[DocumentUploaded]
+  Label --> Event3[DocumentUploaded]
+  Event1 --> Store[admin_domain_events]
+  Event2 --> Store
+  Event3 --> Store
+```
+
+### Clasificacion documental
+
+La bandeja soporta estos campos preparados:
+
+- `classification_source`
+- `classification_confidence`
+- `classification_reason`
+- `selected_type`
+- `confirmed_type`
+
+La IA todavia no se ejecuta automaticamente desde Inbox. El usuario podra corregir `selected_type` antes de confirmar. Solo la confirmacion debe disparar `DocumentConfirmed`.
+
+### Relacion con expedientes
+
+Un documento confirmado podra generar o alimentar expedientes:
+
+- Expediente Compra
+- Expediente Produccion
+- Expediente Incidencia
+- Expediente APPCC
+
+La bandeja no crea expedientes todavia; deja los contratos y relaciones listos mediante `upload_group_id`, `admin_uploaded_documents` y eventos persistidos en `admin_domain_events`.
 
 ## Migracion recomendada
 
