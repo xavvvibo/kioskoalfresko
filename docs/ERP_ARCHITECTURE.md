@@ -601,6 +601,38 @@ La vista `admin_inventory_ready_view` centraliza la lectura FEFO para produccion
 
 Las etiquetas todavia no se imprimen automaticamente en esta fase. Las funciones `previewInventoryLabel()` y `previewProductionLabel()` preparan los datos y el QR para que Zebra los consuma en un paso posterior.
 
+## Revision APPCC de lotes importados
+
+Los lotes importados desde compras historicas pueden llegar con lote, proveedor y factura, pero sin caducidad real documentada. El ERP no debe inventar caducidades. Para cerrar esa brecha se anade:
+
+- `supabase/admin_kiosko_inventory_review.sql`
+- `listInventoryLotsRequiringReview()`
+- `updateInventoryLotReviewData()`
+- `bulkApplyExpiryRulesPreview()`
+- `bulkApplyExpiryRulesConfirm()`
+- seccion **Lotes pendientes de revision** en `/admin-kiosko/inventario`
+
+Campos de auditoria en `admin_inventory_lots`:
+
+- `expiry_source`: `real_documentada`, `estimada_por_regla`, `revisada_manual`
+- `reviewed_at`
+- `reviewed_by`
+- `review_notes`
+- `appcc_review_status`: `pendiente_revision`, `revisado`, `requiere_documentacion`
+
+Reglas internas de sugerencia:
+
+- congelado: compra + 12 meses
+- bebida envasada: compra + 12 meses
+- salsas industriales cerradas: compra + 6 meses
+- huevos: compra + 21 dias
+- lacteos frescos: compra + 7 o 14 dias
+- carnes frescas: compra + 3 dias
+- verduras frescas: compra + 5 dias
+- secos/ambiente: compra + 6 meses
+
+Estas reglas generan solo sugerencias. Una sugerencia aplicada queda marcada como `estimada_por_regla`; no se presenta como `real_documentada`. Si la fecha procede de factura, etiqueta de proveedor o ficha tecnica, debe guardarse como `real_documentada` y documentarse en `review_notes`.
+
 ## Migracion recomendada
 
 1. Mantener server actions actuales funcionando.

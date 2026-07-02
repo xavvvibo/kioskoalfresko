@@ -25,6 +25,37 @@ export type InventoryReadyLot = {
   listo_para_etiqueta: boolean | null;
   requiere_revision: boolean | null;
   motivo_revision: string | null;
+  product_family?: string | null;
+  storage_temperature?: string | null;
+  expiry_source?: ExpirySource | null;
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
+  review_notes?: string | null;
+  appcc_review_status?: string | null;
+};
+
+export type ExpirySource = "real_documentada" | "estimada_por_regla" | "revisada_manual";
+
+export type InventoryLotReviewUpdate = {
+  lotId: string;
+  expiryDate?: string | null;
+  expirySource: ExpirySource;
+  reviewedBy: string;
+  reviewNotes?: string | null;
+  appccReviewStatus?: "pendiente_revision" | "revisado" | "requiere_documentacion";
+};
+
+export type ExpiryRulePreview = {
+  lotId: string;
+  product: string;
+  batch: string | null;
+  purchaseDate: string | null;
+  currentExpiry: string | null;
+  suggestedExpiry: string | null;
+  rule: string;
+  expirySource: "estimada_por_regla";
+  confidence: "media" | "baja";
+  notes: string;
 };
 
 export type InventoryActivationResult = {
@@ -139,6 +170,80 @@ function labelFromLot(lot: InventoryReadyLot, model: InventoryLabelPreview["mode
       expiry_date: expiryDate,
       inventory_lot_id: lot.inventory_lot_id,
     },
+  };
+}
+
+function addDays(date: string | null, days: number) {
+  if (!date) return null;
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  parsed.setUTCDate(parsed.getUTCDate() + days);
+  return parsed.toISOString().slice(0, 10);
+}
+
+function addMonths(date: string | null, months: number) {
+  if (!date) return null;
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  parsed.setUTCMonth(parsed.getUTCMonth() + months);
+  return parsed.toISOString().slice(0, 10);
+}
+
+function buildExpiryRulePreview(lot: InventoryReadyLot): ExpiryRulePreview {
+  const product = (lot.producto || "").toLowerCase();
+  const family = (lot.product_family || "").toLowerCase();
+  const storage = (lot.storage_temperature || "").toLowerCase();
+  const categoryText = `${product} ${family} ${storage}`;
+  let suggestedExpiry: string | null = null;
+  let rule = "productos secos/ambiente: compra + 6 meses";
+  let confidence: ExpiryRulePreview["confidence"] = "baja";
+
+  if (categoryText.includes("frozen") || categoryText.includes("cong") || categoryText.includes("congel")) {
+    suggestedExpiry = addMonths(lot.fecha_compra, 12);
+    rule = "congelado: compra + 12 meses";
+    confidence = "media";
+  } else if (family.includes("beverage") || family.includes("alcohol") || categoryText.includes("bebida") || categoryText.includes("coca") || categoryText.includes("fanta") || categoryText.includes("agua ")) {
+    suggestedExpiry = addMonths(lot.fecha_compra, 12);
+    rule = "bebida envasada: compra + 12 meses";
+    confidence = "media";
+  } else if (categoryText.includes("salsa") || categoryText.includes("ssa ") || categoryText.includes("alioli") || categoryText.includes("mostaza") || categoryText.includes("bbq") || categoryText.includes("baconesa")) {
+    suggestedExpiry = addMonths(lot.fecha_compra, 6);
+    rule = "salsas industriales cerradas: compra + 6 meses";
+    confidence = "media";
+  } else if (categoryText.includes("huevo")) {
+    suggestedExpiry = addDays(lot.fecha_compra, 21);
+    rule = "huevos: compra + 21 días";
+    confidence = "media";
+  } else if (categoryText.includes("lact") || categoryText.includes("leche") || categoryText.includes("queso") || categoryText.includes("qso") || categoryText.includes("mozzarella") || categoryText.includes("margarina")) {
+    const shortLife = categoryText.includes("leche") || categoryText.includes("creme") || categoryText.includes("lactea");
+    suggestedExpiry = addDays(lot.fecha_compra, shortLife ? 7 : 14);
+    rule = shortLife ? "lácteos frescos: compra + 7 días" : "lácteos frescos: compra + 14 días";
+    confidence = "media";
+  } else if (family.includes("meat") || categoryText.includes("carne") || categoryText.includes("pollo") || categoryText.includes("cerdo") || categoryText.includes("bacon") || categoryText.includes("lomo") || categoryText.includes("costilla")) {
+    suggestedExpiry = addDays(lot.fecha_compra, 3);
+    rule = "carnes frescas: compra + 3 días";
+    confidence = storage.includes("frozen") || categoryText.includes("cong") ? "baja" : "media";
+  } else if (categoryText.includes("patata") || categoryText.includes("tomate") || categoryText.includes("cebolla") || categoryText.includes("lechuga") || categoryText.includes("limon") || categoryText.includes("repollo")) {
+    suggestedExpiry = addDays(lot.fecha_compra, 5);
+    rule = "verduras frescas: compra + 5 días";
+    confidence = "media";
+  } else {
+    suggestedExpiry = addMonths(lot.fecha_compra, 6);
+  }
+
+  return {
+    lotId: lot.inventory_lot_id,
+    product: lot.producto || "Producto",
+    batch: lot.lote,
+    purchaseDate: lot.fecha_compra,
+    currentExpiry: lot.caducidad,
+    suggestedExpiry,
+    rule,
+    expirySource: "estimada_por_regla",
+    confidence,
+    notes: suggestedExpiry
+      ? "Sugerencia calculada para revisión humana. No equivale a caducidad real documentada."
+      : "No se puede sugerir caducidad porque falta fecha de compra.",
   };
 }
 
@@ -265,6 +370,93 @@ export async function getInventoryActivationMetrics(): Promise<DbResult<Inventor
       productsPendingReview: lots.filter((row) => row.requiere_revision).length,
     },
   };
+}
+
+export async function listInventoryLotsRequiringReview(limit = 200): Promise<DbResult<Array<InventoryReadyLot & { expirySuggestion: ExpiryRulePreview }>>> {
+  const safeLimit = Math.max(1, Math.min(1000, Math.round(limit)));
+  const result = await supabaseRest<InventoryReadyLot[]>("admin_inventory_ready_view", {
+    method: "GET",
+    query: `?select=*&requiere_revision=eq.true&order=fecha_compra.asc.nullslast,producto.asc&limit=${safeLimit}`,
+  });
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    data: result.data.map((lot) => ({ ...lot, expirySuggestion: buildExpiryRulePreview(lot) })),
+  };
+}
+
+export async function updateInventoryLotReviewData(input: InventoryLotReviewUpdate): Promise<DbResult<null>> {
+  if (!input.lotId) return { ok: false, error: "Falta lote." };
+  if (!input.reviewedBy?.trim()) return { ok: false, error: "Falta responsable de revisión." };
+  if (!["real_documentada", "estimada_por_regla", "revisada_manual"].includes(input.expirySource)) {
+    return { ok: false, error: "Fuente de caducidad no válida." };
+  }
+  if (input.expiryDate && !/^\d{4}-\d{2}-\d{2}$/.test(input.expiryDate)) {
+    return { ok: false, error: "Caducidad no válida." };
+  }
+
+  const result = await supabaseRest<undefined>("admin_inventory_lots", {
+    method: "PATCH",
+    query: `?id=eq.${encodeURIComponent(input.lotId)}`,
+    body: JSON.stringify({
+      updated_at: new Date().toISOString(),
+      expiry_date: input.expiryDate || null,
+      expiry_source: input.expirySource,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: input.reviewedBy.trim(),
+      review_notes: input.reviewNotes || null,
+      appcc_review_status: input.appccReviewStatus || "revisado",
+    }),
+    headers: { Prefer: "return=minimal" },
+  });
+  if (!result.ok) return result;
+
+  await rebuildInventoryCache();
+  return { ok: true, data: null };
+}
+
+export async function bulkApplyExpiryRulesPreview(limit = 200): Promise<DbResult<ExpiryRulePreview[]>> {
+  const lots = await listInventoryLotsRequiringReview(limit);
+  if (!lots.ok) return lots;
+  return {
+    ok: true,
+    data: lots.data.map((lot) => lot.expirySuggestion).filter((preview) => preview.suggestedExpiry),
+  };
+}
+
+export async function bulkApplyExpiryRulesConfirm(input: {
+  lotIds: string[];
+  reviewedBy: string;
+  reviewNotes?: string;
+}): Promise<DbResult<{ updated: number; skipped: number }>> {
+  const ids = Array.from(new Set(input.lotIds.filter(Boolean)));
+  if (!ids.length) return { ok: false, error: "No hay lotes seleccionados." };
+
+  const preview = await bulkApplyExpiryRulesPreview(1000);
+  if (!preview.ok) return preview;
+  const byId = new Map(preview.data.map((item) => [item.lotId, item]));
+  let updated = 0;
+  let skipped = 0;
+
+  for (const lotId of ids) {
+    const suggestion = byId.get(lotId);
+    if (!suggestion?.suggestedExpiry) {
+      skipped += 1;
+      continue;
+    }
+    const result = await updateInventoryLotReviewData({
+      lotId,
+      expiryDate: suggestion.suggestedExpiry,
+      expirySource: "estimada_por_regla",
+      reviewedBy: input.reviewedBy,
+      reviewNotes: [input.reviewNotes, suggestion.rule, suggestion.notes].filter(Boolean).join(" · "),
+      appccReviewStatus: "revisado",
+    });
+    if (result.ok) updated += 1;
+    else skipped += 1;
+  }
+
+  return { ok: true, data: { updated, skipped } };
 }
 
 export {

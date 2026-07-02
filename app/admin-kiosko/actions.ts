@@ -31,12 +31,16 @@ import {
   createProductionMovement,
   ensureSupplierRecord,
   applyInventoryMovement,
+  updateInventoryLotReviewData,
   updateInventoryProduct,
   upsertInventoryFromAiReception,
   updateEquipmentAlertStatus,
   updateAccountingReconciliationStatus,
   updateUploadedDocumentReview,
+  createInboxUploadGroupId,
+  queueInboxDocument,
 } from "@/lib/admin-kiosko/database";
+import type { InboxDocumentType } from "@/lib/admin-kiosko/inbox";
 
 export async function loginAdminKioskoAction(formData: FormData) {
   const password = String(formData.get("password") || "");
@@ -75,6 +79,19 @@ function checkbox(formData: FormData, key: string) {
 function checkboxValue(formData: FormData, key: string) {
   return formData.get(key) === "on" || formData.get(key) === "true";
 }
+
+const inboxDocumentTypes = new Set<InboxDocumentType>([
+  "invoice",
+  "delivery_note",
+  "receipt",
+  "supplier_traceability_label",
+  "sanitary_document",
+  "technical_sheet",
+  "supplier_contract",
+  "maintenance_document",
+  "training_document",
+  "other",
+]);
 
 function todayMadrid() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -135,6 +152,10 @@ function hasCriticalObservation(value: string) {
   return /rechaz|incidencia|cr[ií]tic|mal estado|temperatura alta|caducad[ao]|no conforme/i.test(value);
 }
 
+function optionalInboxDocumentType(value: string): InboxDocumentType | undefined {
+  return inboxDocumentTypes.has(value as InboxDocumentType) ? value as InboxDocumentType : undefined;
+}
+
 async function resolveSupplierFromForm(formData: FormData, fieldPrefix = "supplier") {
   const selectedId = text(formData, `${fieldPrefix}_id`);
   const selectedName = text(formData, `${fieldPrefix}_name`) || text(formData, fieldPrefix);
@@ -186,6 +207,79 @@ async function redirectAfterSaveWithEvent(
 
   const error = encodeURIComponent(result.error.slice(0, 240));
   redirect(`${path}?error=${error}`);
+}
+
+export async function uploadInboxDocumentsAction(formData: FormData) {
+  await requireAdminSession();
+
+  const selectedType = optionalInboxDocumentType(text(formData, "selected_type"));
+  const responsible = text(formData, "responsible") || "F. Javier Bocanegra Sanjuan";
+  const uploadGroupId = text(formData, "upload_group_id") || createInboxUploadGroupId();
+  const files = [...formData.getAll("files"), ...formData.getAll("file")]
+    .filter((value): value is File => value instanceof File && value.size > 0);
+
+  if (!files.length) {
+    return {
+      ok: false as const,
+      error: "No se ha recibido ningún documento para subir.",
+      uploadGroupId,
+      documents: [],
+    };
+  }
+
+  const documents = [];
+  const errors = [];
+
+  for (const [index, file] of files.entries()) {
+    const queued = await queueInboxDocument({
+      file,
+      selectedType,
+      responsible,
+      uploadGroupId,
+      uploadSequence: index + 1,
+    });
+
+    if (!queued.ok) {
+      errors.push(`${file.name}: ${queued.error}`);
+      continue;
+    }
+
+    documents.push(queued.data);
+    await emitDomainEventSafe(createDomainEvent("DocumentUploaded", {
+      source: "inbox",
+      correlationId: uploadGroupId,
+      trace: { documentId: queued.data.uploadedDocumentId },
+      payload: {
+        uploadedDocumentId: queued.data.uploadedDocumentId,
+        filename: queued.data.filename,
+        mimeType: queued.data.mimeType,
+        fileSize: queued.data.fileSize,
+        storageBucket: queued.data.storageBucket,
+        storagePath: queued.data.storagePath,
+        uploadGroupId,
+      },
+    }));
+  }
+
+  revalidatePath("/admin-kiosko/compras");
+  revalidatePath("/admin-kiosko/contabilidad");
+  revalidatePath("/admin-kiosko/ia");
+
+  if (errors.length && !documents.length) {
+    return {
+      ok: false as const,
+      error: errors.join(" · ").slice(0, 500),
+      uploadGroupId,
+      documents,
+    };
+  }
+
+  return {
+    ok: true as const,
+    uploadGroupId,
+    documents,
+    errors,
+  };
 }
 
 export async function saveTemperatureRecordAction(formData: FormData) {
@@ -1042,6 +1136,31 @@ export async function saveInventoryMovementAction(formData: FormData) {
           },
     },
   )));
+}
+
+export async function saveInventoryLotReviewAction(formData: FormData) {
+  await requireAdminSession();
+
+  const expirySource = text(formData, "expiry_source");
+  const safeExpirySource = ["real_documentada", "estimada_por_regla", "revisada_manual"].includes(expirySource)
+    ? expirySource as "real_documentada" | "estimada_por_regla" | "revisada_manual"
+    : "revisada_manual";
+  const status = text(formData, "appcc_review_status");
+  const safeStatus = ["pendiente_revision", "revisado", "requiere_documentacion"].includes(status)
+    ? status as "pendiente_revision" | "revisado" | "requiere_documentacion"
+    : "revisado";
+
+  const result = await updateInventoryLotReviewData({
+    lotId: text(formData, "lot_id"),
+    expiryDate: text(formData, "expiry_date"),
+    expirySource: safeExpirySource,
+    reviewedBy: text(formData, "reviewed_by") || "F. Javier Bocanegra Sanjuan",
+    reviewNotes: text(formData, "review_notes"),
+    appccReviewStatus: safeStatus,
+  });
+
+  ["/admin-kiosko/inventario", "/admin-kiosko/trazabilidad", "/admin-kiosko", "/admin-kiosko/inspeccion-express"].forEach((path) => revalidatePath(path));
+  redirectAfterSave("/admin-kiosko/inventario#lotes-pendientes-revision", result);
 }
 
 export async function saveLabelRecordAction(formData: FormData) {

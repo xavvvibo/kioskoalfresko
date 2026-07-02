@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getExpiryBuckets, getInventoryLotMovements, getInventoryLots, getInventoryMovements, getInventoryProductById, getInventoryProducts } from "@/lib/admin-kiosko/database";
+import { getExpiryBuckets, getInventoryLotMovements, getInventoryLots, getInventoryMovements, getInventoryProductById, getInventoryProducts, listInventoryLotsRequiringReview } from "@/lib/admin-kiosko/database";
 import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
 import { ZebraPrintButton } from "../_components/ZebraPrintButton";
-import { saveInventoryMovementAction, saveInventoryProductAction } from "../actions";
+import { saveInventoryLotReviewAction, saveInventoryMovementAction, saveInventoryProductAction } from "../actions";
 
 export const metadata: Metadata = {
   title: "Inventario APPCC | Panel interno",
@@ -33,6 +33,20 @@ function Field({ name, label, value = "", type = "text", required = false }: { n
   );
 }
 
+function reviewReasonLabel(reason: string | null) {
+  if (reason === "missing_expiry") return "Caducidad pendiente";
+  if (reason === "missing_lot") return "Lote pendiente";
+  if (reason === "pending_appcc_review") return "Revisión APPCC pendiente";
+  return "Revisión pendiente";
+}
+
+function expirySourceLabel(source: string | null | undefined) {
+  if (source === "real_documentada") return "Real documentada";
+  if (source === "estimada_por_regla") return "Estimada por regla";
+  if (source === "revisada_manual") return "Revisada manual";
+  return "Sin fuente asignada";
+}
+
 export default async function InventarioPage({
   searchParams,
 }: {
@@ -40,13 +54,14 @@ export default async function InventarioPage({
 }) {
   await requireAdminSession();
   const params = await searchParams;
-  const [productsResult, movementsResult, selectedResult, expiryResult, lotsResult, lotMovementsResult] = await Promise.all([
+  const [productsResult, movementsResult, selectedResult, expiryResult, lotsResult, lotMovementsResult, reviewLotsResult] = await Promise.all([
     getInventoryProducts({ q: params?.q, status: params?.status, stock: params?.stock, expiry: params?.expiry }),
     getInventoryMovements(params?.product),
     params?.product ? getInventoryProductById(params.product) : Promise.resolve({ ok: true as const, data: null }),
     getExpiryBuckets(),
     getInventoryLots({ q: params?.q, activeOnly: false }),
     getInventoryLotMovements(),
+    listInventoryLotsRequiringReview(80),
   ]);
   const products = productsResult.ok ? productsResult.data : [];
   const movements = movementsResult.ok ? movementsResult.data : [];
@@ -54,6 +69,7 @@ export default async function InventarioPage({
   const expiry = expiryResult.ok ? expiryResult.data : { expired: [], seven: [], fifteen: [], thirty: [] };
   const lots = lotsResult.ok ? lotsResult.data : [];
   const lotMovements = lotMovementsResult.ok ? lotMovementsResult.data : [];
+  const reviewLots = reviewLotsResult.ok ? reviewLotsResult.data : [];
   const lotsByProduct = new Map(lots.map((lot) => [lot.product_id, [] as typeof lots]));
   lots.forEach((lot) => {
     if (!lot.product_id) return;
@@ -108,6 +124,87 @@ export default async function InventarioPage({
                   </div>
                 </article>
               ))}
+            </div>
+          </section>
+
+          <section id="lotes-pendientes-revision" className="rounded-[2rem] border border-amber-200/20 bg-[#151515] p-5 sm:p-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200">Revisión APPCC</p>
+                <h2 className="mt-2 text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Lotes pendientes de revisión</h2>
+                <p className="mt-2 max-w-3xl text-sm text-stone-300">
+                  Las sugerencias de caducidad son estimaciones internas y deben quedar marcadas como tales. No sustituyen una caducidad documentada en factura, etiqueta o ficha técnica.
+                </p>
+              </div>
+              <p className="rounded-full border border-amber-200/30 bg-amber-100/10 px-4 py-2 text-sm font-black text-amber-100">{reviewLots.length} lotes</p>
+            </div>
+            <div className="mt-5 grid gap-3">
+              {reviewLots.slice(0, 12).map((lot) => (
+                <article key={lot.inventory_lot_id} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
+                  <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-lg font-black text-white">{lot.producto || "Producto"}</p>
+                        <span className="rounded-full border border-amber-200/30 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-amber-100">{reviewReasonLabel(lot.motivo_revision)}</span>
+                        <span className="rounded-full border border-white/15 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-stone-200">{expirySourceLabel(lot.expiry_source)}</span>
+                      </div>
+                      <div className="mt-3 grid gap-2 text-sm text-stone-300 sm:grid-cols-2">
+                        <p><span className="font-black text-stone-100">Lote:</span> {lot.lote || "Lote interno pendiente de contrastar"}</p>
+                        <p><span className="font-black text-stone-100">Stock:</span> {lot.stock ?? 0} {lot.unidad || "ud"}</p>
+                        <p><span className="font-black text-stone-100">Proveedor:</span> {lot.proveedor || "Proveedor registrado"}</p>
+                        <p><span className="font-black text-stone-100">Factura:</span> {lot.factura || "Documento enlazado"}</p>
+                        <p><span className="font-black text-stone-100">Compra:</span> {lot.fecha_compra || "Fecha no consignada"}</p>
+                        <p><span className="font-black text-stone-100">Caducidad actual:</span> {lot.caducidad || "Pendiente de revisar"}</p>
+                      </div>
+                      <div className="mt-3 rounded-xl border border-amber-200/20 bg-amber-100/10 p-3 text-sm text-amber-50">
+                        <p className="font-black">Sugerencia: {lot.expirySuggestion.suggestedExpiry || "sin sugerencia"}</p>
+                        <p className="mt-1 text-amber-100/85">{lot.expirySuggestion.rule} · {lot.expirySuggestion.notes}</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-3">
+                      <form action={saveInventoryLotReviewAction} className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3">
+                        <input type="hidden" name="lot_id" value={lot.inventory_lot_id} />
+                        <input type="hidden" name="appcc_review_status" value="revisado" />
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <label className="grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-stone-300">
+                            Caducidad
+                            <input name="expiry_date" type="date" defaultValue={lot.caducidad || ""} className="rounded-xl border border-white/12 bg-white px-3 py-2 text-sm text-stone-950" />
+                          </label>
+                          <label className="grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-stone-300">
+                            Fuente
+                            <select name="expiry_source" defaultValue={lot.expiry_source || "revisada_manual"} className="rounded-xl border border-white/12 bg-white px-3 py-2 text-sm text-stone-950">
+                              <option value="real_documentada">Real documentada</option>
+                              <option value="revisada_manual">Revisada manual</option>
+                              <option value="estimada_por_regla">Estimada por regla</option>
+                            </select>
+                          </label>
+                        </div>
+                        <label className="mt-3 grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-stone-300">
+                          Responsable
+                          <input name="reviewed_by" defaultValue="F. Javier Bocanegra Sanjuan" className="rounded-xl border border-white/12 bg-white px-3 py-2 text-sm text-stone-950" />
+                        </label>
+                        <label className="mt-3 grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-stone-300">
+                          Notas
+                          <textarea name="review_notes" rows={2} defaultValue={lot.review_notes || ""} className="rounded-xl border border-white/12 bg-white px-3 py-2 text-sm text-stone-950" />
+                        </label>
+                        <button className="mt-3 w-full rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white">Guardar revisión</button>
+                      </form>
+                      {lot.expirySuggestion.suggestedExpiry ? (
+                        <form action={saveInventoryLotReviewAction} className="rounded-xl border border-amber-200/20 bg-amber-100/10 p-3">
+                          <input type="hidden" name="lot_id" value={lot.inventory_lot_id} />
+                          <input type="hidden" name="expiry_date" value={lot.expirySuggestion.suggestedExpiry} />
+                          <input type="hidden" name="expiry_source" value="estimada_por_regla" />
+                          <input type="hidden" name="appcc_review_status" value="revisado" />
+                          <input type="hidden" name="reviewed_by" value="F. Javier Bocanegra Sanjuan" />
+                          <input type="hidden" name="review_notes" value={`${lot.expirySuggestion.rule}. Caducidad estimada por regla interna; no documentada como fecha real del proveedor.`} />
+                          <button className="w-full rounded-full border border-amber-200/50 bg-amber-100 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-stone-950">Aplicar sugerencia estimada</button>
+                        </form>
+                      ) : null}
+                    </div>
+                  </div>
+                </article>
+              ))}
+              {!reviewLots.length ? <p className="rounded-xl border border-emerald-300/20 bg-emerald-100/10 p-4 text-sm font-semibold text-emerald-100">No constan lotes activos pendientes de revisión APPCC.</p> : null}
             </div>
           </section>
 
