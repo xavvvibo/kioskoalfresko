@@ -1,6 +1,8 @@
 import type { InboxConfirmation, InboxDocumentRecord, InboxDocumentStatus, InboxDocumentType } from "../inbox/contracts";
+import type { InboxOcrQueueDocument, InboxOcrStructuredResult } from "../domain/inbox-ocr/contracts";
 import { normalizeDocumentProcessingStatus, normalizeDocumentType } from "./documents.repository";
 import { findDomainEventsByCorrelationId } from "./events.repository";
+import { adminSupabaseRequest, downloadAdminStorageObject, uploadAdminStorageObject } from "./legacy-core";
 
 type DbResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -36,6 +38,13 @@ type UploadedDocumentRow = {
   storage_path: string | null;
   storage_status: string | null;
   processing_error: string | null;
+  ocr_attempts: number | null;
+  ocr_started_at: string | null;
+  ocr_completed_at: string | null;
+  ocr_model: string | null;
+  ocr_json: Record<string, unknown> | null;
+  ocr_warnings: string[] | null;
+  ocr_reprocess_requested: boolean | null;
   possible_duplicate: boolean | null;
   duplicate_of: string | null;
   duplicate_score: number | null;
@@ -113,6 +122,8 @@ export type InboxMetrics = {
   duplicates: number;
   errors: number;
   importedToday: number;
+  ocrCompletedToday: number;
+  ocrWarnings: number;
   averageReviewMinutes: number | null;
   averageConfirmationMinutes: number | null;
 };
@@ -145,114 +156,25 @@ const domainRecordTypeMap: Record<string, string> = {
   training_document: "training_document",
 };
 
-function getSupabaseConfig() {
-  return {
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
-  };
-}
-
-function assertSupabaseConfig() {
-  const config = getSupabaseConfig();
-
-  if (!config.url || !config.serviceRoleKey) {
-    return { ok: false as const, error: "Supabase no está configurado." };
-  }
-
-  return { ok: true as const, config };
-}
+const inboxSelect = "id,created_at,original_filename,mime_type,file_size,uploaded_at,uploaded_by,detected_type,selected_type,confirmed_type,processing_status,review_status,classification_source,classification_confidence,classification_reason,upload_group_id,upload_sequence,storage_bucket,storage_path,storage_status,processing_error,ocr_attempts,ocr_started_at,ocr_completed_at,ocr_model,ocr_json,ocr_warnings,ocr_reprocess_requested,possible_duplicate,duplicate_of,duplicate_score,related_record_type,related_record_id,import_status,import_duration_ms,import_handler_results,import_error,imported_at";
 
 async function inboxRequest<T>(init: RequestInit & { query?: string }): Promise<DbResult<T>> {
-  const configResult = assertSupabaseConfig();
-  if (!configResult.ok) return configResult;
-
-  try {
-    const response = await fetch(`${configResult.config.url}/rest/v1/admin_uploaded_documents${init.query || ""}`, {
-      ...init,
-      headers: {
-        apikey: configResult.config.serviceRoleKey,
-        Authorization: `Bearer ${configResult.config.serviceRoleKey}`,
-        "Content-Type": "application/json",
-        ...init.headers,
-      },
-      cache: "no-store",
-    });
-
-    const responseText = await response.text();
-    if (!response.ok) {
-      let error = responseText || `HTTP ${response.status}`;
-      try {
-        const parsed = JSON.parse(responseText) as { message?: string; details?: string; hint?: string; code?: string };
-        error = [parsed.message, parsed.details, parsed.hint, parsed.code].filter(Boolean).join(" · ");
-      } catch {
-        // Keep raw Supabase message.
-      }
-      return { ok: false, error };
-    }
-
-    if (response.status === 204 || !responseText) return { ok: true, data: undefined as T };
-    return { ok: true, data: JSON.parse(responseText) as T };
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "No se ha podido conectar con Supabase." };
-  }
+  return adminSupabaseRequest<T>("admin_uploaded_documents", init);
 }
 
 async function inboxRpcRequest<T>(functionName: string, body: Record<string, unknown>): Promise<DbResult<T>> {
-  const configResult = assertSupabaseConfig();
-  if (!configResult.ok) return configResult;
-
-  try {
-    const response = await fetch(`${configResult.config.url}/rest/v1/rpc/${functionName}`, {
-      method: "POST",
-      headers: {
-        apikey: configResult.config.serviceRoleKey,
-        Authorization: `Bearer ${configResult.config.serviceRoleKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-      cache: "no-store",
-    });
-    const responseText = await response.text();
-    if (!response.ok) {
-      let error = responseText || `HTTP ${response.status}`;
-      try {
-        const parsed = JSON.parse(responseText) as { message?: string; details?: string; hint?: string; code?: string };
-        error = [parsed.message, parsed.details, parsed.hint, parsed.code].filter(Boolean).join(" · ");
-      } catch {
-        // Keep raw Supabase response.
-      }
-      return { ok: false, error };
-    }
-
-    if (!responseText) return { ok: true, data: undefined as T };
-    return { ok: true, data: JSON.parse(responseText) as T };
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "No se ha podido conectar con Supabase." };
-  }
+  return adminSupabaseRequest<T>(`rpc/${functionName}`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 async function uploadInboxStorageObject(path: string, buffer: Buffer, mimeType: string) {
-  const configResult = assertSupabaseConfig();
-  if (!configResult.ok) return configResult;
+  return uploadAdminStorageObject(INBOX_BUCKET, path, buffer, mimeType, { upsert: false });
+}
 
-  try {
-    const response = await fetch(`${configResult.config.url}/storage/v1/object/${INBOX_BUCKET}/${path}`, {
-      method: "POST",
-      headers: {
-        apikey: configResult.config.serviceRoleKey,
-        Authorization: `Bearer ${configResult.config.serviceRoleKey}`,
-        "Content-Type": mimeType || "application/octet-stream",
-        "x-upsert": "false",
-      },
-      body: new Blob([new Uint8Array(buffer)], { type: mimeType || "application/octet-stream" }),
-      cache: "no-store",
-    });
-
-    if (!response.ok) return { ok: false as const, error: await response.text() || `Storage HTTP ${response.status}` };
-    return { ok: true as const, data: { bucket: INBOX_BUCKET, path } };
-  } catch (error) {
-    return { ok: false as const, error: error instanceof Error ? error.message : "No se pudo guardar el documento original." };
-  }
+async function downloadInboxStorageObject(path: string): Promise<DbResult<Buffer>> {
+  return downloadAdminStorageObject(INBOX_BUCKET, path);
 }
 
 function safeFilename(filename: string) {
@@ -260,9 +182,9 @@ function safeFilename(filename: string) {
 }
 
 function storageFolderForType(type?: InboxDocumentType) {
-  if (type === "invoice") return "facturas";
+  if (type === "purchase_invoice") return "facturas";
   if (type === "credit_note") return "facturas";
-  if (type === "delivery_note") return "albaranes";
+  if (type === "purchase_delivery_note") return "albaranes";
   if (type === "receipt") return "recepciones";
   if (type === "supplier_traceability_label" || type === "traceability_label") return "etiquetas";
   if (type === "sanitary_document" || type === "technical_sheet" || type === "supplier_contract" || type === "training_document") return "certificados";
@@ -294,6 +216,13 @@ function toInboxDocument(row: UploadedDocumentRow): InboxDocumentRecord {
     classificationConfidence: row.classification_confidence || undefined,
     classificationReason: row.classification_reason || undefined,
     processingError: row.processing_error || undefined,
+    ocrAttempts: row.ocr_attempts || 0,
+    ocrStartedAt: row.ocr_started_at || undefined,
+    ocrCompletedAt: row.ocr_completed_at || undefined,
+    ocrModel: row.ocr_model || undefined,
+    ocrJson: row.ocr_json || undefined,
+    ocrWarnings: Array.isArray(row.ocr_warnings) ? row.ocr_warnings : undefined,
+    ocrReprocessRequested: Boolean(row.ocr_reprocess_requested),
     possibleDuplicate: Boolean(row.possible_duplicate),
     duplicateOf: row.duplicate_of || undefined,
     duplicateScore: row.duplicate_score || undefined,
@@ -310,6 +239,24 @@ function toInboxDocument(row: UploadedDocumentRow): InboxDocumentRecord {
 function normalizeDomainRecordType(value?: string | null) {
   if (!value) return undefined;
   return domainRecordTypeMap[value] || value;
+}
+
+function toOcrQueueDocument(row: UploadedDocumentRow): InboxOcrQueueDocument {
+  return {
+    uploadedDocumentId: row.id,
+    filename: row.original_filename || "Documento",
+    mimeType: row.mime_type || "application/octet-stream",
+    fileSize: row.file_size || 0,
+    storageBucket: row.storage_bucket || undefined,
+    storagePath: row.storage_path || undefined,
+    status: normalizeDocumentProcessingStatus(row.processing_status || row.review_status),
+    detectedType: row.detected_type ? normalizeDocumentType(row.detected_type) : undefined,
+    selectedType: row.selected_type ? normalizeDocumentType(row.selected_type) : undefined,
+    confirmedType: row.confirmed_type ? normalizeDocumentType(row.confirmed_type) : undefined,
+    ocrAttempts: row.ocr_attempts || 0,
+    possibleDuplicate: Boolean(row.possible_duplicate),
+    importedAt: row.imported_at || undefined,
+  };
 }
 
 function validateInboxFile(file: File) {
@@ -368,8 +315,8 @@ export function classifyInboxDocumentCandidate(input: {
     .toLowerCase();
   const checks: Array<[InboxDocumentType, number, RegExp, string]> = [
     ["credit_note", 0.94, /(rectificativa|abono|devolucion|devoluci[oó]n)/, "El nombre del archivo indica rectificativa, abono o devolución."],
-    ["invoice", 0.9, /(factura|invoice|fra\.?|f-?\d+)/, "El nombre del archivo indica factura."],
-    ["delivery_note", 0.9, /(albaran|albar[aá]n|delivery|recepcion|recepci[oó]n)/, "El nombre del archivo indica albarán o recepción."],
+    ["purchase_invoice", 0.9, /(factura|invoice|fra\.?|f-?\d+)/, "El nombre del archivo indica factura."],
+    ["purchase_delivery_note", 0.9, /(albaran|albar[aá]n|delivery|recepcion|recepci[oó]n)/, "El nombre del archivo indica albarán o recepción."],
     ["receipt", 0.82, /(ticket|recibo|receipt)/, "El nombre del archivo indica ticket o recibo."],
     ["traceability_label", 0.86, /(trazabilidad|lote|caducidad|ean|gtin)/, "El nombre del archivo indica etiqueta o datos de trazabilidad."],
     ["supplier_traceability_label", 0.84, /(etiqueta|label)/, "El nombre del archivo indica etiqueta de proveedor."],
@@ -430,7 +377,7 @@ export async function createInboxDocument(input: InboxCreateInput): Promise<DbRe
 
   const created = await inboxRequest<UploadedDocumentRow[]>({
     method: "POST",
-    query: "?select=id,created_at,original_filename,mime_type,file_size,uploaded_at,uploaded_by,detected_type,selected_type,confirmed_type,processing_status,review_status,classification_source,classification_confidence,classification_reason,upload_group_id,upload_sequence,storage_bucket,storage_path,storage_status,processing_error,possible_duplicate,duplicate_of,duplicate_score,related_record_type,related_record_id,import_status,import_duration_ms,import_handler_results,import_error,imported_at",
+    query: `?select=${inboxSelect}`,
     body: JSON.stringify(payload),
     headers: {
       Prefer: "return=representation",
@@ -545,6 +492,109 @@ export async function updateInboxStatus(input: InboxStatusUpdate): Promise<DbRes
   return { ok: true, data: null };
 }
 
+export async function listInboxOcrQueue(limit = 10): Promise<DbResult<InboxOcrQueueDocument[]>> {
+  const safeLimit = Math.max(1, Math.min(50, Math.round(limit)));
+  const rows = await inboxRequest<UploadedDocumentRow[]>({
+    method: "GET",
+    query: `?select=${inboxSelect}&or=(processing_status.eq.uploaded,ocr_reprocess_requested.eq.true)&processing_status=not.in.(confirmed,imported,archived)&storage_path=not.is.null&order=uploaded_at.asc&limit=${safeLimit}`,
+  });
+
+  if (!rows.ok) return rows;
+  return { ok: true, data: rows.data.map(toOcrQueueDocument) };
+}
+
+export async function listInboxOcrDocumentsByIds(uploadedDocumentIds: string[]): Promise<DbResult<InboxOcrQueueDocument[]>> {
+  const ids = uploadedDocumentIds.filter(Boolean);
+  if (!ids.length) return { ok: false, error: "No hay documentos seleccionados para OCR." };
+  const rows = await inboxRequest<UploadedDocumentRow[]>({
+    method: "GET",
+    query: `?select=${inboxSelect}&id=in.(${ids.map((id) => encodeURIComponent(id)).join(",")})`,
+  });
+
+  if (!rows.ok) return rows;
+  return { ok: true, data: rows.data.map(toOcrQueueDocument) };
+}
+
+export async function downloadInboxDocumentOriginal(document: InboxOcrQueueDocument): Promise<DbResult<Buffer>> {
+  if (!document.storagePath) return { ok: false, error: "El documento no tiene archivo original privado asociado." };
+  return downloadInboxStorageObject(document.storagePath);
+}
+
+export async function markInboxOcrStarted(document: InboxOcrQueueDocument): Promise<DbResult<null>> {
+  const updated = await inboxRequest<undefined>({
+    method: "PATCH",
+    query: `?id=eq.${encodeURIComponent(document.uploadedDocumentId)}`,
+    body: JSON.stringify({
+      updated_at: new Date().toISOString(),
+      processing_status: "processing",
+      review_status: "pendiente_revision",
+      processing_error: null,
+      ocr_started_at: new Date().toISOString(),
+      ocr_completed_at: null,
+      ocr_attempts: (document.ocrAttempts || 0) + 1,
+      ocr_reprocess_requested: false,
+    }),
+    headers: {
+      Prefer: "return=minimal",
+    },
+  });
+
+  if (!updated.ok) return updated;
+  return { ok: true, data: null };
+}
+
+export async function markInboxOcrFailed(document: InboxOcrQueueDocument, error: string): Promise<DbResult<null>> {
+  const updated = await inboxRequest<undefined>({
+    method: "PATCH",
+    query: `?id=eq.${encodeURIComponent(document.uploadedDocumentId)}`,
+    body: JSON.stringify({
+      updated_at: new Date().toISOString(),
+      processing_status: "failed",
+      review_status: "rechazado",
+      processing_error: error,
+      ocr_completed_at: new Date().toISOString(),
+      ocr_reprocess_requested: false,
+    }),
+    headers: {
+      Prefer: "return=minimal",
+    },
+  });
+
+  if (!updated.ok) return updated;
+  return { ok: true, data: null };
+}
+
+export async function saveInboxOcrResult(result: InboxOcrStructuredResult): Promise<DbResult<null>> {
+  const updated = await inboxRequest<undefined>({
+    method: "PATCH",
+    query: `?id=eq.${encodeURIComponent(result.uploadedDocumentId)}`,
+    body: JSON.stringify({
+      updated_at: new Date().toISOString(),
+      processing_status: result.status,
+      review_status: "pendiente_revision",
+      detected_type: result.detectedType,
+      selected_type: result.status === "classified" ? result.detectedType : undefined,
+      classification_source: result.classificationSource,
+      classification_confidence: result.confidence,
+      classification_reason: result.classificationReason,
+      corrections: result.corrections,
+      ocr_json: result.ocrJson,
+      ocr_text: result.rawText,
+      ocr_model: result.model,
+      ocr_warnings: result.warnings,
+      ocr_completed_at: new Date().toISOString(),
+      ocr_reprocess_requested: false,
+      processing_error: null,
+    }),
+    headers: {
+      Prefer: "return=minimal",
+    },
+  });
+
+  if (!updated.ok) return updated;
+  return { ok: true, data: null };
+}
+
 export async function confirmInboxDocument(input: InboxConfirmation): Promise<DbResult<null>> {
   const confirmed = await inboxRequest<undefined>({
     method: "PATCH",
@@ -591,7 +641,7 @@ export async function archiveInboxDocument(uploadedDocumentId: string, responsib
 export async function listInboxDocuments(filters: InboxListFilters = {}): Promise<DbResult<InboxDocumentRecord[]>> {
   const limit = Math.max(1, Math.min(200, Math.round(filters.limit || 50)));
   const params = [
-    "select=id,created_at,original_filename,mime_type,file_size,uploaded_at,uploaded_by,detected_type,selected_type,confirmed_type,processing_status,review_status,classification_source,classification_confidence,classification_reason,upload_group_id,upload_sequence,storage_bucket,storage_path,storage_status,processing_error,possible_duplicate,duplicate_of,duplicate_score,related_record_type,related_record_id,import_status,import_duration_ms,import_handler_results,import_error,imported_at",
+    `select=${inboxSelect}`,
     "order=uploaded_at.desc",
     `limit=${limit}`,
   ];
@@ -612,7 +662,7 @@ export async function listInboxDocuments(filters: InboxListFilters = {}): Promis
 export async function getInboxDocument(uploadedDocumentId: string): Promise<DbResult<InboxDocumentRecord | null>> {
   const rows = await inboxRequest<UploadedDocumentRow[]>({
     method: "GET",
-    query: `?select=id,created_at,original_filename,mime_type,file_size,uploaded_at,uploaded_by,detected_type,selected_type,confirmed_type,processing_status,review_status,classification_source,classification_confidence,classification_reason,upload_group_id,upload_sequence,storage_bucket,storage_path,storage_status,processing_error,possible_duplicate,duplicate_of,duplicate_score,related_record_type,related_record_id,import_status,import_duration_ms,import_handler_results,import_error,imported_at&id=eq.${encodeURIComponent(uploadedDocumentId)}&limit=1`,
+    query: `?select=${inboxSelect}&id=eq.${encodeURIComponent(uploadedDocumentId)}&limit=1`,
   });
 
   if (!rows.ok) return rows;
@@ -640,6 +690,8 @@ export async function getInboxMetrics(): Promise<DbResult<InboxMetrics>> {
   if (!documents.ok) return documents;
   const today = new Date().toISOString().slice(0, 10);
   const importedToday = documents.data.filter((document) => document.status === "imported" && document.importedAt?.startsWith(today)).length;
+  const ocrCompletedToday = documents.data.filter((document) => document.ocrCompletedAt?.startsWith(today)).length;
+  const ocrWarnings = documents.data.filter((document) => document.ocrWarnings?.length).length;
 
   return {
     ok: true,
@@ -650,6 +702,8 @@ export async function getInboxMetrics(): Promise<DbResult<InboxMetrics>> {
       duplicates: documents.data.filter((document) => document.possibleDuplicate).length,
       errors: documents.data.filter((document) => document.status === "failed" || document.importStatus === "failed").length,
       importedToday,
+      ocrCompletedToday,
+      ocrWarnings,
       averageReviewMinutes: null,
       averageConfirmationMinutes: documents.data.some((document) => document.importDurationMs)
         ? Math.round(documents.data.reduce((sum, document) => sum + Number(document.importDurationMs || 0), 0) / Math.max(1, documents.data.filter((document) => document.importDurationMs).length) / 60000)
@@ -675,7 +729,7 @@ export async function getInboxDocumentTimeline(uploadedDocumentId: string): Prom
     data: [
       { id: "received", label: "Documento recibido", at: document.data.uploadedAt, status: "done", detail: document.data.filename },
       { id: "classified", label: "Clasificado", at: eventByType.get("InboxDocumentClassified")?.occurred_at, status: ["classified", "needs_review", "confirmed", "imported"].includes(status) ? "done" : "pending", detail: document.data.classificationReason },
-      { id: "ocr", label: "OCR", status: status === "processing" ? "current" : status === "failed" ? "failed" : "pending", detail: "Reutiliza el OCR existente cuando se active el reprocesado." },
+      { id: "ocr", label: "OCR", at: eventByType.get("InboxOcrCompleted")?.occurred_at || document.data.ocrCompletedAt, status: status === "processing" ? "current" : status === "failed" ? "failed" : document.data.ocrCompletedAt ? "done" : "pending", detail: document.data.ocrWarnings?.join(" · ") || "OCR estructurado de bandeja documental." },
       { id: "review", label: "Revisión", status: status === "needs_review" ? "current" : ["confirmed", "imported"].includes(status) ? "done" : "pending" },
       { id: "confirmation", label: "Confirmación", at: eventByType.get("InboxReviewCompleted")?.occurred_at, status: ["confirmed", "imported"].includes(status) ? "done" : "pending" },
       { id: "import", label: "Importación", at: document.data.importedAt, status: status === "imported" ? "done" : status === "failed" ? "failed" : "pending" },

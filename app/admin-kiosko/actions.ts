@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { clearAdminSession, createAdminSession, isCorrectAdminPassword, requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { createDomainEvent, emitDomainEventSafe } from "@/lib/admin-kiosko/domain";
+import { processPendingInboxOcr, reprocessInboxOcr } from "@/lib/admin-kiosko/domain/inbox-ocr/processor";
+import { DOCUMENT_TYPES } from "@/lib/admin-kiosko/domain/document-types";
 import {
   createChecklistRecord,
   createCleaningRecord,
@@ -87,21 +89,7 @@ function checkboxValue(formData: FormData, key: string) {
   return formData.get(key) === "on" || formData.get(key) === "true";
 }
 
-const inboxDocumentTypes = new Set<InboxDocumentType>([
-  "invoice",
-  "credit_note",
-  "delivery_note",
-  "receipt",
-  "supplier_traceability_label",
-  "traceability_label",
-  "sanitary_document",
-  "technical_sheet",
-  "supplier_contract",
-  "maintenance_document",
-  "training_document",
-  "appcc_document",
-  "other",
-]);
+const inboxDocumentTypes = new Set<InboxDocumentType>(DOCUMENT_TYPES);
 
 function todayMadrid() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -419,6 +407,17 @@ export async function bulkInboxDocumentsAction(formData: FormData) {
 
   revalidatePath("/admin-kiosko/inbox");
   if (result.ok) {
+    if (action === "reprocess_ocr") {
+      const ocrResult = await reprocessInboxOcr(uploadedDocumentIds);
+      revalidatePath("/admin-kiosko/inbox");
+      if (!ocrResult.ok) {
+        redirect(`/admin-kiosko/inbox?error=${encodeURIComponent(ocrResult.error.slice(0, 240))}`);
+      }
+      const failed = ocrResult.data.failed;
+      const completed = ocrResult.data.completed;
+      redirect(`/admin-kiosko/inbox?saved=1&ocr=${completed}&ocr_failed=${failed}`);
+    }
+
     await Promise.all(uploadedDocumentIds.map((uploadedDocumentId) => emitDomainEventSafe(createDomainEvent(
       action === "confirm" ? "InboxImportConfirmed" : "InboxReviewCompleted",
       {
@@ -439,6 +438,20 @@ export async function bulkInboxDocumentsAction(formData: FormData) {
       },
     ))));
     redirect("/admin-kiosko/inbox?saved=1");
+  }
+
+  redirect(`/admin-kiosko/inbox?error=${encodeURIComponent(result.error.slice(0, 240))}`);
+}
+
+export async function processInboxPendingOcrAction(formData: FormData) {
+  await requireAdminSession();
+
+  const limit = Math.max(1, Math.min(50, Number(text(formData, "limit")) || 10));
+  const result = await processPendingInboxOcr(limit);
+
+  revalidatePath("/admin-kiosko/inbox");
+  if (result.ok) {
+    redirect(`/admin-kiosko/inbox?saved=1&ocr=${result.data.completed}&ocr_failed=${result.data.failed}`);
   }
 
   redirect(`/admin-kiosko/inbox?error=${encodeURIComponent(result.error.slice(0, 240))}`);

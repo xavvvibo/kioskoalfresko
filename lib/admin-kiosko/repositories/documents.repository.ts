@@ -1,3 +1,5 @@
+import { documentTypeRoute, type DocumentType } from "../domain/document-types";
+
 /**
  * Documents repository.
  *
@@ -25,23 +27,14 @@ export const DOCUMENT_PROCESSING_STATUSES = [
 
 export type DocumentProcessingStatus = (typeof DOCUMENT_PROCESSING_STATUSES)[number];
 
-export const DOCUMENT_TYPES = [
-  "invoice",
-  "credit_note",
-  "delivery_note",
-  "receipt",
-  "supplier_traceability_label",
-  "traceability_label",
-  "sanitary_document",
-  "technical_sheet",
-  "supplier_contract",
-  "maintenance_document",
-  "training_document",
-  "appcc_document",
-  "other",
-] as const;
-
-export type DocumentType = (typeof DOCUMENT_TYPES)[number];
+export {
+  DOCUMENT_TYPE_ALIASES,
+  DOCUMENT_TYPE_LABELS,
+  DOCUMENT_TYPES,
+  documentTypeRoute,
+  normalizeDocumentType,
+  type DocumentType,
+} from "../domain/document-types";
 
 export type BulkDocumentQueueItem = {
   uploaded_document_id: string;
@@ -63,36 +56,6 @@ const legacyReviewStatusMap: Record<string, DocumentProcessingStatus> = {
   importado: "imported",
 };
 
-const legacyDocumentTypeMap: Record<string, DocumentType> = {
-  factura: "invoice",
-  invoice: "invoice",
-  rectificativa: "credit_note",
-  credit_note: "credit_note",
-  albaran: "delivery_note",
-  delivery_note: "delivery_note",
-  recibo: "receipt",
-  receipt: "receipt",
-  etiqueta: "supplier_traceability_label",
-  etiqueta_lote: "supplier_traceability_label",
-  supplier_traceability_label: "supplier_traceability_label",
-  etiqueta_trazabilidad: "traceability_label",
-  traceability_label: "traceability_label",
-  certificado: "sanitary_document",
-  sanitary_document: "sanitary_document",
-  ficha_tecnica: "technical_sheet",
-  technical_sheet: "technical_sheet",
-  contrato: "supplier_contract",
-  supplier_contract: "supplier_contract",
-  mantenimiento: "maintenance_document",
-  maintenance_document: "maintenance_document",
-  formacion: "training_document",
-  training_document: "training_document",
-  appcc: "appcc_document",
-  appcc_document: "appcc_document",
-  otro: "other",
-  other: "other",
-};
-
 export function normalizeDocumentProcessingStatus(status?: string | null): DocumentProcessingStatus {
   if (!status) return "uploaded";
   if (status === "revisado") return "needs_review";
@@ -105,23 +68,8 @@ export function normalizeDocumentProcessingStatus(status?: string | null): Docum
   return legacyReviewStatusMap[status] || "needs_review";
 }
 
-export function normalizeDocumentType(type?: string | null): DocumentType {
-  if (!type) return "other";
-  return legacyDocumentTypeMap[type] || legacyDocumentTypeMap[type.toLowerCase()] || "other";
-}
-
 export function nextDocumentRouteForType(type?: string | null) {
-  const normalized = normalizeDocumentType(type);
-
-  if (normalized === "invoice" || normalized === "receipt") return "/admin-kiosko/contabilidad";
-  if (normalized === "delivery_note") return "/admin-kiosko/compras";
-  if (normalized === "supplier_traceability_label" || normalized === "traceability_label") return "/admin-kiosko/trazabilidad";
-  if (normalized === "maintenance_document") return "/admin-kiosko/mantenimiento";
-  if (normalized === "training_document" || normalized === "sanitary_document" || normalized === "technical_sheet" || normalized === "supplier_contract" || normalized === "appcc_document") {
-    return "/admin-kiosko/documentacion";
-  }
-
-  return "/admin-kiosko/compras";
+  return documentTypeRoute(type);
 }
 
 export {

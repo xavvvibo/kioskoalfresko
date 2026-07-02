@@ -17,6 +17,14 @@ alter table if exists public.admin_uploaded_documents
   add column if not exists processing_status text default 'uploaded',
   add column if not exists processing_error text,
   add column if not exists corrections jsonb default '{}'::jsonb,
+  add column if not exists ocr_attempts integer not null default 0,
+  add column if not exists ocr_started_at timestamptz,
+  add column if not exists ocr_completed_at timestamptz,
+  add column if not exists ocr_model text,
+  add column if not exists ocr_json jsonb default '{}'::jsonb,
+  add column if not exists ocr_text text,
+  add column if not exists ocr_warnings text[] default '{}'::text[],
+  add column if not exists ocr_reprocess_requested boolean default false,
   add column if not exists file_hash text,
   add column if not exists possible_duplicate boolean default false,
   add column if not exists duplicate_of uuid,
@@ -36,6 +44,64 @@ alter table if exists public.admin_uploaded_documents
   add column if not exists archived_by text,
   add column if not exists archived_at timestamptz;
 
+create or replace function public.admin_normalize_document_type(p_type text)
+returns text
+language sql
+immutable
+as $$
+  select case lower(trim(coalesce(p_type, '')))
+    when '' then 'other'
+    when 'factura' then 'purchase_invoice'
+    when 'invoice' then 'purchase_invoice'
+    when 'purchase_invoice' then 'purchase_invoice'
+    when 'rectificativa' then 'credit_note'
+    when 'abono' then 'credit_note'
+    when 'credit_note' then 'credit_note'
+    when 'albaran' then 'purchase_delivery_note'
+    when 'albarán' then 'purchase_delivery_note'
+    when 'delivery_note' then 'purchase_delivery_note'
+    when 'purchase_delivery_note' then 'purchase_delivery_note'
+    when 'recibo' then 'receipt'
+    when 'ticket' then 'receipt'
+    when 'receipt' then 'receipt'
+    when 'etiqueta' then 'supplier_traceability_label'
+    when 'etiqueta_lote' then 'supplier_traceability_label'
+    when 'supplier_traceability_label' then 'supplier_traceability_label'
+    when 'etiqueta_trazabilidad' then 'traceability_label'
+    when 'traceability_label' then 'traceability_label'
+    when 'certificado' then 'sanitary_document'
+    when 'certificado_ddd' then 'sanitary_document'
+    when 'boletin_sanitario' then 'sanitary_document'
+    when 'boletín_sanitario' then 'sanitary_document'
+    when 'analisis_agua' then 'sanitary_document'
+    when 'análisis_agua' then 'sanitary_document'
+    when 'sanitary_document' then 'sanitary_document'
+    when 'ficha_tecnica' then 'technical_sheet'
+    when 'ficha_técnica' then 'technical_sheet'
+    when 'technical_sheet' then 'technical_sheet'
+    when 'contrato' then 'supplier_contract'
+    when 'contrato_ddd' then 'supplier_contract'
+    when 'supplier_contract' then 'supplier_contract'
+    when 'mantenimiento' then 'maintenance_document'
+    when 'maintenance_document' then 'maintenance_document'
+    when 'formacion' then 'training_document'
+    when 'formación' then 'training_document'
+    when 'certificado_manipulador' then 'training_document'
+    when 'training_document' then 'training_document'
+    when 'appcc' then 'appcc_document'
+    when 'haccp' then 'appcc_document'
+    when 'memoria_sanitaria' then 'appcc_document'
+    when 'appcc_document' then 'appcc_document'
+    when 'accounting_document' then 'accounting_document'
+    when 'contabilidad' then 'accounting_document'
+    when 'otro' then 'other'
+    when 'other' then 'other'
+    else 'other'
+  end;
+$$;
+
+comment on function public.admin_normalize_document_type(text) is 'Normaliza aliases legacy al catalogo documental canonico del ERP APPCC.';
+
 do $$
 begin
   if to_regclass('public.admin_uploaded_documents') is not null then
@@ -53,6 +119,18 @@ begin
     end;
   end if;
 end $$;
+
+update public.admin_uploaded_documents
+set
+  detected_type = case when detected_type is null then null else public.admin_normalize_document_type(detected_type) end,
+  selected_type = case when selected_type is null then null else public.admin_normalize_document_type(selected_type) end,
+  confirmed_type = case when confirmed_type is null then null else public.admin_normalize_document_type(confirmed_type) end
+where to_regclass('public.admin_uploaded_documents') is not null
+  and (
+    detected_type is not null
+    or selected_type is not null
+    or confirmed_type is not null
+  );
 
 update public.admin_uploaded_documents
 set processing_status = case
@@ -134,6 +212,15 @@ begin
     create index if not exists admin_uploaded_documents_inbox_corrections_idx
       on public.admin_uploaded_documents using gin (corrections);
 
+    create index if not exists admin_uploaded_documents_inbox_ocr_queue_idx
+      on public.admin_uploaded_documents (processing_status, ocr_reprocess_requested, uploaded_at);
+
+    create index if not exists admin_uploaded_documents_inbox_ocr_completed_idx
+      on public.admin_uploaded_documents (ocr_completed_at desc);
+
+    create index if not exists admin_uploaded_documents_inbox_ocr_json_idx
+      on public.admin_uploaded_documents using gin (ocr_json);
+
     create index if not exists admin_uploaded_documents_inbox_duplicate_idx
       on public.admin_uploaded_documents (possible_duplicate, duplicate_of);
 
@@ -156,13 +243,21 @@ begin
   if to_regclass('public.admin_uploaded_documents') is not null then
     comment on column public.admin_uploaded_documents.upload_group_id is 'Identificador comun para una subida masiva o expediente documental.';
     comment on column public.admin_uploaded_documents.expediente_id is 'Identificador futuro de expediente ERP; la UI puede agrupar por upload_group_id hasta que exista expediente persistido.';
-    comment on column public.admin_uploaded_documents.detected_type is 'Tipo documental propuesto por IA/OCR: invoice, credit_note, delivery_note, receipt, supplier_traceability_label, traceability_label, technical_sheet, sanitary_document, appcc_document, maintenance_document, supplier_contract, training_document, other.';
+    comment on column public.admin_uploaded_documents.detected_type is 'Tipo documental canonico propuesto por IA/OCR: purchase_invoice, purchase_delivery_note, receipt, supplier_traceability_label, traceability_label, technical_sheet, sanitary_document, appcc_document, maintenance_document, supplier_contract, training_document, accounting_document, credit_note, other.';
     comment on column public.admin_uploaded_documents.selected_type is 'Tipo elegido manualmente antes de confirmar.';
     comment on column public.admin_uploaded_documents.confirmed_type is 'Tipo confirmado por usuario tras revision.';
     comment on column public.admin_uploaded_documents.processing_status is 'Estado canonico de bandeja: uploaded, processing, classified, needs_review, confirmed, imported, failed, archived.';
     comment on column public.admin_uploaded_documents.review_status is 'Campo legacy mantenido por compatibilidad; no debe usarse como estado operativo.';
     comment on column public.admin_uploaded_documents.classification_confidence is 'Confianza de clasificacion documental entre 0 y 1.';
     comment on column public.admin_uploaded_documents.corrections is 'Campos corregidos durante la revision antes de derivar a contabilidad, compras, APPCC, inventario, trazabilidad o etiquetas.';
+    comment on column public.admin_uploaded_documents.ocr_attempts is 'Numero de intentos de OCR batch ejecutados desde Inbox.';
+    comment on column public.admin_uploaded_documents.ocr_started_at is 'Fecha/hora de inicio del ultimo OCR batch.';
+    comment on column public.admin_uploaded_documents.ocr_completed_at is 'Fecha/hora de finalizacion del ultimo OCR batch.';
+    comment on column public.admin_uploaded_documents.ocr_model is 'Modelo usado por OpenAI Vision/OCR en el ultimo procesamiento.';
+    comment on column public.admin_uploaded_documents.ocr_json is 'Resultado OCR estructurado del documento raiz; no crea impactos definitivos hasta confirmacion.';
+    comment on column public.admin_uploaded_documents.ocr_text is 'Texto bruto devuelto por OCR/OpenAI cuando existe.';
+    comment on column public.admin_uploaded_documents.ocr_warnings is 'Avisos APPCC/operativos detectados durante OCR que obligan o recomiendan revision.';
+    comment on column public.admin_uploaded_documents.ocr_reprocess_requested is 'Marca de cola para reprocesar OCR sin crear un nuevo documento raiz.';
     comment on column public.admin_uploaded_documents.possible_duplicate is 'Marca advertencia de posible documento duplicado; nunca bloquea la subida.';
     comment on column public.admin_uploaded_documents.duplicate_of is 'Documento raiz posible al que duplica este registro.';
     comment on column public.admin_uploaded_documents.duplicate_score is 'Puntuacion de similitud de duplicado entre 0 y 1.';
@@ -181,6 +276,79 @@ begin
     alter table public.admin_uploaded_documents
       add constraint admin_uploaded_documents_processing_status_chk
       check (processing_status in ('uploaded', 'processing', 'classified', 'needs_review', 'confirmed', 'imported', 'failed', 'archived'))
+      not valid;
+
+    alter table public.admin_uploaded_documents
+      drop constraint if exists admin_uploaded_documents_detected_type_chk;
+    alter table public.admin_uploaded_documents
+      drop constraint if exists admin_uploaded_documents_selected_type_chk;
+    alter table public.admin_uploaded_documents
+      drop constraint if exists admin_uploaded_documents_confirmed_type_chk;
+    alter table public.admin_uploaded_documents
+      add constraint admin_uploaded_documents_detected_type_chk
+      check (
+        detected_type is null
+        or detected_type in (
+          'purchase_invoice',
+          'purchase_delivery_note',
+          'receipt',
+          'supplier_traceability_label',
+          'traceability_label',
+          'technical_sheet',
+          'sanitary_document',
+          'appcc_document',
+          'maintenance_document',
+          'supplier_contract',
+          'training_document',
+          'accounting_document',
+          'credit_note',
+          'other'
+        )
+      )
+      not valid;
+    alter table public.admin_uploaded_documents
+      add constraint admin_uploaded_documents_selected_type_chk
+      check (
+        selected_type is null
+        or selected_type in (
+          'purchase_invoice',
+          'purchase_delivery_note',
+          'receipt',
+          'supplier_traceability_label',
+          'traceability_label',
+          'technical_sheet',
+          'sanitary_document',
+          'appcc_document',
+          'maintenance_document',
+          'supplier_contract',
+          'training_document',
+          'accounting_document',
+          'credit_note',
+          'other'
+        )
+      )
+      not valid;
+    alter table public.admin_uploaded_documents
+      add constraint admin_uploaded_documents_confirmed_type_chk
+      check (
+        confirmed_type is null
+        or confirmed_type in (
+          'purchase_invoice',
+          'purchase_delivery_note',
+          'receipt',
+          'supplier_traceability_label',
+          'traceability_label',
+          'technical_sheet',
+          'sanitary_document',
+          'appcc_document',
+          'maintenance_document',
+          'supplier_contract',
+          'training_document',
+          'accounting_document',
+          'credit_note',
+          'other'
+        )
+      )
       not valid;
 
     alter table public.admin_uploaded_documents
@@ -237,6 +405,13 @@ select
   classification_confidence,
   classification_reason,
   processing_error,
+  ocr_attempts,
+  ocr_started_at,
+  ocr_completed_at,
+  ocr_model,
+  ocr_json,
+  ocr_warnings,
+  ocr_reprocess_requested,
   possible_duplicate,
   duplicate_of,
   duplicate_score,
@@ -284,8 +459,8 @@ begin
       updated_at = now(),
       processing_status = 'confirmed',
       review_status = 'confirmado',
-      confirmed_type = coalesce(p_confirmed_type, confirmed_type, selected_type, detected_type, 'other'),
-      selected_type = coalesce(p_confirmed_type, selected_type, detected_type, 'other'),
+      confirmed_type = public.admin_normalize_document_type(coalesce(p_confirmed_type, confirmed_type, selected_type, detected_type, 'other')),
+      selected_type = public.admin_normalize_document_type(coalesce(p_confirmed_type, selected_type, detected_type, 'other')),
       confirmed_by = coalesce(p_responsible, confirmed_by),
       confirmed_at = now()
     where id = any(p_document_ids);
@@ -306,16 +481,19 @@ begin
       updated_at = now(),
       processing_status = 'needs_review',
       review_status = 'pendiente_revision',
-      selected_type = coalesce(p_confirmed_type, selected_type, detected_type, 'other')
+      selected_type = public.admin_normalize_document_type(coalesce(p_confirmed_type, selected_type, detected_type, 'other'))
     where id = any(p_document_ids);
     get diagnostics v_updated = row_count;
   elsif p_action = 'reprocess_ocr' then
     update public.admin_uploaded_documents
     set
       updated_at = now(),
-      processing_status = 'processing',
-      processing_error = null
-    where id = any(p_document_ids);
+      processing_status = 'uploaded',
+      review_status = 'pendiente_revision',
+      processing_error = null,
+      ocr_reprocess_requested = true
+    where id = any(p_document_ids)
+      and processing_status <> 'imported';
     get diagnostics v_updated = row_count;
   elsif p_action = 'mark_duplicate' then
     update public.admin_uploaded_documents

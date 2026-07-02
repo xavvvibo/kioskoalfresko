@@ -473,25 +473,27 @@ flowchart TD
 
 ## Inbox ERP
 
-La carpeta `lib/admin-kiosko/inbox` define los contratos para la futura entrada unica documental.
+La carpeta `lib/admin-kiosko/inbox` define los contratos para la entrada unica documental.
 
 El backend real de la bandeja vive en:
 
 - `lib/admin-kiosko/repositories/inbox.repository.ts`
 - `uploadInboxDocumentsAction` en `app/admin-kiosko/actions.ts`
+- `processPendingInboxOcr` y `reprocessInboxOcr` en `lib/admin-kiosko/domain/inbox-ocr/processor.ts`
 
-No existe todavia una UI compleja. La accion server-side ya permite subir uno o varios archivos mezclando PDF e imagenes. Cada archivo crea un registro individual en `admin_uploaded_documents` y comparte `upload_group_id` cuando pertenece a la misma subida.
+La UI operativa vive en `/admin-kiosko/inbox`. Permite subir uno o varios archivos mezclando PDF e imagenes. Cada archivo crea un registro individual en `admin_uploaded_documents` y comparte `upload_group_id` cuando pertenece a la misma subida.
 
 Flujo:
 
 1. Subir uno o varios archivos.
 2. Crear un `admin_uploaded_documents` por archivo.
 3. Emitir `DocumentUploaded`.
-4. Clasificar con IA en una fase posterior.
-5. Permitir correccion manual del tipo.
-6. Confirmar.
-7. Emitir `DocumentConfirmed`.
-8. Derivar por handlers a contabilidad, compras, recepcion APPCC, inventario, trazabilidad, documentacion sanitaria o etiquetas.
+4. Procesar OCR batch con OpenAI Vision cuando el usuario pulse procesar pendientes o reprocesar.
+5. Guardar resultado estructurado en `corrections`, `ocr_json`, `detected_type`, `classification_confidence` y `ocr_warnings`.
+6. Permitir correccion manual del tipo y de los datos.
+7. Confirmar.
+8. Emitir `InboxImportConfirmed`.
+9. Derivar por handlers a contabilidad, compras, recepcion APPCC, inventario, trazabilidad, documentacion sanitaria o etiquetas.
 
 ### Upload groups
 
@@ -520,7 +522,7 @@ flowchart TD
   Event3 --> Store
 ```
 
-### Clasificacion documental
+### Clasificacion documental y OCR batch
 
 La bandeja soporta estos campos preparados:
 
@@ -529,8 +531,57 @@ La bandeja soporta estos campos preparados:
 - `classification_reason`
 - `selected_type`
 - `confirmed_type`
+- `ocr_attempts`
+- `ocr_started_at`
+- `ocr_completed_at`
+- `ocr_model`
+- `ocr_json`
+- `ocr_text`
+- `ocr_warnings`
+- `ocr_reprocess_requested`
 
-La IA todavia no se ejecuta automaticamente desde Inbox. El usuario podra corregir `selected_type` antes de confirmar. Solo la confirmacion debe disparar `DocumentConfirmed`.
+El OCR batch reutiliza la infraestructura existente de `lib/ai` y OpenAI Vision. No crea compras, lotes, recepciones ni asientos contables. Solo prepara datos para revision humana.
+
+Estados del OCR dentro del lifecycle documental:
+
+- `uploaded`: documento pendiente de OCR.
+- `processing`: OCR en curso.
+- `classified`: OCR con confianza alta y sin avisos sanitarios bloqueantes.
+- `needs_review`: confianza media/baja o avisos APPCC.
+- `failed`: error tecnico o imposibilidad de leer el documento.
+
+Eventos emitidos por OCR batch:
+
+- `InboxOcrStarted`
+- `InboxOcrCompleted`
+- `InboxOcrFailed`
+- `InboxDocumentClassified`
+- `InboxNeedsReview`
+- compatibilidad con `DocumentClassified`
+
+Reglas APPCC minimas:
+
+- perecederos sin lote visible pasan a revision.
+- perecederos sin caducidad visible pasan a revision.
+- recepciones con perecederos sin temperatura visible generan aviso.
+- fichas tecnicas sin alergenos claros pasan a revision.
+- documentos sanitarios con vencimiento proximo generan aviso.
+
+```mermaid
+flowchart TD
+  Uploaded[uploaded] --> Processing[processing]
+  Processing --> Vision[OpenAI Vision / OCR existente]
+  Vision --> Extract[Extraccion estructurada]
+  Extract --> High[classified]
+  Extract --> Review[needs_review]
+  Vision --> Failed[failed]
+  High --> Human[Revision humana opcional]
+  Review --> Human[Revision humana obligatoria]
+  Human --> Confirm[InboxImportConfirmed]
+  Confirm --> Orchestrator[DocumentImportOrchestrator]
+```
+
+Solo la confirmacion humana dispara `InboxImportConfirmed`; el OCR no importa automaticamente ni modifica stock definitivo.
 
 ### Relacion con expedientes
 
@@ -743,7 +794,8 @@ Tipos documentales soportados por la bandeja:
 flowchart TD
   Drop[Arrastrar / pegar / seleccionar archivos] --> Root[admin_uploaded_documents]
   Root --> Storage[Storage privado admin-kiosko-documents]
-  Root --> Classify[Clasificacion IA inicial]
+  Root --> Ocr[OCR batch OpenAI Vision]
+  Ocr --> Classify[Clasificacion y extraccion estructurada]
   Classify --> Review[Revision editable]
   Review --> Confirm[Confirmar e importar]
   Confirm --> Events[Event Store]
@@ -758,6 +810,10 @@ flowchart TD
 Eventos emitidos por el flujo Inbox:
 
 - `InboxDocumentUploaded`
+- `InboxOcrStarted`
+- `InboxOcrCompleted`
+- `InboxOcrFailed`
+- `InboxNeedsReview`
 - `InboxDocumentClassified`
 - `InboxReviewCompleted`
 - `InboxImportConfirmed`

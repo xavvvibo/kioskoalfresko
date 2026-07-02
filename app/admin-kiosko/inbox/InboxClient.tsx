@@ -3,24 +3,11 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { InboxDocumentRecord, InboxDocumentType } from "@/lib/admin-kiosko/inbox";
+import { DOCUMENT_TYPE_LABELS } from "@/lib/admin-kiosko/domain/document-types";
 import type { InboxGroup, InboxMetrics } from "@/lib/admin-kiosko/repositories/inbox.repository";
-import { archiveInboxDocumentAction, bulkInboxDocumentsAction, confirmInboxReviewAction, uploadInboxDocumentsAction } from "../actions";
+import { archiveInboxDocumentAction, bulkInboxDocumentsAction, confirmInboxReviewAction, processInboxPendingOcrAction, uploadInboxDocumentsAction } from "../actions";
 
-const typeLabels: Record<InboxDocumentType, string> = {
-  invoice: "Factura",
-  credit_note: "Rectificativa",
-  delivery_note: "Albarán",
-  receipt: "Ticket",
-  supplier_traceability_label: "Etiqueta proveedor",
-  traceability_label: "Etiqueta trazabilidad",
-  sanitary_document: "Documento sanitario",
-  technical_sheet: "Ficha técnica",
-  supplier_contract: "Contrato proveedor",
-  maintenance_document: "Mantenimiento",
-  training_document: "Formación",
-  appcc_document: "APPCC",
-  other: "Otro",
-};
+const typeLabels: Record<InboxDocumentType, string> = DOCUMENT_TYPE_LABELS;
 
 const statusLabels = {
   uploaded: "Subido",
@@ -122,7 +109,22 @@ function DocumentReviewRow({ document }: { document: InboxDocumentRecord }) {
             {document.relatedRecordType ? <p><strong className="text-white">Relación ERP:</strong> {document.relatedRecordType}</p> : null}
             {document.importStatus ? <p><strong className="text-white">Importación:</strong> {document.importStatus}{document.importDurationMs ? ` · ${document.importDurationMs} ms` : ""}</p> : null}
             {document.processingError || document.importError ? <p className="text-[#f2c6bb]"><strong>Error:</strong> {document.processingError || document.importError}</p> : null}
+            {document.ocrAttempts ? (
+              <p><strong className="text-white">OCR:</strong> {document.ocrAttempts} intento(s){document.ocrModel ? ` · ${document.ocrModel}` : ""}{document.ocrCompletedAt ? ` · completado ${new Date(document.ocrCompletedAt).toLocaleString("es-ES")}` : ""}</p>
+            ) : null}
+            {document.ocrWarnings?.length ? (
+              <div className="rounded-xl border border-amber-300 bg-amber-100 px-3 py-2 font-semibold text-amber-950">
+                {document.ocrWarnings.map((warning) => <p key={warning}>{warning}</p>)}
+              </div>
+            ) : null}
           </div>
+          {document.ocrJson ? (
+            <div className="mt-4 grid gap-2 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs text-stone-300">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Resumen OCR</p>
+              <p><strong className="text-white">Tipo:</strong> {String(document.ocrJson.detectedType || document.detectedType || "Pendiente de revisión")}</p>
+              <p><strong className="text-white">Campos extraídos:</strong> {Object.keys((document.ocrJson.result as Record<string, unknown> | undefined) || {}).slice(0, 8).join(", ") || "Revisión manual preparada."}</p>
+            </div>
+          ) : null}
           {document.importHandlerResults?.length ? (
             <div className="mt-4 grid gap-2 rounded-2xl border border-white/10 bg-white/6 p-3">
               <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Resultado por handler</p>
@@ -236,6 +238,8 @@ export function InboxClient({
         document.confirmedType || "",
         document.uploadGroupId || "",
         document.classificationReason || "",
+        document.ocrWarnings?.join(" ") || "",
+        document.processingError || "",
       ].join(" "));
       return matchesFilter && (!normalizedQuery || haystack.includes(normalizedQuery));
     });
@@ -347,6 +351,8 @@ export function InboxClient({
           ["Duplicados", metrics?.duplicates ?? documents.filter((item) => item.possibleDuplicate).length],
           ["Errores", metrics?.errors ?? documents.filter((item) => item.status === "failed").length],
           ["Importados hoy", metrics?.importedToday ?? documents.filter((item) => item.status === "imported").length],
+          ["OCR hoy", metrics?.ocrCompletedToday ?? documents.filter((item) => item.ocrCompletedAt?.startsWith(new Date().toISOString().slice(0, 10))).length],
+          ["Avisos OCR", metrics?.ocrWarnings ?? documents.filter((item) => item.ocrWarnings?.length).length],
           ["Media importación", metrics?.averageConfirmationMinutes === null || metrics?.averageConfirmationMinutes === undefined ? "Pendiente" : `${metrics.averageConfirmationMinutes} min`],
           ["Expedientes", groups.length],
         ].map(([label, value]) => (
@@ -373,6 +379,14 @@ export function InboxClient({
         </div>
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar proveedor, producto, factura, albarán, lote, documento o texto OCR" className="mt-5 w-full rounded-2xl border border-white/12 bg-white px-4 py-3 text-sm text-stone-950 outline-none focus:border-[#d94b2b]" />
         <div className="mt-5 grid gap-4">
+          <form action={processInboxPendingOcrAction} className="grid gap-3 rounded-[1.2rem] border border-white/10 bg-white/6 p-3 md:grid-cols-[1fr_auto_auto]">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">OCR batch</p>
+              <p className="mt-1 text-xs font-semibold text-stone-300">Procesa documentos subidos o marcados para reprocesar. No importa, no confirma y no modifica stock.</p>
+            </div>
+            <input name="limit" type="number" min="1" max="50" defaultValue="10" className="rounded-xl border border-white/12 bg-white px-3 py-2 text-sm font-semibold text-stone-950" />
+            <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Procesar pendientes</button>
+          </form>
           <form id="bulk-inbox-form" action={bulkInboxDocumentsAction} className="grid gap-3 rounded-[1.2rem] border border-white/10 bg-black/20 p-3 md:grid-cols-[1fr_1fr_auto_auto_auto]">
           <input type="hidden" name="responsible" value="F. Javier Bocanegra Sanjuan" />
             <select name="bulk_action" className="rounded-xl border border-white/12 bg-white px-3 py-2 text-sm font-semibold text-stone-950">

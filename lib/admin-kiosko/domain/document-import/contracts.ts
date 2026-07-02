@@ -54,8 +54,8 @@ export type DocumentImportHandler = {
   execute(context: DocumentImportContext): Promise<DocumentImportHandlerResult>;
 };
 
-export const purchaseInvoiceTypes: InboxDocumentType[] = ["invoice", "credit_note"];
-export const purchaseDeliveryNoteTypes: InboxDocumentType[] = ["delivery_note", "receipt"];
+export const purchaseInvoiceTypes: InboxDocumentType[] = ["purchase_invoice", "credit_note", "accounting_document"];
+export const purchaseDeliveryNoteTypes: InboxDocumentType[] = ["purchase_delivery_note", "receipt"];
 export const supplierTraceabilityLabelTypes: InboxDocumentType[] = ["supplier_traceability_label", "traceability_label"];
 export const appccDocumentTypes: InboxDocumentType[] = [
   "technical_sheet",

@@ -50,6 +50,31 @@ export type InboxDocumentClassifiedPayload = {
   reason?: string;
 };
 
+export type InboxOcrStartedPayload = {
+  uploadedDocumentId: string;
+  attempt: number;
+  mimeType?: string;
+};
+
+export type InboxOcrCompletedPayload = {
+  uploadedDocumentId: string;
+  detectedType: string;
+  confidence: number;
+  status: string;
+  warnings?: string[];
+};
+
+export type InboxOcrFailedPayload = {
+  uploadedDocumentId: string;
+  error: string;
+  attempt?: number;
+};
+
+export type InboxNeedsReviewPayload = {
+  uploadedDocumentId: string;
+  reasons: string[];
+};
+
 export type InboxReviewCompletedPayload = {
   uploadedDocumentId: string;
   confirmedType: string;
@@ -201,6 +226,10 @@ export type AdminKioskoDomainEvent =
   | DomainEventEnvelope<"DocumentClassified", DocumentClassifiedPayload>
   | DomainEventEnvelope<"DocumentConfirmed", DocumentConfirmedPayload>
   | DomainEventEnvelope<"InboxDocumentUploaded", InboxDocumentUploadedPayload>
+  | DomainEventEnvelope<"InboxOcrStarted", InboxOcrStartedPayload>
+  | DomainEventEnvelope<"InboxOcrCompleted", InboxOcrCompletedPayload>
+  | DomainEventEnvelope<"InboxOcrFailed", InboxOcrFailedPayload>
+  | DomainEventEnvelope<"InboxNeedsReview", InboxNeedsReviewPayload>
   | DomainEventEnvelope<"InboxDocumentClassified", InboxDocumentClassifiedPayload>
   | DomainEventEnvelope<"InboxReviewCompleted", InboxReviewCompletedPayload>
   | DomainEventEnvelope<"InboxImportConfirmed", InboxImportConfirmedPayload>

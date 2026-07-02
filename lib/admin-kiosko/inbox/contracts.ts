@@ -28,6 +28,13 @@ export type InboxDocumentRecord = {
   classificationConfidence?: number;
   classificationReason?: string;
   processingError?: string;
+  ocrAttempts?: number;
+  ocrStartedAt?: string;
+  ocrCompletedAt?: string;
+  ocrModel?: string;
+  ocrJson?: Record<string, unknown>;
+  ocrWarnings?: string[];
+  ocrReprocessRequested?: boolean;
   possibleDuplicate?: boolean;
   duplicateOf?: string;
   duplicateScore?: number;

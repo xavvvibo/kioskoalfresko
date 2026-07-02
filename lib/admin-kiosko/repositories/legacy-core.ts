@@ -1,5 +1,6 @@
 import { evaluateTemperature, isActiveTemperatureEquipment, getTemperatureEquipment, temperatureEquipment } from "../temperature-rules";
 import { getDocumentStats } from "../documents";
+import { normalizeDocumentType } from "../domain/document-types";
 
 type DbResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -891,7 +892,7 @@ export type ExecutiveDashboardMetrics = {
 
 function getSupabaseConfig() {
   return {
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    url: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "",
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
   };
 }
@@ -995,7 +996,7 @@ function assertSupabaseConfig() {
   return { ok: true as const, config };
 }
 
-async function supabaseRequest<T>(table: string, init: RequestInit & { query?: string }): Promise<DbResult<T>> {
+export async function adminSupabaseRequest<T>(table: string, init: RequestInit & { query?: string }): Promise<DbResult<T>> {
   const configResult = assertSupabaseConfig();
 
   if (!configResult.ok) {
@@ -1051,7 +1052,7 @@ async function supabaseRequest<T>(table: string, init: RequestInit & { query?: s
 }
 
 async function insertRecord(table: string, payload: Record<string, unknown>) {
-  return supabaseRequest<undefined>(table, {
+  return adminSupabaseRequest<undefined>(table, {
     method: "POST",
     body: JSON.stringify(payload),
     headers: {
@@ -1061,7 +1062,7 @@ async function insertRecord(table: string, payload: Record<string, unknown>) {
 }
 
 async function insertRecordReturning<T>(table: string, payload: Record<string, unknown>, select = "*") {
-  return supabaseRequest<T[]>(table, {
+  return adminSupabaseRequest<T[]>(table, {
     method: "POST",
     query: `?select=${select}`,
     body: JSON.stringify(payload),
@@ -1072,7 +1073,7 @@ async function insertRecordReturning<T>(table: string, payload: Record<string, u
 }
 
 async function patchRecord(table: string, id: string, payload: Record<string, unknown>) {
-  return supabaseRequest<undefined>(table, {
+  return adminSupabaseRequest<undefined>(table, {
     method: "PATCH",
     query: `?id=eq.${encodeURIComponent(id)}`,
     body: JSON.stringify(payload),
@@ -1082,7 +1083,7 @@ async function patchRecord(table: string, id: string, payload: Record<string, un
   });
 }
 
-async function uploadStorageObject(bucket: string, path: string, buffer: Buffer, mimeType: string) {
+export async function uploadAdminStorageObject(bucket: string, path: string, buffer: Buffer, mimeType: string, options?: { upsert?: boolean }) {
   const configResult = assertSupabaseConfig();
   if (!configResult.ok) return configResult;
 
@@ -1093,7 +1094,7 @@ async function uploadStorageObject(bucket: string, path: string, buffer: Buffer,
         apikey: configResult.config.serviceRoleKey,
         Authorization: `Bearer ${configResult.config.serviceRoleKey}`,
         "Content-Type": mimeType || "application/octet-stream",
-        "x-upsert": "true",
+        "x-upsert": options?.upsert === false ? "false" : "true",
       },
       body: new Blob([new Uint8Array(buffer)], { type: mimeType || "application/octet-stream" }),
       cache: "no-store",
@@ -1106,6 +1107,30 @@ async function uploadStorageObject(bucket: string, path: string, buffer: Buffer,
     return { ok: true as const, data: { bucket, path } };
   } catch (error) {
     return { ok: false as const, error: error instanceof Error ? error.message : "No se pudo guardar el documento original." };
+  }
+}
+
+export async function downloadAdminStorageObject(bucket: string, path: string): Promise<DbResult<Buffer>> {
+  const configResult = assertSupabaseConfig();
+  if (!configResult.ok) return configResult;
+
+  try {
+    const response = await fetch(`${configResult.config.url}/storage/v1/object/${bucket}/${path}`, {
+      method: "GET",
+      headers: {
+        apikey: configResult.config.serviceRoleKey,
+        Authorization: `Bearer ${configResult.config.serviceRoleKey}`,
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return { ok: false as const, error: await response.text() || `Storage HTTP ${response.status}` };
+    }
+
+    return { ok: true as const, data: Buffer.from(await response.arrayBuffer()) };
+  } catch (error) {
+    return { ok: false as const, error: error instanceof Error ? error.message : "No se pudo leer el documento original." };
   }
 }
 
@@ -1141,8 +1166,8 @@ async function createStorageSignedUrl(bucket: string, path: string, expiresIn = 
 
 function storageFolderForDocumentType(type: string) {
   const normalized = type.trim().toLowerCase();
-  if (normalized.includes("factura")) return "facturas";
-  if (normalized.includes("albaran") || normalized.includes("albarán")) return "albaranes";
+  if (normalized.includes("factura") || normalized === "purchase_invoice" || normalized === "credit_note" || normalized === "accounting_document") return "facturas";
+  if (normalized.includes("albaran") || normalized.includes("albarán") || normalized === "purchase_delivery_note") return "albaranes";
   if (normalized.includes("recepcion") || normalized.includes("recepción")) return "recepciones";
   if (normalized.includes("etiqueta")) return "etiquetas";
   if (normalized.includes("certificado")) return "certificados";
@@ -1151,7 +1176,7 @@ function storageFolderForDocumentType(type: string) {
 }
 
 async function getRecentRows<T>(table: string, select: string) {
-  return supabaseRequest<T[]>(
+  return adminSupabaseRequest<T[]>(
     table,
     {
       method: "GET",
@@ -1161,7 +1186,7 @@ async function getRecentRows<T>(table: string, select: string) {
 }
 
 async function getRows<T>(table: string, query: string) {
-  return supabaseRequest<T[]>(table, {
+  return adminSupabaseRequest<T[]>(table, {
     method: "GET",
     query,
   });
@@ -1233,14 +1258,14 @@ async function findDuplicateTemperatureRecord(data: TemperatureRecordInput) {
   const responsibleFilter = data.responsible
     ? `&responsible=eq.${encodeURIComponent(data.responsible.trim())}`
     : "";
-  return supabaseRequest<Array<{ id: string }>>("admin_temperature_records", {
+  return adminSupabaseRequest<Array<{ id: string }>>("admin_temperature_records", {
     method: "GET",
     query: `?select=id&record_date=eq.${encodeURIComponent(data.record_date)}&record_time=eq.${encodeURIComponent(data.record_time || "")}&equipment=eq.${encodeURIComponent(data.equipment.trim())}&temperature=eq.${encodeURIComponent(String(data.temperature))}${responsibleFilter}&limit=1`,
   });
 }
 
 async function getOpenAlertForEquipment(equipment: string) {
-  return supabaseRequest<Array<{ id: string; description: string | null }>>("admin_equipment_alerts", {
+  return adminSupabaseRequest<Array<{ id: string; description: string | null }>>("admin_equipment_alerts", {
     method: "GET",
     query: `?select=id,description&equipment=eq.${encodeURIComponent(equipment)}&status=in.(pendiente,en_proceso)&order=created_at.asc&limit=1`,
   });
@@ -1603,7 +1628,7 @@ export async function createAiTraceabilityItem(data: AiTraceabilityItemInput) {
 export async function createAiProcessingLog(data: AiProcessingLogInput) {
   return insertRecord("admin_ai_processing_logs", {
     document_name: cleanText(data.document_name),
-    detected_type: cleanText(data.detected_type),
+    detected_type: normalizeDocumentType(data.detected_type),
     status: cleanText(data.status),
     summary: cleanText(data.summary),
     raw_json: data.raw_json || {},
@@ -1636,7 +1661,7 @@ export async function updateUploadedDocumentReview(id: string, data: UploadedDoc
   if (!id) return { ok: true, data: null };
 
   const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (data.detected_type !== undefined) payload.detected_type = cleanText(data.detected_type);
+  if (data.detected_type !== undefined) payload.detected_type = normalizeDocumentType(data.detected_type);
   if (data.ocr_json !== undefined) payload.ocr_json = data.ocr_json || {};
   if (data.review_status !== undefined) payload.review_status = cleanText(data.review_status);
   if (data.corrections !== undefined) payload.corrections = data.corrections || {};
@@ -1665,14 +1690,15 @@ export async function storeOriginalOcrDocument({
   const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
   const now = new Date();
   const storageBucket = "admin-kiosko-documents";
-  const folder = storageFolderForDocumentType(detectedType);
+  const normalizedDetectedType = normalizeDocumentType(detectedType);
+  const folder = storageFolderForDocumentType(normalizedDetectedType);
   const storagePath = `${folder}/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${Date.now()}-${safeName}`;
-  const upload = await uploadStorageObject(storageBucket, storagePath, buffer, mimeType);
+  const upload = await uploadAdminStorageObject(storageBucket, storagePath, buffer, mimeType);
   const created = await createUploadedDocument({
     original_filename: filename,
     mime_type: mimeType,
     file_size: size,
-    detected_type: detectedType,
+    detected_type: normalizedDetectedType,
     storage_bucket: storageBucket,
     storage_path: upload.ok ? storagePath : undefined,
     storage_status: upload.ok ? "stored" : "metadata_only",
@@ -3315,7 +3341,7 @@ export async function getRecentTemperatureRecords(): Promise<DbResult<RecentAdmi
 }
 
 export async function getOpenEquipmentAlerts(): Promise<DbResult<EquipmentAlert[]>> {
-  const result = await supabaseRequest<EquipmentAlert[]>("admin_equipment_alerts", {
+  const result = await adminSupabaseRequest<EquipmentAlert[]>("admin_equipment_alerts", {
     method: "GET",
     query: "?select=id,equipment,alert_date,alert_time,temperature,alert_level,status,description,corrective_action&status=in.(pendiente,en_proceso)&order=created_at.desc&limit=10",
   });
