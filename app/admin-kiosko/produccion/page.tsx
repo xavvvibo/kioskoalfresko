@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getInternalRecipes, getProductionBatches, getProductionMaterialOptions, getProductionMetrics, getInventoryProducts, type InternalRecipe, type ProductionMaterialOption, type InventoryProduct } from "@/lib/admin-kiosko/database";
+import { getInternalRecipes, getProductionBatches, getProductionMaterialOptions, getProductionMetrics, getInventoryProducts, previewProductionBatch, type InternalRecipe, type ProductionMaterialOption, type InventoryProduct } from "@/lib/admin-kiosko/database";
+import type { ProductionPreview } from "@/lib/admin-kiosko/production/contracts";
 import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
 import { ZebraPrintButton } from "../_components/ZebraPrintButton";
@@ -32,11 +33,27 @@ function today() {
   }).format(new Date());
 }
 
-function Field({ name, label, value = "", type = "text", required = false }: { name: string; label: string; value?: string | number | null; type?: string; required?: boolean }) {
+function optionalPositiveNumber(value?: string) {
+  const number = Number(String(value || "").replace(",", "."));
+  return Number.isFinite(number) && number > 0 ? number : undefined;
+}
+
+function formatNumber(value: number | null | undefined, digits = 2) {
+  return Number(value || 0).toLocaleString("es-ES", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: digits,
+  });
+}
+
+function formatMoney(value: number | null | undefined) {
+  return `${formatNumber(value, 2)} €`;
+}
+
+function Field({ name, label, value = "", type = "text", required = false, step }: { name: string; label: string; value?: string | number | null; type?: string; required?: boolean; step?: string }) {
   return (
     <label className="grid gap-2 text-sm font-semibold text-stone-200">
       {label}
-      <input name={name} type={type} defaultValue={value ?? ""} required={required} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]" />
+      <input name={name} type={type} step={step} defaultValue={value ?? ""} required={required} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]" />
     </label>
   );
 }
@@ -135,10 +152,138 @@ function stateClass(state?: string | null) {
   return "border-emerald-300 bg-emerald-100 text-emerald-950";
 }
 
+function ProductionCalculatorResult({ preview }: { preview: ProductionPreview | null }) {
+  if (!preview) {
+    return (
+      <div className="rounded-[1.4rem] border border-white/10 bg-white/6 p-5 text-sm text-stone-300">
+        Selecciona una receta y una cantidad objetivo para preparar la producción antes de registrar un lote interno.
+      </div>
+    );
+  }
+
+  const scaling = preview.scaling;
+  const costPerServing = scaling.targetServings ? scaling.cost.ingredientsCost / scaling.targetServings : null;
+
+  return (
+    <div className="grid gap-5">
+      <section className="grid gap-3 md:grid-cols-4">
+        {[
+          ["Producto", scaling.outputProduct],
+          ["Factor", `x${formatNumber(scaling.factor, 3)}`],
+          ["Rendimiento", `${formatNumber(scaling.expectedYieldQuantity, 3)} ${scaling.expectedYieldUnit}`],
+          ["Coste", formatMoney(scaling.cost.ingredientsCost)],
+        ].map(([label, value]) => (
+          <article key={label} className="rounded-[1.2rem] border border-white/10 bg-[#0d0d0d] p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">{label}</p>
+            <p className="mt-2 text-lg font-black text-white">{value}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className="grid gap-3 md:grid-cols-3">
+        <article className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Coste por ración</p>
+          <p className="mt-2 text-lg font-black text-white">{costPerServing ? formatMoney(costPerServing) : "Calculable al usar raciones"}</p>
+        </article>
+        <article className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Merma prevista</p>
+          <p className="mt-2 text-lg font-black text-white">{formatNumber(scaling.expectedWasteQuantity, 3)} {scaling.expectedWasteUnit}</p>
+        </article>
+        <article className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Caducidad</p>
+          <p className="mt-2 text-lg font-black text-white">{scaling.expiryDate || "Vida útil por definir"}</p>
+        </article>
+      </section>
+
+      {preview.warnings.length ? (
+        <div className="grid gap-2 rounded-[1.2rem] border border-amber-300 bg-amber-100 p-4 text-sm font-semibold text-amber-950">
+          {preview.warnings.map((warning) => <p key={warning}>{warning}</p>)}
+        </div>
+      ) : (
+        <p className="rounded-[1.2rem] border border-emerald-300 bg-emerald-100 p-4 text-sm font-black text-emerald-950">
+          Stock conocido suficiente para esta vista previa. No se ha consumido inventario.
+        </p>
+      )}
+
+      <section className="grid gap-3">
+        <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Ingredientes escalados</h3>
+        <div className="grid gap-3 lg:grid-cols-2">
+          {scaling.scaledIngredients.map((ingredient) => (
+            <article key={ingredient.id || ingredient.name} className={`rounded-[1.2rem] border p-4 text-sm ${ingredient.limiting ? "border-amber-300 bg-amber-100 text-amber-950" : "border-white/10 bg-white/6 text-stone-200"}`}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className={`font-black ${ingredient.limiting ? "text-amber-950" : "text-white"}`}>{ingredient.name}</p>
+                  <p className="mt-1">
+                    Necesario: {formatNumber(ingredient.totalRequiredQuantity, 3)} {ingredient.unit}
+                    {ingredient.scaledWasteQuantity ? ` · merma ${formatNumber(ingredient.scaledWasteQuantity, 3)} ${ingredient.unit}` : ""}
+                  </p>
+                </div>
+                <span className={`w-fit rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${ingredient.limiting ? "border-amber-500 text-amber-950" : "border-emerald-300 text-emerald-200"}`}>
+                  {ingredient.limiting ? "Falta stock" : "FEFO ok"}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2">
+                <p>Disponible FEFO: {formatNumber(ingredient.availableQuantity, 3)} {ingredient.unit}</p>
+                {ingredient.missingQuantity ? <p>Faltante: {formatNumber(ingredient.missingQuantity, 3)} {ingredient.unit}</p> : null}
+                <p>Coste estimado: {ingredient.estimatedCost == null ? "sin coste unitario" : formatMoney(ingredient.estimatedCost)}</p>
+                {ingredient.candidates?.slice(0, 3).map((candidate) => (
+                  <p key={`${candidate.lotId || candidate.productName}-${candidate.batch || "stock"}`} className={`rounded-xl px-3 py-2 ${ingredient.limiting ? "bg-white/60" : "bg-[#0d0d0d]"}`}>
+                    {candidate.fefo ? "FEFO · " : ""}{candidate.supplier || "Proveedor"} · lote {candidate.batch || "stock"} · {formatNumber(candidate.availableQuantity, 3)} {candidate.unit || ingredient.unit} · caduca {candidate.expiryDate || "sin fecha"} · {candidate.location || "ubicación"}
+                  </p>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <article className="rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
+          <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Pasos de elaboración</h3>
+          <div className="mt-3 grid gap-2 text-sm text-stone-200">
+            {scaling.steps.map((step) => (
+              <p key={`${step.order}-${step.title}`} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2">
+                <span className="font-black text-white">{step.order}. {step.title}</span> · {step.description}
+                {step.criticalControlPoint ? <span className="block text-[#f2c6bb]">APPCC: {step.criticalControlPoint}</span> : null}
+              </p>
+            ))}
+            {!scaling.steps.length ? <p>Pasos pendientes de completar en la ficha técnica.</p> : null}
+          </div>
+        </article>
+
+        <article className="rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
+          <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">APPCC y etiqueta futura</h3>
+          <div className="mt-3 grid gap-2 text-sm text-stone-200">
+            <p>Alérgenos: {scaling.allergens.length ? scaling.allergens.join(", ") : "Sin alérgenos declarados en la ficha."}</p>
+            <p>Conservación: {scaling.conservationType || "por definir"}</p>
+            <p>Consumir antes de: {scaling.expiryDate || "por definir"}</p>
+            <p>Etiqueta preparada: {scaling.futureLabel.model} · {scaling.futureLabel.product}</p>
+            <p>Ingrediente limitante: {scaling.fefo.limitingIngredient || "Ninguno con stock conocido"}</p>
+            {scaling.preservationNotes ? <p>Notas: {scaling.preservationNotes}</p> : null}
+          </div>
+        </article>
+      </section>
+    </div>
+  );
+}
+
 export default async function ProduccionPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ saved?: string; error?: string; warning?: string; batch?: string; recipe?: string }>;
+  searchParams?: Promise<{
+    saved?: string;
+    error?: string;
+    warning?: string;
+    batch?: string;
+    recipe?: string;
+    preview?: string;
+    preview_mode?: string;
+    target_quantity?: string;
+    target_unit?: string;
+    target_servings?: string;
+    serving_quantity?: string;
+    serving_unit?: string;
+  }>;
 }) {
   await requireAdminSession();
   const params = await searchParams;
@@ -157,6 +302,19 @@ export default async function ProduccionPage({
   const selectedRecipe = recipes.find((recipe) => recipe.id === params?.recipe) || recipes[0];
   const recipeInput = selectedRecipe?.inputs?.[0];
   const todayValue = today();
+  const previewMode = params?.preview_mode === "servings" ? "servings" : "quantity";
+  const previewResult = params?.preview === "1" && selectedRecipe
+    ? await previewProductionBatch({
+        recipeId: selectedRecipe.id,
+        targetQuantity: previewMode === "quantity" ? optionalPositiveNumber(params?.target_quantity) : undefined,
+        targetUnit: previewMode === "quantity" ? params?.target_unit || selectedRecipe.output_unit || "kg" : undefined,
+        targetServings: previewMode === "servings" ? optionalPositiveNumber(params?.target_servings) : undefined,
+        servingQuantity: previewMode === "servings" ? optionalPositiveNumber(params?.serving_quantity) : undefined,
+        servingUnit: previewMode === "servings" ? params?.serving_unit || selectedRecipe.output_unit || "ud" : undefined,
+        productionDate: todayValue,
+      })
+    : null;
+  const productionPreview = previewResult?.ok ? previewResult.data : null;
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-white">
@@ -173,6 +331,7 @@ export default async function ProduccionPage({
           <nav className="flex flex-wrap gap-2 rounded-[1.4rem] border border-white/10 bg-[#151515] p-3" aria-label="Subsecciones producción">
             {[
               ["Nueva producción", "#nueva-produccion"],
+              ["Calculadora", "#calculadora-produccion"],
               ["Recetas", "#recetas"],
               ["Lotes internos", "#lotes"],
               ["Congelación", "#lotes"],
@@ -202,6 +361,56 @@ export default async function ProduccionPage({
                 <p className="mt-2 text-xl font-black text-white">{value}</p>
               </article>
             ))}
+          </section>
+
+          <section id="calculadora-produccion" className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+            <div className="flex flex-col gap-3 border-b border-white/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Preview sin consumir stock</p>
+                <h2 className="mt-2 text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Calculadora de producción</h2>
+                <p className="mt-2 max-w-3xl text-sm font-semibold text-stone-300">
+                  Escala una ficha técnica antes de registrar el lote interno. Esta vista no descuenta inventario, no imprime etiquetas y no crea producción.
+                </p>
+              </div>
+              <span className="w-fit rounded-full border border-emerald-300 bg-emerald-100 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-950">Solo cálculo</span>
+            </div>
+
+            <form action="/admin-kiosko/produccion#calculadora-produccion" className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr_0.8fr_auto]">
+              <input type="hidden" name="preview" value="1" />
+              <label className="grid gap-2 text-sm font-semibold text-stone-200">
+                Receta técnica
+                <select name="recipe" defaultValue={selectedRecipe?.id || ""} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]">
+                  {recipes.map((recipe) => (
+                    <option key={recipe.id} value={recipe.id}>{recipe.recipe_name} · {recipe.output_product}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-stone-200">
+                Modo
+                <select name="preview_mode" defaultValue={previewMode} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]">
+                  <option value="quantity">Cantidad final</option>
+                  <option value="servings">Número de raciones</option>
+                </select>
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                <Field name="target_quantity" label="Cantidad final" type="number" step="0.001" value={params?.target_quantity || selectedRecipe?.expected_yield || 3} />
+                <Field name="target_unit" label="Unidad" value={params?.target_unit || selectedRecipe?.output_unit || "kg"} />
+                <Field name="target_servings" label="Raciones" type="number" value={params?.target_servings || 20} />
+                <Field name="serving_quantity" label="Cantidad/ración" type="number" step="0.001" value={params?.serving_quantity || selectedRecipe?.unit_weight || 100} />
+                <Field name="serving_unit" label="Unidad/ración" value={params?.serving_unit || "g"} />
+              </div>
+              <div className="flex items-end">
+                <button className="w-full rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Calcular preview</button>
+              </div>
+            </form>
+
+            <div className="mt-5">
+              {previewResult && !previewResult.ok ? (
+                <p className="rounded-2xl border border-amber-300 bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-950">{previewResult.error}</p>
+              ) : (
+                <ProductionCalculatorResult preview={productionPreview} />
+              )}
+            </div>
           </section>
 
           <section className="grid gap-6 xl:grid-cols-[1fr_24rem]">
