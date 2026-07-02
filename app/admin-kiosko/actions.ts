@@ -6,6 +6,8 @@ import { clearAdminSession, createAdminSession, isCorrectAdminPassword, requireA
 import { createDomainEvent, emitDomainEventSafe } from "@/lib/admin-kiosko/domain";
 import { processPendingInboxOcr, reprocessInboxOcr } from "@/lib/admin-kiosko/domain/inbox-ocr/processor";
 import { DOCUMENT_TYPES } from "@/lib/admin-kiosko/domain/document-types";
+import { generateGodexTraceabilityEzpl, type GodexLabelTemplate } from "@/lib/admin-kiosko/printing/godex-ezpl";
+import { sendGodexEzplToPrintService } from "@/lib/admin-kiosko/printing/godex-print-client";
 import {
   createChecklistRecord,
   createCleaningRecord,
@@ -152,6 +154,14 @@ function hasCriticalObservation(value: string) {
 
 function optionalInboxDocumentType(value: string): InboxDocumentType | undefined {
   return inboxDocumentTypes.has(value as InboxDocumentType) ? value as InboxDocumentType : undefined;
+}
+
+function godexTemplateFromModel(model: string): GodexLabelTemplate {
+  if (model === "Congelación") return "congelacion";
+  if (model === "Descongelación") return "descongelacion";
+  if (model === "Recepción") return "recepcion";
+  if (model === "Lote" || model === "Caducidad") return "trazabilidad";
+  return "produccion";
 }
 
 async function resolveSupplierFromForm(formData: FormData, fieldPrefix = "supplier") {
@@ -1476,6 +1486,112 @@ export async function saveLabelRecordAction(formData: FormData) {
       printer: text(formData, "printer") || "Zebra ZD421",
     },
   })));
+}
+
+export async function printGodexLabelAction(_previousState: { ok: boolean; message: string } | null, formData: FormData) {
+  await requireAdminSession();
+
+  const copies = Math.max(1, Math.min(8, Math.round(requiredNumber(formData, "copies") || 1)));
+  const model = text(formData, "model") || "Etiqueta APPCC";
+  const product = text(formData, "product");
+  const batch = text(formData, "batch");
+  const supplier = text(formData, "supplier_name") || text(formData, "supplier");
+  const responsible = text(formData, "responsible") || "F. Javier Bocanegra Sanjuan";
+
+  if (!product || !batch) {
+    return { ok: false, message: "La etiqueta necesita producto y lote antes de imprimir en Godex." };
+  }
+
+  const ezpl = generateGodexTraceabilityEzpl({
+    template: godexTemplateFromModel(model),
+    product,
+    batch,
+    supplier,
+    productionDate: text(formData, "elaboration_date") || text(formData, "opening_date"),
+    freezingDate: text(formData, "freezing_date"),
+    defrostingDate: text(formData, "defrosting_date"),
+    expiryDate: text(formData, "best_before_date"),
+    receptionDate: text(formData, "opening_date") || text(formData, "elaboration_date"),
+    responsible,
+    traceabilityCode: text(formData, "inventory_lot_id") || batch,
+    qrPayload: parseJson<Record<string, unknown>>(text(formData, "qr_payload"), {
+      type: "appcc-label",
+      product,
+      batch,
+      supplier,
+      expiry_date: text(formData, "best_before_date"),
+      inventory_lot_id: text(formData, "inventory_lot_id"),
+    }),
+    sanitaryText: text(formData, "review_warning") || "APPCC interno - conservar segun procedimiento",
+    copies,
+  });
+
+  const printResult = await sendGodexEzplToPrintService({
+    ezpl,
+    jobName: `${batch || product}-godex-appcc`,
+    copies,
+    metadata: {
+      product,
+      batch,
+      model,
+      responsible,
+      inventory_lot_id: text(formData, "inventory_lot_id"),
+    },
+  });
+
+  if (!printResult.ok) {
+    return { ok: false, message: printResult.error };
+  }
+
+  const labelResult = await createLabelRecord({
+    model,
+    product,
+    batch,
+    supplier,
+    elaboration_date: text(formData, "elaboration_date"),
+    opening_date: text(formData, "opening_date"),
+    freezing_date: text(formData, "freezing_date"),
+    defrosting_date: text(formData, "defrosting_date"),
+    best_before_date: text(formData, "best_before_date"),
+    responsible,
+    print_format: "termica",
+    copies,
+    printer: "Godex G500",
+    template: godexTemplateFromModel(model),
+    zpl_version: "EZPL",
+    inventory_lot_id: text(formData, "inventory_lot_id"),
+    product_id: text(formData, "product_id"),
+    accounting_document_id: text(formData, "accounting_document_id"),
+    supplier_document_id: text(formData, "supplier_document_id"),
+    uploaded_document_id: text(formData, "uploaded_document_id"),
+    label_type: text(formData, "label_type") || "godex_appcc",
+    expiry_source: text(formData, "expiry_source"),
+    appcc_review_status: text(formData, "appcc_review_status"),
+    review_warning: text(formData, "review_warning"),
+  });
+  if (!labelResult.ok) {
+    console.error("[GODEX PRINT HISTORY ERROR]", labelResult.error);
+  }
+
+  await emitDomainEventSafe(createDomainEvent("LabelPrinted", {
+    source: "labels",
+    trace: {
+      inventoryLotId: text(formData, "inventory_lot_id"),
+      documentId: text(formData, "uploaded_document_id"),
+    },
+    payload: {
+      template: model,
+      copies,
+      printer: "Godex G500",
+      inventoryLotId: text(formData, "inventory_lot_id"),
+    },
+  }));
+
+  revalidatePath("/admin-kiosko/etiquetas");
+  return {
+    ok: true,
+    message: `Etiqueta enviada a Godex G500${printResult.jobId ? ` · trabajo ${printResult.jobId}` : ""}.`,
+  };
 }
 
 export async function saveEquipmentAssetAction(formData: FormData) {

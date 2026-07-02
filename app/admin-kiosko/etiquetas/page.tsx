@@ -6,6 +6,7 @@ import { buildZebraLabelZpl, type ZebraTemplate } from "@/lib/admin-kiosko/zebra
 import { AdminHeader } from "../_components/AdminHeader";
 import { ZebraPrintButton } from "../_components/ZebraPrintButton";
 import { saveLabelRecordAction } from "../actions";
+import { GodexPrintButton } from "./GodexPrintButton";
 import { PrintButton } from "./PrintButton";
 
 export const metadata: Metadata = {
@@ -352,32 +353,60 @@ export default async function EtiquetasPage({
                 {currentLotValidation && !currentLotValidation.directPrintAllowed ? (
                   <a href="/admin-kiosko/inventario#lotes-pendientes-revision" className="rounded-full border border-amber-200/40 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-amber-100">Revisar antes de imprimir</a>
                 ) : (
-                  <ZebraPrintButton
-                    zpl={zpl}
-                    filename={`${current.batch || current.product || "etiqueta-appcc"}.zpl`}
-                    historyPayload={{
-                      model: current.model,
-                      template,
-                      product: current.product,
-                      batch: current.batch,
-                      supplier: current.supplier,
-                      production_date: current.elaboration_date,
-                      freezing_date: current.freezing_date,
-                      defrosting_date: current.defrosting_date,
-                      expiry_date: current.best_before_date,
-                      responsible: current.responsible,
-                      copies,
-                      inventory_lot_id: current.inventory_lot_id,
-                      product_id: current.product_id,
-                      accounting_document_id: current.accounting_document_id,
-                      supplier_document_id: current.supplier_document_id,
-                      uploaded_document_id: current.uploaded_document_id,
-                      label_type: current.label_type || "inventory_lot",
-                      expiry_source: current.expiry_source,
-                      appcc_review_status: current.appcc_review_status,
-                      review_warning: current.review_warning,
-                    }}
-                  />
+                  <>
+                    <GodexPrintButton
+                      payload={{
+                        model: current.model,
+                        product: current.product,
+                        batch: current.batch,
+                        supplier: current.supplier,
+                        elaboration_date: current.elaboration_date,
+                        opening_date: current.opening_date,
+                        freezing_date: current.freezing_date,
+                        defrosting_date: current.defrosting_date,
+                        best_before_date: current.best_before_date,
+                        responsible: current.responsible,
+                        copies,
+                        qr_payload: current.qr_payload,
+                        inventory_lot_id: current.inventory_lot_id,
+                        product_id: current.product_id,
+                        accounting_document_id: current.accounting_document_id,
+                        supplier_document_id: current.supplier_document_id,
+                        uploaded_document_id: current.uploaded_document_id,
+                        label_type: current.label_type || "inventory_lot",
+                        expiry_source: current.expiry_source,
+                        appcc_review_status: current.appcc_review_status,
+                        review_warning: current.review_warning,
+                      }}
+                      disabled={!current.product || !current.batch}
+                    />
+                    <ZebraPrintButton
+                      zpl={zpl}
+                      filename={`${current.batch || current.product || "etiqueta-appcc"}.zpl`}
+                      historyPayload={{
+                        model: current.model,
+                        template,
+                        product: current.product,
+                        batch: current.batch,
+                        supplier: current.supplier,
+                        production_date: current.elaboration_date,
+                        freezing_date: current.freezing_date,
+                        defrosting_date: current.defrosting_date,
+                        expiry_date: current.best_before_date,
+                        responsible: current.responsible,
+                        copies,
+                        inventory_lot_id: current.inventory_lot_id,
+                        product_id: current.product_id,
+                        accounting_document_id: current.accounting_document_id,
+                        supplier_document_id: current.supplier_document_id,
+                        uploaded_document_id: current.uploaded_document_id,
+                        label_type: current.label_type || "inventory_lot",
+                        expiry_source: current.expiry_source,
+                        appcc_review_status: current.appcc_review_status,
+                        review_warning: current.review_warning,
+                      }}
+                    />
+                  </>
                 )}
                 <PrintButton />
               </div>
