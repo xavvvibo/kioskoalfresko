@@ -40,6 +40,7 @@ declare
   v_requires_traceability boolean;
   v_requires_appcc boolean;
   v_generates_lot boolean;
+  v_is_return boolean;
 begin
   for v_supplier in select * from jsonb_array_elements(purchase_data)
   loop
@@ -80,6 +81,8 @@ begin
       v_document_type := coalesce(v_purchase#>>'{document,type}', 'invoice');
       v_document_number := nullif(trim(coalesce(v_purchase#>>'{document,number}', '')), '');
       v_document_date := nullif(v_purchase#>>'{document,date}', '')::date;
+      v_is_return := v_document_type in ('credit_note', 'refund', 'return', 'rectifying_invoice')
+        or coalesce(nullif(v_purchase#>>'{accounting,total}', '')::numeric, 0) < 0;
 
       if v_document_number is null or v_document_date is null then
         raise notice 'Compra omitida para proveedor %: falta document.number o document.date', v_supplier_name;
@@ -151,8 +154,10 @@ begin
         v_unit := coalesce(nullif(v_line->>'unit', ''), 'ud');
         v_price := nullif(v_line->>'price', '')::numeric;
         v_requires_traceability := coalesce((nullif(v_line->>'requires_traceability', ''))::boolean, false);
-        v_requires_appcc := coalesce((nullif(v_line->>'requires_appcc_reception', ''))::boolean, false);
-        v_generates_lot := coalesce((nullif(v_line->>'generates_inventory_lot', ''))::boolean, false);
+        v_requires_appcc := coalesce((nullif(v_line->>'requires_appcc_reception', ''))::boolean, false) and not v_is_return;
+        v_generates_lot := coalesce((nullif(v_line->>'generates_inventory_lot', ''))::boolean, false)
+          and not v_is_return
+          and coalesce(v_quantity, 0) > 0;
 
         select id into v_product_id
         from public.admin_inventory_products ip
@@ -251,9 +256,12 @@ begin
             v_product_id,
             v_quantity,
             v_unit,
-            v_price,
+            case
+              when v_quantity is not null and v_quantity <> 0 and v_price is not null then v_price / v_quantity
+              else v_price
+            end,
             nullif(v_line->>'iva', '')::numeric,
-            case when v_quantity is not null and v_price is not null then v_quantity * v_price else null end,
+            v_price,
             nullif(regexp_replace(coalesce(v_line->>'gtin', ''), '\D', '', 'g'), ''),
             nullif(regexp_replace(coalesce(v_line->>'ean', ''), '\D', '', 'g'), ''),
             v_manufacturer_lot,
@@ -337,8 +345,14 @@ begin
               coalesce(v_quantity, 0),
               v_unit,
               coalesce(nullif(v_line->>'default_location', ''), 'Almacén'),
-              v_price,
-              v_price,
+              case
+                when v_quantity is not null and v_quantity <> 0 and v_price is not null then v_price / v_quantity
+                else v_price
+              end,
+              case
+                when v_quantity is not null and v_quantity <> 0 and v_price is not null then v_price / v_quantity
+                else v_price
+              end,
               'activo',
               v_requires_traceability,
               v_requires_appcc,
