@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "source": "kiosko-alfresko-historical-purchases",
+  "notes": "Estructura inicial segura para compras historicas. No se inventan CIF, numeros de factura, lotes ni caducidades. Rellenar purchases solo con facturas revisadas.",
+  "suppliers": [
+    {
+      "supplier": "Makro",
+      "tax_id": null,
+      "notes": "Proveedor detectado. Pendiente completar CIF/NIF y documentos revisados.",
+      "purchases": []
+    },
+    {
+      "supplier": "Transgourmet",
+      "tax_id": null,
+      "notes": "Proveedor detectado. Pendiente completar CIF/NIF y documentos revisados.",
+      "purchases": []
+    },
+    {
+      "supplier": "Cash Alhambra",
+      "tax_id": null,
+      "notes": "Proveedor detectado. Pendiente completar CIF/NIF y documentos revisados.",
+      "purchases": []
+    },
+    {
+      "supplier": "Cárnicas Paquito",
+      "tax_id": null,
+      "notes": "Proveedor detectado. Priorizar carnes con lote, caducidad y temperatura de recepción visibles.",
+      "purchases": []
+    },
+    {
+      "supplier": "Mercadona",
+      "tax_id": null,
+      "notes": "Proveedor detectado. Cargar solo tickets/facturas con productos trazables revisados.",
+      "purchases": []
+    },
+    {
+      "supplier": "Alcampo",
+      "tax_id": null,
+      "notes": "Proveedor detectado. Cargar solo tickets/facturas con productos trazables revisados.",
+      "purchases": []
+    },
+    {
+      "supplier": "Brico Depot",
+      "tax_id": null,
+      "notes": "Proveedor detectado. Clasificación probable equipment/other; no genera APPCC salvo producto sanitario específico.",
+      "purchases": []
+    },
+    {
+      "supplier": "Ferrostock",
+      "tax_id": null,
+      "notes": "Proveedor detectado. Clasificación probable equipment/service; revisar antes de inventario.",
+      "purchases": []
+    },
+    {
+      "supplier": "Planet",
+      "tax_id": null,
+      "notes": "Proveedor detectado. Pendiente identificar familia real de compra.",
+      "purchases": []
+    },
+    {
+      "supplier": "Panadería La Gracia de Dios",
+      "tax_id": null,
+      "notes": "Proveedor detectado. Priorizar panadería con fecha de recepción y lote si aparece.",
+      "purchases": []
+    },
+    {
+      "supplier": "Sabocan",
+      "tax_id": null,
+      "notes": "Proveedor detectado. Pendiente revisar facturas/albaranes.",
+      "purchases": []
+    },
+    {
+      "supplier": "Alhambra Distribución",
+      "tax_id": null,
+      "notes": "Proveedor detectado. Clasificación probable alcohol/beverage; revisar lote y caducidad si aplica.",
+      "purchases": []
+    }
+  ],
+  "purchase_template": {
+    "document": {
+      "type": "invoice",
+      "number": null,
+      "date": null,
+      "uploaded_document_id": null,
+      "source_document_id": null,
+      "notes": "Rellenar solo desde factura/albarán revisado."
+    },
+    "accounting": {
+      "taxable_base": null,
+      "iva": null,
+      "total": null,
+      "accounting_category": null
+    },
+    "lines": [
+      {
+        "product": null,
+        "quantity": null,
+        "unit": null,
+        "price": null,
+        "iva": null,
+        "gtin": null,
+        "ean": null,
+        "manufacturer_lot": null,
+        "origin_country": null,
+        "expiry_date": null,
+        "category": "food",
+        "requires_traceability": true,
+        "requires_appcc_reception": true,
+        "generates_inventory_lot": true,
+        "storage_temperature": null,
+        "default_location": "Almacén",
+        "notes": "Ejemplo de estructura. No se importa si product/document.number/document.date están vacíos."
+      }
+    ]
+  }
+}
