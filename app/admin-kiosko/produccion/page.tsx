@@ -424,6 +424,7 @@ export default async function ProduccionPage({
               </div>
 
               <div className="mt-5 grid gap-6 lg:grid-cols-2">
+                <input type="hidden" name="recipe_id" value={selectedRecipe?.id || ""} />
                 <section className="rounded-[1.4rem] border border-white/10 bg-white/6 p-4">
                   <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Materia prima</h3>
                   <div className="mt-4 grid gap-4">

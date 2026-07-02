@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { internalAdminSections } from "@/content/site";
 import { isAdminAuthenticated } from "@/lib/admin-kiosko/auth";
-import { getAdminDashboardSummary, getExecutiveDashboardMetrics } from "@/lib/admin-kiosko/database";
+import { getAdminDashboardSummary, getDashboardProductionOperationalMetrics, getExecutiveDashboardMetrics } from "@/lib/admin-kiosko/database";
 import { temperatureEquipment } from "@/lib/admin-kiosko/temperature-rules";
 import { AdminHeader } from "./_components/AdminHeader";
 import { LoginPanel } from "./_components/LoginPanel";
@@ -34,12 +34,14 @@ export default async function AdminKioskoPage({
     return <LoginPanel hasError={params?.error === "1"} />;
   }
 
-  const [dashboard, executive] = await Promise.all([
+  const [dashboard, executive, productionOps] = await Promise.all([
     getAdminDashboardSummary(),
     getExecutiveDashboardMetrics(),
+    getDashboardProductionOperationalMetrics(),
   ]);
   const summary = dashboard.ok ? dashboard.data : null;
   const metrics = executive.ok ? executive.data : null;
+  const productionMetrics = productionOps.ok ? productionOps.data : null;
   const inspectorMode = params?.inspector === "1";
   const inactiveTemperatureEquipment = temperatureEquipment.filter((equipment) => !equipment.active);
   const latestMonthlySignatureRecord = summary?.latestMonthlySignature
@@ -124,7 +126,11 @@ export default async function AdminKioskoPage({
     ["Lotes próximos", String(metrics?.expiringLots ?? 0)],
     ["Lotes agotados", String(metrics?.exhaustedLots ?? 0)],
     ["Lotes sin caducidad", String(metrics?.lotsWithoutExpiry ?? 0)],
-    ["Lotes internos activos", String(metrics?.activeInternalBatches ?? 0)],
+    ["Lotes internos activos", String(productionMetrics?.activeInternalLots ?? metrics?.activeInternalBatches ?? 0)],
+    ["Producciones hoy", String(productionMetrics?.productionsToday ?? 0)],
+    ["Kg elaborados", String(productionMetrics?.elaboratedKgToday ?? 0)],
+    ["Consumos FEFO", String(productionMetrics?.fefoConsumptionsToday ?? 0)],
+    ["Ingredientes agotados", String(productionMetrics?.exhaustedIngredients ?? 0)],
     ["Descongelados abiertos", String(metrics?.openDefrostedBatches ?? 0)],
     ["Próximos a consumir", String(metrics?.productsToConsumeSoon ?? 0)],
     ["Mermas del mes", String(metrics?.monthlyWasteMovements ?? 0)],

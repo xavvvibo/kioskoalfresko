@@ -7,6 +7,8 @@ export type DomainEventName =
   | "InventoryLotCreated"
   | "InventoryLotConsumed"
   | "ProductionBatchCreated"
+  | "FinishedProductLotCreated"
+  | "LabelPrepared"
   | "LabelPrinted"
   | "AccountingDocumentCreated"
   | "AccountingDocumentReconciled"

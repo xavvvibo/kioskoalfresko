@@ -29,8 +29,11 @@ import {
   createLabelRecord,
   createProductionBatch,
   createProductionMovement,
+  generateFinishedProductLabel,
   ensureSupplierRecord,
   applyInventoryMovement,
+  planProductionBatch,
+  registerProductionMovements,
   updateInventoryLotReviewData,
   updateInventoryProduct,
   upsertInventoryFromAiReception,
@@ -797,6 +800,107 @@ export async function saveProductionBatchAction(formData: FormData) {
     : null;
   if (calculatedExpiry) calculatedExpiry.setUTCDate(calculatedExpiry.getUTCDate() + recipeShelfLifeDays);
   const expiryDate = text(formData, "expiry_date") || (calculatedExpiry ? calculatedExpiry.toISOString().slice(0, 10) : "");
+  const recipeId = text(formData, "recipe_id");
+
+  if (recipeId) {
+    const plan = await planProductionBatch({
+      recipeId,
+      targetQuantity: optionalNumber(formData, "output_quantity"),
+      targetUnit: text(formData, "output_unit"),
+      productionDate,
+      productionTime: text(formData, "production_time") || timeMadrid(),
+      responsible: text(formData, "responsible"),
+      storageState: text(formData, "storage_state") || "refrigerado",
+      observations: text(formData, "observations"),
+    });
+
+    if (!plan.ok) {
+      redirect(`/admin-kiosko/produccion?error=${encodeURIComponent(plan.error.slice(0, 240))}`);
+    }
+
+    const executed = await registerProductionMovements({
+      ...plan.data,
+      expiryDate: expiryDate || plan.data.expiryDate,
+    });
+
+    ["/admin-kiosko/produccion", "/admin-kiosko/inventario", "/admin-kiosko/trazabilidad", "/admin-kiosko/etiquetas", "/admin-kiosko"].forEach((path) => revalidatePath(path));
+
+    if (!executed.ok) {
+      redirect(`/admin-kiosko/produccion?error=${encodeURIComponent(executed.error.slice(0, 240))}`);
+    }
+
+    const label = generateFinishedProductLabel(executed.data);
+    const correlationId = executed.data.productionBatchId;
+
+    await emitDomainEventSafe(createDomainEvent("ProductionBatchCreated", {
+      source: "production",
+      correlationId,
+      trace: { productionBatchId: executed.data.productionBatchId, inventoryLotId: executed.data.outputInventoryLotId },
+      payload: {
+        productionBatchId: executed.data.productionBatchId,
+        batchCode: executed.data.batchCode,
+        outputProduct: executed.data.outputProduct,
+        outputQuantity: executed.data.outputQuantity,
+        outputUnit: executed.data.outputUnit,
+      },
+    }));
+
+    await Promise.all(executed.data.consumedLots.map((lot) => emitDomainEventSafe(createDomainEvent("InventoryLotConsumed", {
+      source: "production",
+      correlationId,
+      trace: { inventoryLotId: lot.lotId, productionBatchId: executed.data.productionBatchId, productId: lot.productId },
+      payload: {
+        inventoryLotId: lot.lotId,
+        productId: lot.productId,
+        quantity: lot.quantity,
+        unit: lot.unit,
+        reason: `Producción ${executed.data.batchCode}`,
+      },
+    }))));
+
+    await emitDomainEventSafe(createDomainEvent("FinishedProductLotCreated", {
+      source: "production",
+      correlationId,
+      trace: { productionBatchId: executed.data.productionBatchId, inventoryLotId: executed.data.outputInventoryLotId, productId: executed.data.outputProductId },
+      payload: {
+        productionBatchId: executed.data.productionBatchId,
+        inventoryLotId: executed.data.outputInventoryLotId,
+        productId: executed.data.outputProductId,
+        productName: executed.data.outputProduct,
+        batchNumber: executed.data.batchCode,
+        quantity: executed.data.outputQuantity,
+        unit: executed.data.outputUnit,
+        expiryDate: executed.data.expiryDate || undefined,
+      },
+    }));
+
+    await emitDomainEventSafe(createDomainEvent("LabelPrepared", {
+      source: "labels",
+      correlationId,
+      trace: { productionBatchId: executed.data.productionBatchId, inventoryLotId: executed.data.outputInventoryLotId },
+      payload: {
+        productionBatchId: executed.data.productionBatchId,
+        inventoryLotId: executed.data.outputInventoryLotId,
+        productName: label.product,
+        batchNumber: label.batch,
+        template: "elaboracion",
+        expiryDate: label.bestBeforeDate || undefined,
+      },
+    }));
+
+    const params = new URLSearchParams({
+      model: "Elaboración",
+      product: label.product,
+      batch: label.batch,
+      elaboration_date: label.elaborationDate,
+      best_before_date: label.bestBeforeDate || "",
+      responsible: text(formData, "responsible") || "F. Javier Bocanegra Sanjuan",
+      print_format: "termica",
+      copies: "1",
+      qr_payload: JSON.stringify(label.qrPayload),
+    });
+    redirect(`/admin-kiosko/etiquetas?${params.toString()}`);
+  }
 
   const result = await createProductionBatch({
     production_date: productionDate,

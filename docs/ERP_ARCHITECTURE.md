@@ -665,6 +665,49 @@ El historial `admin_label_records` queda vinculado, cuando existe, a:
 
 Browser Print y Zebra no cambian de protocolo. El ZPL sigue siendo ZPL II para Zebra ZD421; solo se enriquece el QR con lote, factura, fuente de caducidad y estado APPCC.
 
+## Produccion transaccional FEFO
+
+La produccion interna operativa se ejecuta mediante:
+
+- `planProductionBatch()`
+- `validateProductionStock()`
+- `reserveProductionLots()`
+- `consumeProductionLots()`
+- `createFinishedProductLot()`
+- `registerProductionMovements()`
+- `generateFinishedProductLabel()`
+- `supabase/admin_kiosko_production_execution.sql`
+
+El flujo de escritura no encadena mutaciones REST independientes. La funcion SQL `admin_execute_production_batch(jsonb)` valida stock completo, bloquea lotes FEFO, consume materias primas, crea lote interno, registra movimientos y genera trazabilidad dentro de una unica transaccion PostgreSQL. Si un consumo falla, no se crea lote interno ni etiqueta preparada.
+
+```mermaid
+flowchart TD
+  Invoice[Factura] --> Inventory[Inventario por lotes]
+  Inventory --> FEFO[Seleccion FEFO]
+  FEFO --> Production[Produccion interna]
+  Production --> InternalLot[Nuevo lote interno]
+  InternalLot --> Label[Etiqueta preparada]
+  Label --> Sale[Venta / consumo / merma]
+```
+
+La trazabilidad de produccion queda en:
+
+- `admin_production_batches`
+- `admin_production_movements`
+- `admin_inventory_lot_movements`
+- `admin_inventory_lots` para el lote terminado
+- `admin_traceability_events` cuando la tabla esta disponible
+- `admin_domain_events` mediante eventos emitidos por la accion servidor
+
+Eventos emitidos tras confirmar la transaccion:
+
+- `ProductionBatchCreated`
+- `InventoryLotConsumed`
+- `FinishedProductLotCreated`
+- `LabelPrepared`
+
+La etiqueta queda preparada con producto, lote interno, fecha de elaboracion, caducidad, ingredientes, alergenos, conservacion y QR de trazabilidad. No se imprime automaticamente.
+
 ## Migracion recomendada
 
 1. Mantener server actions actuales funcionando.
