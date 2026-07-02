@@ -613,6 +613,15 @@ export type LabelRecordInput = {
   printer?: string;
   template?: string;
   zpl_version?: string;
+  inventory_lot_id?: string;
+  product_id?: string;
+  accounting_document_id?: string;
+  supplier_document_id?: string;
+  uploaded_document_id?: string;
+  label_type?: string;
+  expiry_source?: string;
+  appcc_review_status?: string;
+  review_warning?: string;
 };
 
 export type LabelRecord = {
@@ -635,6 +644,15 @@ export type LabelRecord = {
   template: string | null;
   zpl_version: string | null;
   qr_payload: string | null;
+  inventory_lot_id?: string | null;
+  product_id?: string | null;
+  accounting_document_id?: string | null;
+  supplier_document_id?: string | null;
+  uploaded_document_id?: string | null;
+  label_type?: string | null;
+  expiry_source?: string | null;
+  appcc_review_status?: string | null;
+  review_warning?: string | null;
 };
 
 export type ProductionBatchInput = {
@@ -2588,6 +2606,15 @@ function buildLabelQrPayload(data: LabelRecordInput) {
     supplier: cleanText(data.supplier),
     best_before_date: cleanText(data.best_before_date),
     responsible: cleanText(data.responsible),
+    inventory_lot_id: cleanText(data.inventory_lot_id),
+    product_id: cleanText(data.product_id),
+    accounting_document_id: cleanText(data.accounting_document_id),
+    supplier_document_id: cleanText(data.supplier_document_id),
+    uploaded_document_id: cleanText(data.uploaded_document_id),
+    label_type: cleanText(data.label_type),
+    expiry_source: cleanText(data.expiry_source),
+    appcc_review_status: cleanText(data.appcc_review_status),
+    review_warning: cleanText(data.review_warning),
   });
 }
 
@@ -2613,6 +2640,15 @@ export async function createLabelRecord(data: LabelRecordInput) {
     printer: cleanText(data.printer),
     template: cleanText(data.template),
     zpl_version: cleanText(data.zpl_version),
+    inventory_lot_id: cleanText(data.inventory_lot_id),
+    product_id: cleanText(data.product_id),
+    accounting_document_id: cleanText(data.accounting_document_id),
+    supplier_document_id: cleanText(data.supplier_document_id),
+    uploaded_document_id: cleanText(data.uploaded_document_id),
+    label_type: cleanText(data.label_type),
+    expiry_source: cleanText(data.expiry_source),
+    appcc_review_status: cleanText(data.appcc_review_status),
+    review_warning: cleanText(data.review_warning),
     qr_payload: buildLabelQrPayload(data),
   });
 }

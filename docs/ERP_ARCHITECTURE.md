@@ -633,6 +633,38 @@ Reglas internas de sugerencia:
 
 Estas reglas generan solo sugerencias. Una sugerencia aplicada queda marcada como `estimada_por_regla`; no se presenta como `real_documentada`. Si la fecha procede de factura, etiqueta de proveedor o ficha tecnica, debe guardarse como `real_documentada` y documentarse en `review_notes`.
 
+## Etiquetas desde inventario revisado
+
+El modulo de etiquetas consume lotes reales desde `admin_inventory_ready_view` y aplica validacion APPCC antes de preparar Zebra:
+
+- `listLabelEligibleInventoryLots()`
+- `validateInventoryLotForLabel()`
+- `previewInventoryLotLabel()`
+- `createInventoryLotLabelRecord()`
+- `supabase/admin_kiosko_inventory_label_review.sql`
+
+Reglas:
+
+- `appcc_review_status = aprobado` o `revisado`: etiqueta permitida.
+- `expiry_source = real_documentada`: etiqueta permitida como caducidad real.
+- `expiry_source = estimada_por_regla`: etiqueta permitida, pero imprime aviso de caducidad estimada/revisada.
+- `appcc_review_status = pendiente_revision`: no permite impresion directa; debe revisarse el lote o usar override manual documentado en backend.
+- lote trazable sin caducidad: no apto para etiqueta.
+
+El historial `admin_label_records` queda vinculado, cuando existe, a:
+
+- `inventory_lot_id`
+- `product_id`
+- `accounting_document_id`
+- `supplier_document_id`
+- `uploaded_document_id`
+- `label_type = inventory_lot`
+- `expiry_source`
+- `appcc_review_status`
+- `review_warning`
+
+Browser Print y Zebra no cambian de protocolo. El ZPL sigue siendo ZPL II para Zebra ZD421; solo se enriquece el QR con lote, factura, fuente de caducidad y estado APPCC.
+
 ## Migracion recomendada
 
 1. Mantener server actions actuales funcionando.

@@ -1180,6 +1180,15 @@ export async function saveLabelRecordAction(formData: FormData) {
     responsible: text(formData, "responsible"),
     print_format: text(formData, "print_format"),
     copies: Math.max(1, Math.min(48, Math.round(requiredNumber(formData, "copies") || 8))),
+    inventory_lot_id: text(formData, "inventory_lot_id"),
+    product_id: text(formData, "product_id"),
+    accounting_document_id: text(formData, "accounting_document_id"),
+    supplier_document_id: text(formData, "supplier_document_id"),
+    uploaded_document_id: text(formData, "uploaded_document_id"),
+    label_type: text(formData, "label_type"),
+    expiry_source: text(formData, "expiry_source"),
+    appcc_review_status: text(formData, "appcc_review_status"),
+    review_warning: text(formData, "review_warning"),
   });
 
   revalidatePath("/admin-kiosko/etiquetas");

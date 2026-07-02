@@ -19,6 +19,13 @@ export type InventoryReadyLot = {
   fecha_compra: string | null;
   ubicacion: string | null;
   estado: string | null;
+  purchase_document_id?: string | null;
+  purchase_line_id?: string | null;
+  supplier_document_id?: string | null;
+  uploaded_document_id?: string | null;
+  requires_traceability?: boolean | null;
+  requires_appcc_reception?: boolean | null;
+  generates_inventory_lot?: boolean | null;
   fefo_rank: number | null;
   fefo: boolean | null;
   listo_para_produccion: boolean | null;

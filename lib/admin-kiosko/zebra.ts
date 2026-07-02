@@ -13,6 +13,11 @@ export type ZebraLabelData = {
   expiryDate?: string;
   responsible?: string;
   copies?: number;
+  warningText?: string;
+  invoice?: string;
+  inventoryLotId?: string;
+  expirySource?: string;
+  appccReviewStatus?: string;
 };
 
 export const zebraDefaultConfig = {
@@ -50,6 +55,10 @@ function qrPayload(data: ZebraLabelData) {
     defrosting_date: clean(data.defrostingDate),
     reception_date: clean(data.receptionDate),
     expiry_date: clean(data.expiryDate),
+    invoice: clean(data.invoice),
+    inventory_lot_id: clean(data.inventoryLotId),
+    expiry_source: clean(data.expirySource),
+    appcc_review_status: clean(data.appccReviewStatus),
   });
 }
 
@@ -105,7 +114,8 @@ export function buildZebraLabelZpl(data: ZebraLabelData) {
   const copies = Math.max(1, Math.min(99, Math.round(data.copies || zebraDefaultConfig.defaultCopies)));
   const title = templateTitle(data.template);
   const rows = labelRows(data);
-  const warning = data.template === "descongelacion" ? "^FO20,250^A0N,24,24^FDPRODUCTO DESCONGELADO^FS" : "";
+  const warningText = data.warningText || (data.template === "descongelacion" ? "PRODUCTO DESCONGELADO" : "");
+  const warning = warningText ? `^FO20,250^A0N,22,22^FD${zplText(warningText, 34)}^FS` : "";
   const rowZpl = rows
     .map(([label, value], index) => {
       const y = 76 + (index * 31);

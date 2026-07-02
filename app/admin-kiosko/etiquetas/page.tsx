@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getLabelRecords, getLabelSourceOptions } from "@/lib/admin-kiosko/database";
+import { getLabelRecords, getLabelSourceOptions, listLabelEligibleInventoryLots } from "@/lib/admin-kiosko/database";
 import { buildZebraLabelZpl, type ZebraTemplate } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
 import { ZebraPrintButton } from "../_components/ZebraPrintButton";
@@ -49,6 +49,19 @@ function labelFromParams(params: Record<string, string>) {
   };
 }
 
+function sourceLabel(source?: string | null) {
+  if (source === "real_documentada") return "Caducidad real documentada";
+  if (source === "estimada_por_regla") return "Caducidad estimada/revisada";
+  if (source === "revisada_manual") return "Caducidad revisada manualmente";
+  return "Fuente de caducidad pendiente";
+}
+
+function appccLabel(status?: string | null) {
+  if (status === "aprobado" || status === "revisado") return "Lote revisado y apto";
+  if (status === "requiere_documentacion") return "Requiere documentación";
+  return "Pendiente de revisión";
+}
+
 function LabelCard({ label }: { label: ReturnType<typeof labelFromParams> }) {
   const qr = `/admin-kiosko/etiquetas/qr?p=${encodeURIComponent(label.qr_payload)}`;
   return (
@@ -82,14 +95,17 @@ export default async function EtiquetasPage({
 }) {
   await requireAdminSession();
   const params = await searchParams || {};
-  const [historyResult, sourcesResult] = await Promise.all([
+  const [historyResult, sourcesResult, inventoryLotsResult] = await Promise.all([
     getLabelRecords(20),
     getLabelSourceOptions(),
+    listLabelEligibleInventoryLots(120),
   ]);
   const history = historyResult.ok ? historyResult.data : [];
   const sources = sourcesResult.ok ? sourcesResult.data : [];
+  const inventoryLots = inventoryLotsResult.ok ? inventoryLotsResult.data : [];
   const selected = history.find((record) => record.id === params.id);
   const selectedSource = sources.find((source) => source.key === params.source);
+  const selectedInventoryLot = inventoryLots.find((lot) => lot.inventory_lot_id === params.inventory_lot);
   const current = selected
     ? {
         model: selected.model,
@@ -105,7 +121,54 @@ export default async function EtiquetasPage({
         print_format: selected.print_format || "a4",
         copies: selected.copies || 8,
         qr_payload: selected.qr_payload || "",
+        inventory_lot_id: selected.inventory_lot_id || "",
+        product_id: selected.product_id || "",
+        accounting_document_id: selected.accounting_document_id || "",
+        supplier_document_id: selected.supplier_document_id || "",
+        uploaded_document_id: selected.uploaded_document_id || "",
+        label_type: selected.label_type || "",
+        expiry_source: selected.expiry_source || "",
+        appcc_review_status: selected.appcc_review_status || "",
+        review_warning: selected.review_warning || "",
+        factura: "",
+        storage_temperature: "",
       }
+    : selectedInventoryLot
+      ? {
+          model: "Recepción",
+          product: selectedInventoryLot.producto || "",
+          batch: selectedInventoryLot.lote || "",
+          supplier: selectedInventoryLot.proveedor || "",
+          elaboration_date: selectedInventoryLot.fecha_compra || "",
+          opening_date: "",
+          freezing_date: "",
+          defrosting_date: "",
+          best_before_date: selectedInventoryLot.caducidad || "",
+          responsible: "F. Javier Bocanegra Sanjuan",
+          print_format: "termica",
+          copies: 1,
+          qr_payload: JSON.stringify({
+            type: "inventory_lot",
+            inventory_lot_id: selectedInventoryLot.inventory_lot_id,
+            product: selectedInventoryLot.producto || "",
+            batch: selectedInventoryLot.lote || "",
+            supplier: selectedInventoryLot.proveedor || "",
+            invoice: selectedInventoryLot.factura || "",
+            expiry_date: selectedInventoryLot.caducidad || "",
+            expiry_source: selectedInventoryLot.expiry_source || "",
+          }),
+          inventory_lot_id: selectedInventoryLot.inventory_lot_id,
+          product_id: selectedInventoryLot.product_id || "",
+          accounting_document_id: selectedInventoryLot.purchase_document_id || "",
+          supplier_document_id: selectedInventoryLot.supplier_document_id || "",
+          uploaded_document_id: selectedInventoryLot.uploaded_document_id || "",
+          label_type: "inventory_lot",
+          expiry_source: selectedInventoryLot.expiry_source || "",
+          appcc_review_status: selectedInventoryLot.appcc_review_status || "",
+          review_warning: selectedInventoryLot.labelValidation.warning || "",
+          factura: selectedInventoryLot.factura || "",
+          storage_temperature: selectedInventoryLot.storage_temperature || selectedInventoryLot.ubicacion || "",
+        }
     : selectedSource
       ? {
           model: selectedSource.model,
@@ -127,10 +190,35 @@ export default async function EtiquetasPage({
             supplier: selectedSource.supplier,
             source_batch_number: selectedSource.source_batch_number,
           }),
+          inventory_lot_id: "",
+          product_id: "",
+          accounting_document_id: "",
+          supplier_document_id: "",
+          uploaded_document_id: "",
+          label_type: "",
+          expiry_source: "",
+          appcc_review_status: "",
+          review_warning: "",
+          factura: "",
+          storage_temperature: "",
         }
-    : labelFromParams(params);
+    : {
+        ...labelFromParams(params),
+        inventory_lot_id: "",
+        product_id: "",
+        accounting_document_id: "",
+        supplier_document_id: "",
+        uploaded_document_id: "",
+        label_type: "",
+        expiry_source: "",
+        appcc_review_status: "",
+        review_warning: "",
+        factura: "",
+        storage_temperature: "",
+      };
   const copies = Math.max(1, Math.min(48, current.copies || 8));
   const template = zebraTemplate(current.model);
+  const currentLotValidation = selectedInventoryLot?.labelValidation;
   const zpl = buildZebraLabelZpl({
     template,
     product: current.product,
@@ -142,6 +230,11 @@ export default async function EtiquetasPage({
     expiryDate: current.best_before_date,
     responsible: current.responsible,
     copies,
+    warningText: current.review_warning || undefined,
+    invoice: current.factura,
+    inventoryLotId: current.inventory_lot_id,
+    expirySource: current.expiry_source,
+    appccReviewStatus: current.appcc_review_status,
   });
 
   return (
@@ -164,9 +257,22 @@ export default async function EtiquetasPage({
                 <input type="hidden" name="best_before_date" value={current.best_before_date} />
                 <input type="hidden" name="responsible" value={current.responsible} />
                 <input type="hidden" name="print_format" value={current.print_format} />
+                <input type="hidden" name="inventory_lot_id" value={current.inventory_lot_id} />
+                <input type="hidden" name="product_id" value={current.product_id} />
+                <input type="hidden" name="accounting_document_id" value={current.accounting_document_id} />
+                <input type="hidden" name="supplier_document_id" value={current.supplier_document_id} />
+                <input type="hidden" name="uploaded_document_id" value={current.uploaded_document_id} />
+                <input type="hidden" name="label_type" value={current.label_type} />
+                <input type="hidden" name="expiry_source" value={current.expiry_source} />
+                <input type="hidden" name="appcc_review_status" value={current.appcc_review_status} />
+                <input type="hidden" name="review_warning" value={current.review_warning} />
                 <div className="rounded-[1.3rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
                   <p className="font-black text-white">{current.model} · {current.product || "Selecciona un lote"}</p>
                   <p className="mt-2">Lote {current.batch || "pendiente"} · proveedor {current.supplier || "pendiente"} · caducidad {current.best_before_date || "vida útil no consignada"}</p>
+                  {current.inventory_lot_id ? (
+                    <p className="mt-2 text-xs text-stone-300">{sourceLabel(current.expiry_source)} · {appccLabel(current.appcc_review_status)} · factura {current.factura || "origen enlazado"}</p>
+                  ) : null}
+                  {current.review_warning ? <p className="mt-2 rounded-xl border border-amber-200/30 bg-amber-100/10 px-3 py-2 text-xs font-black text-amber-100">{current.review_warning}</p> : null}
                 </div>
                 <label className="grid gap-2 text-sm font-semibold text-stone-200">Copias Zebra
                   <select name="copies" defaultValue={String(copies)} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
@@ -176,6 +282,39 @@ export default async function EtiquetasPage({
                 <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Guardar etiqueta</button>
               </div>
             </form>
+
+            <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+              <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Etiquetas desde inventario</h2>
+              <div className="mt-4 grid gap-3">
+                {inventoryLots.slice(0, 18).map((lot) => (
+                  <article key={lot.inventory_lot_id} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
+                    <div className="flex flex-col gap-3">
+                      <div>
+                        <p className="font-black text-white">{lot.producto || "Producto"}</p>
+                        <p className="mt-1 text-xs text-stone-400">
+                          Lote {lot.lote || "sin lote"} · {lot.stock ?? 0} {lot.unidad || "ud"} · caduca {lot.caducidad || "pendiente"} · {lot.proveedor || "proveedor registrado"}
+                        </p>
+                        <p className="mt-1 text-xs text-stone-400">
+                          {sourceLabel(lot.expiry_source)} · {appccLabel(lot.appcc_review_status)} · factura {lot.factura || "origen enlazado"}
+                        </p>
+                      </div>
+                      <p className={lot.labelValidation.directPrintAllowed ? "rounded-xl border border-emerald-300/20 bg-emerald-100/10 px-3 py-2 text-xs font-semibold text-emerald-100" : "rounded-xl border border-amber-200/20 bg-amber-100/10 px-3 py-2 text-xs font-semibold text-amber-100"}>
+                        {lot.labelValidation.message}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <a href={`/admin-kiosko/etiquetas?inventory_lot=${lot.inventory_lot_id}`} className="rounded-full border border-white/20 px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white">Preview</a>
+                        {lot.labelValidation.directPrintAllowed ? (
+                          <a href={`/admin-kiosko/etiquetas?inventory_lot=${lot.inventory_lot_id}`} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white">Preparar impresión</a>
+                        ) : (
+                          <a href="/admin-kiosko/inventario#lotes-pendientes-revision" className="rounded-full border border-amber-200/40 px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-amber-100">Revisar lote</a>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+                {!inventoryLots.length ? <p className="text-sm text-stone-400">No constan lotes de inventario listos para preparar etiqueta.</p> : null}
+              </div>
+            </section>
 
             <form className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Seleccionar lote</h2>
@@ -210,23 +349,36 @@ export default async function EtiquetasPage({
             <div className="flex items-center justify-between gap-4 print:hidden">
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Vista imprimible</h2>
               <div className="flex flex-wrap items-start gap-3">
-                <ZebraPrintButton
-                  zpl={zpl}
-                  filename={`${current.batch || current.product || "etiqueta-appcc"}.zpl`}
-                  historyPayload={{
-                    model: current.model,
-                    template,
-                    product: current.product,
-                    batch: current.batch,
-                    supplier: current.supplier,
-                    production_date: current.elaboration_date,
-                    freezing_date: current.freezing_date,
-                    defrosting_date: current.defrosting_date,
-                    expiry_date: current.best_before_date,
-                    responsible: current.responsible,
-                    copies,
-                  }}
-                />
+                {currentLotValidation && !currentLotValidation.directPrintAllowed ? (
+                  <a href="/admin-kiosko/inventario#lotes-pendientes-revision" className="rounded-full border border-amber-200/40 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-amber-100">Revisar antes de imprimir</a>
+                ) : (
+                  <ZebraPrintButton
+                    zpl={zpl}
+                    filename={`${current.batch || current.product || "etiqueta-appcc"}.zpl`}
+                    historyPayload={{
+                      model: current.model,
+                      template,
+                      product: current.product,
+                      batch: current.batch,
+                      supplier: current.supplier,
+                      production_date: current.elaboration_date,
+                      freezing_date: current.freezing_date,
+                      defrosting_date: current.defrosting_date,
+                      expiry_date: current.best_before_date,
+                      responsible: current.responsible,
+                      copies,
+                      inventory_lot_id: current.inventory_lot_id,
+                      product_id: current.product_id,
+                      accounting_document_id: current.accounting_document_id,
+                      supplier_document_id: current.supplier_document_id,
+                      uploaded_document_id: current.uploaded_document_id,
+                      label_type: current.label_type || "inventory_lot",
+                      expiry_source: current.expiry_source,
+                      appcc_review_status: current.appcc_review_status,
+                      review_warning: current.review_warning,
+                    }}
+                  />
+                )}
                 <PrintButton />
               </div>
             </div>
