@@ -4,6 +4,8 @@
  * Agregados ejecutivos, alertas operativas y resumen sanitario del ERP.
  * Actualmente reexporta la implementacion legacy para evitar cambios de salida.
  */
+export { getInventoryActivationMetrics as getDashboardInventoryActivationMetrics } from "./inventory.repository";
+
 export {
   getAdminDashboardSummary,
   getExecutiveDashboardMetrics,

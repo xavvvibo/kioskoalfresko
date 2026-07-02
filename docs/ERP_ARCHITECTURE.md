@@ -543,6 +543,64 @@ Un documento confirmado podra generar o alimentar expedientes:
 
 La bandeja no crea expedientes todavia; deja los contratos y relaciones listos mediante `upload_group_id`, `admin_uploaded_documents` y eventos persistidos en `admin_domain_events`.
 
+## Activacion de stock historico
+
+El stock inicial real del ERP debe nacer de compras revisadas, no de altas manuales aisladas. La activacion se apoya en:
+
+- `supabase/seeds/historical-purchases/kiosko_initial_purchases.json`
+- `supabase/seeds/generated/admin_kiosko_initial_purchases_generated.sql`
+- `supabase/admin_kiosko_inventory_activation.sql`
+- `lib/admin-kiosko/repositories/inventory.repository.ts`
+
+Flujo objetivo:
+
+```mermaid
+flowchart TD
+  Invoice[Factura revisada]
+  Invoice --> Document[admin_accounting_documents]
+  Document --> Lines[admin_accounting_document_items]
+  Lines --> Product[admin_inventory_products]
+  Lines --> Lot[admin_inventory_lots]
+  Lot --> Movement[admin_inventory_lot_movements]
+  Lot --> Cache[Cache producto: stock, lote FEFO, caducidad]
+  Lot --> Production[Produccion interna]
+  Lot --> Label[Etiqueta recepcion/lote]
+  Production --> Sale[Venta, consumo, merma o salida interna]
+```
+
+`admin_inventory_lots` es la fuente de verdad para stock por lote. `admin_inventory_products` queda como cache derivada para busquedas, dashboard e interfaces rapidas.
+
+La funcion SQL `admin_activate_historical_stock()` es idempotente:
+
+- crea productos si no existen por GTIN/EAN/nombre normalizado;
+- enlaza lineas contables a productos normalizados;
+- crea lotes solo si no existe `purchase_document_id + purchase_line_id`;
+- crea movimientos de entrada solo si no existe ya el movimiento de esa linea;
+- crea recepcion APPCC para lineas que lo requieren;
+- reconstruye la cache de productos desde lotes activos.
+
+Si una linea no tiene lote de fabricante, se conserva el lote interno generado por el importador:
+
+```text
+INIT-YYYYMMDD-SUPPLIER-PRODUCT
+```
+
+La vista `admin_inventory_ready_view` centraliza la lectura FEFO para produccion, etiquetas y revision:
+
+- producto;
+- lote;
+- stock disponible;
+- caducidad;
+- proveedor;
+- factura;
+- ubicacion;
+- posicion FEFO;
+- listo para produccion;
+- listo para etiqueta;
+- pendiente de revision APPCC.
+
+Las etiquetas todavia no se imprimen automaticamente en esta fase. Las funciones `previewInventoryLabel()` y `previewProductionLabel()` preparan los datos y el QR para que Zebra los consuma en un paso posterior.
+
 ## Migracion recomendada
 
 1. Mantener server actions actuales funcionando.
