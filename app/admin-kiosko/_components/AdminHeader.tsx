@@ -21,6 +21,7 @@ const navGroups = [
     label: "Compras",
     section: "compras",
     links: [
+      ["Bandeja entrada", "/admin-kiosko/inbox"],
       ["Contabilidad", "/admin-kiosko/contabilidad"],
       ["IA / OCR", "/admin-kiosko/ia"],
       ["Historial OCR", "/admin-kiosko/ia/historial"],

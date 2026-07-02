@@ -16,6 +16,7 @@ export type InboxDocumentRecord = {
   filename: string;
   mimeType: string;
   fileSize: number;
+  uploadedAt?: string;
   detectedType?: InboxDocumentType;
   selectedType?: InboxDocumentType;
   confirmedType?: InboxDocumentType;
@@ -23,6 +24,29 @@ export type InboxDocumentRecord = {
   uploadGroupId?: string;
   storageBucket?: string;
   storagePath?: string;
+  classificationSource?: string;
+  classificationConfidence?: number;
+  classificationReason?: string;
+  processingError?: string;
+  possibleDuplicate?: boolean;
+  duplicateOf?: string;
+  duplicateScore?: number;
+  relatedRecordType?: string;
+  relatedRecordId?: string;
+  importedAt?: string;
+  importStatus?: string;
+  importDurationMs?: number;
+  importError?: string;
+  importHandlerResults?: Array<{
+    handler: string;
+    status: string;
+    message: string;
+    recordType?: string;
+    recordId?: string;
+    warnings?: string[];
+    errors?: string[];
+    durationMs?: number;
+  }>;
 };
 
 export type InboxConfirmation = {

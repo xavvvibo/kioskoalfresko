@@ -708,6 +708,139 @@ Eventos emitidos tras confirmar la transaccion:
 
 La etiqueta queda preparada con producto, lote interno, fecha de elaboracion, caducidad, ingredientes, alergenos, conservacion y QR de trazabilidad. No se imprime automaticamente.
 
+## Bandeja de entrada inteligente
+
+`/admin-kiosko/inbox` es la entrada documental unica del ERP. Su raiz de persistencia es `admin_uploaded_documents`; no se duplican originales en tablas de facturas, albaranes, etiquetas o documentacion.
+
+Capacidades actuales:
+
+- subida multiple de PDF e imagenes mezcladas
+- drag and drop, selector de archivos y pegado de imagenes
+- agrupacion por `upload_group_id`
+- guardado privado en `admin-kiosko-documents`
+- clasificacion inicial por IA/heuristica documental
+- revision editable antes de confirmar
+- estados canonicos: `uploaded`, `processing`, `needs_review`, `confirmed`, `failed`, `archived`
+- eventos de dominio en Event Store
+
+Tipos documentales soportados por la bandeja:
+
+- `invoice`
+- `credit_note`
+- `delivery_note`
+- `receipt`
+- `supplier_traceability_label`
+- `traceability_label`
+- `technical_sheet`
+- `sanitary_document`
+- `appcc_document`
+- `maintenance_document`
+- `supplier_contract`
+- `training_document`
+- `other`
+
+```mermaid
+flowchart TD
+  Drop[Arrastrar / pegar / seleccionar archivos] --> Root[admin_uploaded_documents]
+  Root --> Storage[Storage privado admin-kiosko-documents]
+  Root --> Classify[Clasificacion IA inicial]
+  Classify --> Review[Revision editable]
+  Review --> Confirm[Confirmar e importar]
+  Confirm --> Events[Event Store]
+  Confirm --> Accounting[Contabilidad]
+  Confirm --> Purchasing[Compras]
+  Confirm --> Appcc[Recepcion APPCC]
+  Confirm --> Inventory[Inventario y lotes]
+  Confirm --> Trace[Traceabilidad]
+  Confirm --> Labels[Etiquetas preparadas]
+```
+
+Eventos emitidos por el flujo Inbox:
+
+- `InboxDocumentUploaded`
+- `InboxDocumentClassified`
+- `InboxReviewCompleted`
+- `InboxImportConfirmed`
+- compatibilidad paralela con `DocumentUploaded` y `DocumentClassified`
+
+La confirmacion documental todavia no sustituye todos los flujos legacy. Esta fase crea la bandeja, contratos, eventos y revision; la derivacion completa a compras, inventario, APPCC y etiquetas debe activarse de forma incremental desde handlers o servicios transaccionales para evitar efectos duplicados.
+
+## Orquestador documental
+
+La Inbox ya emite `InboxImportConfirmed` al confirmar un documento. Ese evento entra en `DocumentImportOrchestrator`, ubicado en `lib/admin-kiosko/domain/document-import`.
+
+El orquestador no conoce tablas concretas ni implementa reglas de cada modulo. Ejecuta handlers registrados que declaran `supports(context)`:
+
+- `PurchaseImportHandler`
+- `AccountingImportHandler`
+- `InventoryReceptionHandler`
+- `InventoryLotHandler`
+- `AppccImportHandler`
+- `LabelImportHandler`
+- `DashboardProjectionHandler`
+
+Cada handler devuelve un resultado normalizado:
+
+- `success`
+- `warning`
+- `needs_review`
+- `failed`
+- `skipped`
+
+El pipeline completo persiste observabilidad en `admin_uploaded_documents`:
+
+- `import_status`
+- `import_started_at`
+- `import_completed_at`
+- `import_duration_ms`
+- `import_handler_results`
+- `import_error`
+
+```mermaid
+flowchart TD
+  Confirm[InboxImportConfirmed] --> Orchestrator[DocumentImportOrchestrator]
+  Orchestrator --> Purchase[PurchaseImportHandler]
+  Orchestrator --> Accounting[AccountingImportHandler]
+  Orchestrator --> Reception[InventoryReceptionHandler]
+  Orchestrator --> Lot[InventoryLotHandler]
+  Orchestrator --> Appcc[AppccImportHandler]
+  Orchestrator --> Label[LabelImportHandler]
+  Orchestrator --> Dashboard[DashboardProjectionHandler]
+  Purchase --> Results[import_handler_results]
+  Accounting --> Results
+  Reception --> Results
+  Lot --> Results
+  Appcc --> Results
+  Label --> Results
+  Dashboard --> Results
+```
+
+### Idempotencia
+
+Los handlers buscan primero registros existentes por `uploaded_document_id` y reutilizan el resultado si ya existe. Esto evita que una segunda entrega de `InboxImportConfirmed` cree dos facturas, dos recepciones, dos lotes o dos etiquetas.
+
+### Transacciones
+
+Cada agregado mantiene su propia frontera transaccional:
+
+- documento contable
+- recepcion APPCC
+- lote inventario
+- etiqueta preparada
+- archivo sanitario
+
+Un fallo en inventario no deshace un documento contable ya creado, pero ningun handler debe dejar inconsistente su propio agregado. Las acciones masivas de Inbox usan `admin_inbox_bulk_update(...)` como RPC transaccional.
+
+### Extension Open/Closed
+
+Para incorporar un nuevo tipo documental no debe modificarse el orquestador. Debe añadirse:
+
+1. Un contrato de tipo documental.
+2. Un handler con `supports(context)`.
+3. Eventos o resultados de importacion si procede.
+
+El resto del pipeline permanece cerrado a modificacion.
+
 ## Migracion recomendada
 
 1. Mantener server actions actuales funcionando.

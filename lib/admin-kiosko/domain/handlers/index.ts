@@ -5,9 +5,11 @@ import { dashboardHandler } from "./dashboard.handler";
 import { documentConfirmedHandler } from "./document-confirmed.handler";
 import { goodsReceivedHandler } from "./goods-received.handler";
 import { inventoryHandler } from "./inventory.handler";
+import { inboxImportHandler } from "./inbox-import.handler";
 import { labelHandler } from "./label.handler";
 
 export const adminKioskoDomainHandlers: DomainEventHandler<AdminKioskoDomainEvent>[] = [
+  inboxImportHandler,
   documentConfirmedHandler,
   goodsReceivedHandler,
   inventoryHandler,

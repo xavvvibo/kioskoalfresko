@@ -38,6 +38,42 @@ export type DocumentConfirmedPayload = {
   corrections?: Record<string, unknown>;
 };
 
+export type InboxDocumentUploadedPayload = DocumentUploadedPayload & {
+  queueStatus: "uploaded" | "failed";
+};
+
+export type InboxDocumentClassifiedPayload = {
+  uploadedDocumentId: string;
+  detectedType: string;
+  selectedType?: string;
+  confidence?: number;
+  reason?: string;
+};
+
+export type InboxReviewCompletedPayload = {
+  uploadedDocumentId: string;
+  confirmedType: string;
+  corrections?: Record<string, unknown>;
+};
+
+export type InboxImportConfirmedPayload = {
+  uploadedDocumentId: string;
+  confirmedType: string;
+  targets: string[];
+};
+
+export type DocumentImportCompletedPayload = {
+  uploadedDocumentId: string;
+  status: string;
+  durationMs: number;
+  handlers: Array<{
+    handler: string;
+    status: string;
+    recordType?: string;
+    recordId?: string;
+  }>;
+};
+
 export type SupplierCreatedPayload = {
   supplierId?: string;
   name: string;
@@ -164,6 +200,11 @@ export type AdminKioskoDomainEvent =
   | DomainEventEnvelope<"DocumentUploaded", DocumentUploadedPayload>
   | DomainEventEnvelope<"DocumentClassified", DocumentClassifiedPayload>
   | DomainEventEnvelope<"DocumentConfirmed", DocumentConfirmedPayload>
+  | DomainEventEnvelope<"InboxDocumentUploaded", InboxDocumentUploadedPayload>
+  | DomainEventEnvelope<"InboxDocumentClassified", InboxDocumentClassifiedPayload>
+  | DomainEventEnvelope<"InboxReviewCompleted", InboxReviewCompletedPayload>
+  | DomainEventEnvelope<"InboxImportConfirmed", InboxImportConfirmedPayload>
+  | DomainEventEnvelope<"DocumentImportCompleted", DocumentImportCompletedPayload>
   | DomainEventEnvelope<"SupplierCreated", SupplierCreatedPayload>
   | DomainEventEnvelope<"GoodsReceived", GoodsReceivedPayload>
   | DomainEventEnvelope<"InventoryLotCreated", InventoryLotCreatedPayload>

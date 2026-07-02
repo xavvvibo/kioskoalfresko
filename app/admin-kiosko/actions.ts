@@ -40,6 +40,10 @@ import {
   updateEquipmentAlertStatus,
   updateAccountingReconciliationStatus,
   updateUploadedDocumentReview,
+  archiveInboxDocument,
+  bulkUpdateInboxDocuments,
+  classifyQueuedInboxDocument,
+  confirmInboxDocument,
   createInboxUploadGroupId,
   queueInboxDocument,
 } from "@/lib/admin-kiosko/database";
@@ -85,14 +89,17 @@ function checkboxValue(formData: FormData, key: string) {
 
 const inboxDocumentTypes = new Set<InboxDocumentType>([
   "invoice",
+  "credit_note",
   "delivery_note",
   "receipt",
   "supplier_traceability_label",
+  "traceability_label",
   "sanitary_document",
   "technical_sheet",
   "supplier_contract",
   "maintenance_document",
   "training_document",
+  "appcc_document",
   "other",
 ]);
 
@@ -248,6 +255,21 @@ export async function uploadInboxDocumentsAction(formData: FormData) {
     }
 
     documents.push(queued.data);
+    await emitDomainEventSafe(createDomainEvent("InboxDocumentUploaded", {
+      source: "inbox",
+      correlationId: uploadGroupId,
+      trace: { documentId: queued.data.uploadedDocumentId },
+      payload: {
+        uploadedDocumentId: queued.data.uploadedDocumentId,
+        filename: queued.data.filename,
+        mimeType: queued.data.mimeType,
+        fileSize: queued.data.fileSize,
+        storageBucket: queued.data.storageBucket,
+        storagePath: queued.data.storagePath,
+        uploadGroupId,
+        queueStatus: "uploaded",
+      },
+    }));
     await emitDomainEventSafe(createDomainEvent("DocumentUploaded", {
       source: "inbox",
       correlationId: uploadGroupId,
@@ -262,8 +284,38 @@ export async function uploadInboxDocumentsAction(formData: FormData) {
         uploadGroupId,
       },
     }));
+
+    const classified = await classifyQueuedInboxDocument(queued.data.uploadedDocumentId);
+    if (classified.ok) {
+      await emitDomainEventSafe(createDomainEvent("InboxDocumentClassified", {
+        source: "inbox",
+        correlationId: uploadGroupId,
+        trace: { documentId: classified.data.uploadedDocumentId },
+        payload: {
+          uploadedDocumentId: classified.data.uploadedDocumentId,
+          detectedType: classified.data.detectedType || "other",
+          selectedType: classified.data.selectedType,
+          confidence: classified.data.classificationConfidence,
+          reason: classified.data.classificationReason,
+        },
+      }));
+      await emitDomainEventSafe(createDomainEvent("DocumentClassified", {
+        source: "inbox",
+        correlationId: uploadGroupId,
+        trace: { documentId: classified.data.uploadedDocumentId },
+        payload: {
+          uploadedDocumentId: classified.data.uploadedDocumentId,
+          detectedType: classified.data.detectedType || "other",
+          confidence: classified.data.classificationConfidence,
+          model: classified.data.classificationSource,
+        },
+      }));
+    } else {
+      errors.push(`${file.name}: ${classified.error}`);
+    }
   }
 
+  revalidatePath("/admin-kiosko/inbox");
   revalidatePath("/admin-kiosko/compras");
   revalidatePath("/admin-kiosko/contabilidad");
   revalidatePath("/admin-kiosko/ia");
@@ -283,6 +335,113 @@ export async function uploadInboxDocumentsAction(formData: FormData) {
     documents,
     errors,
   };
+}
+
+export async function confirmInboxReviewAction(formData: FormData) {
+  await requireAdminSession();
+
+  const uploadedDocumentId = text(formData, "uploaded_document_id");
+  const confirmedType = optionalInboxDocumentType(text(formData, "confirmed_type")) || "other";
+  const corrections = {
+    supplier: text(formData, "supplier"),
+    document_number: text(formData, "document_number"),
+    document_date: text(formData, "document_date"),
+    total_amount: text(formData, "total_amount"),
+    products: text(formData, "products"),
+    batch_number: text(formData, "batch_number"),
+    expiry_date: text(formData, "expiry_date"),
+    temperature: text(formData, "temperature"),
+    location: text(formData, "location"),
+    category: text(formData, "category"),
+    traceability: text(formData, "traceability"),
+    appcc: text(formData, "appcc"),
+  };
+
+  const result = await confirmInboxDocument({
+    uploadedDocumentId,
+    confirmedType,
+    corrections,
+    responsible: text(formData, "responsible") || "F. Javier Bocanegra Sanjuan",
+  });
+
+  revalidatePath("/admin-kiosko/inbox");
+  if (result.ok) {
+    await emitDomainEventSafe(createDomainEvent("InboxReviewCompleted", {
+      source: "inbox",
+      correlationId: uploadedDocumentId,
+      trace: { documentId: uploadedDocumentId },
+      payload: {
+        uploadedDocumentId,
+        confirmedType,
+        corrections,
+      },
+    }));
+    await emitDomainEventSafe(createDomainEvent("InboxImportConfirmed", {
+      source: "inbox",
+      correlationId: uploadedDocumentId,
+      trace: { documentId: uploadedDocumentId },
+      payload: {
+        uploadedDocumentId,
+        confirmedType,
+        targets: ["accounting", "purchasing", "goods_reception", "inventory", "traceability", "labels"],
+      },
+    }));
+    redirect("/admin-kiosko/inbox?saved=1");
+  }
+
+  redirect(`/admin-kiosko/inbox?error=${encodeURIComponent(result.error.slice(0, 240))}`);
+}
+
+export async function archiveInboxDocumentAction(formData: FormData) {
+  await requireAdminSession();
+
+  const result = await archiveInboxDocument(
+    text(formData, "uploaded_document_id"),
+    text(formData, "responsible") || "F. Javier Bocanegra Sanjuan",
+  );
+
+  redirectAfterSave("/admin-kiosko/inbox", result);
+}
+
+export async function bulkInboxDocumentsAction(formData: FormData) {
+  await requireAdminSession();
+
+  const action = text(formData, "bulk_action") as "confirm" | "archive" | "change_type" | "reprocess_ocr" | "mark_duplicate";
+  const uploadedDocumentIds = formData.getAll("document_ids").map(String).filter(Boolean);
+  const confirmedType = optionalInboxDocumentType(text(formData, "bulk_confirmed_type"));
+  const result = await bulkUpdateInboxDocuments({
+    uploadedDocumentIds,
+    action,
+    confirmedType,
+    duplicateOf: text(formData, "duplicate_of"),
+    responsible: text(formData, "responsible") || "F. Javier Bocanegra Sanjuan",
+  });
+
+  revalidatePath("/admin-kiosko/inbox");
+  if (result.ok) {
+    await Promise.all(uploadedDocumentIds.map((uploadedDocumentId) => emitDomainEventSafe(createDomainEvent(
+      action === "confirm" ? "InboxImportConfirmed" : "InboxReviewCompleted",
+      {
+        source: "inbox",
+        correlationId: uploadedDocumentId,
+        trace: { documentId: uploadedDocumentId },
+        payload: action === "confirm"
+          ? {
+              uploadedDocumentId,
+              confirmedType: confirmedType || "other",
+              targets: ["accounting", "purchasing", "goods_reception", "inventory", "traceability", "labels"],
+            }
+          : {
+              uploadedDocumentId,
+              confirmedType: confirmedType || "other",
+              corrections: { bulk_action: action },
+            },
+      },
+    ))));
+    redirect("/admin-kiosko/inbox?saved=1");
+  }
+
+  redirect(`/admin-kiosko/inbox?error=${encodeURIComponent(result.error.slice(0, 240))}`);
 }
 
 export async function saveTemperatureRecordAction(formData: FormData) {

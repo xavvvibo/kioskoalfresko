@@ -15,8 +15,10 @@
 export const DOCUMENT_PROCESSING_STATUSES = [
   "uploaded",
   "processing",
+  "classified",
   "needs_review",
   "confirmed",
+  "imported",
   "failed",
   "archived",
 ] as const;
@@ -25,14 +27,17 @@ export type DocumentProcessingStatus = (typeof DOCUMENT_PROCESSING_STATUSES)[num
 
 export const DOCUMENT_TYPES = [
   "invoice",
+  "credit_note",
   "delivery_note",
   "receipt",
   "supplier_traceability_label",
+  "traceability_label",
   "sanitary_document",
   "technical_sheet",
   "supplier_contract",
   "maintenance_document",
   "training_document",
+  "appcc_document",
   "other",
 ] as const;
 
@@ -55,11 +60,14 @@ const legacyReviewStatusMap: Record<string, DocumentProcessingStatus> = {
   confirmado: "confirmed",
   rechazado: "failed",
   anulado: "archived",
+  importado: "imported",
 };
 
 const legacyDocumentTypeMap: Record<string, DocumentType> = {
   factura: "invoice",
   invoice: "invoice",
+  rectificativa: "credit_note",
+  credit_note: "credit_note",
   albaran: "delivery_note",
   delivery_note: "delivery_note",
   recibo: "receipt",
@@ -67,6 +75,8 @@ const legacyDocumentTypeMap: Record<string, DocumentType> = {
   etiqueta: "supplier_traceability_label",
   etiqueta_lote: "supplier_traceability_label",
   supplier_traceability_label: "supplier_traceability_label",
+  etiqueta_trazabilidad: "traceability_label",
+  traceability_label: "traceability_label",
   certificado: "sanitary_document",
   sanitary_document: "sanitary_document",
   ficha_tecnica: "technical_sheet",
@@ -77,12 +87,17 @@ const legacyDocumentTypeMap: Record<string, DocumentType> = {
   maintenance_document: "maintenance_document",
   formacion: "training_document",
   training_document: "training_document",
+  appcc: "appcc_document",
+  appcc_document: "appcc_document",
   otro: "other",
   other: "other",
 };
 
 export function normalizeDocumentProcessingStatus(status?: string | null): DocumentProcessingStatus {
   if (!status) return "uploaded";
+  if (status === "revisado") return "needs_review";
+  if (status === "confirmado") return "confirmed";
+  if (status === "importado") return "imported";
   if (DOCUMENT_PROCESSING_STATUSES.includes(status as DocumentProcessingStatus)) {
     return status as DocumentProcessingStatus;
   }
@@ -100,9 +115,9 @@ export function nextDocumentRouteForType(type?: string | null) {
 
   if (normalized === "invoice" || normalized === "receipt") return "/admin-kiosko/contabilidad";
   if (normalized === "delivery_note") return "/admin-kiosko/compras";
-  if (normalized === "supplier_traceability_label") return "/admin-kiosko/trazabilidad";
+  if (normalized === "supplier_traceability_label" || normalized === "traceability_label") return "/admin-kiosko/trazabilidad";
   if (normalized === "maintenance_document") return "/admin-kiosko/mantenimiento";
-  if (normalized === "training_document" || normalized === "sanitary_document" || normalized === "technical_sheet" || normalized === "supplier_contract") {
+  if (normalized === "training_document" || normalized === "sanitary_document" || normalized === "technical_sheet" || normalized === "supplier_contract" || normalized === "appcc_document") {
     return "/admin-kiosko/documentacion";
   }
 
