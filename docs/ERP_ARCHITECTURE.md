@@ -221,6 +221,90 @@ flowchart TD
 
 Contabilidad debe referenciar siempre `uploaded_document_id` cuando nace desde documento.
 
+## Núcleo de compras
+
+El núcleo profesional de compras se prepara de forma aditiva en:
+
+- `supabase/admin_kiosko_purchase_core.sql`
+- `lib/admin-kiosko/purchases/contracts.ts`
+- `lib/admin-kiosko/purchases/normalization.ts`
+- `lib/admin-kiosko/repositories/purchases.repository.ts`
+
+El objetivo es conectar el flujo:
+
+```mermaid
+flowchart TD
+  Supplier[Proveedor maestro]
+  Document[Documento compra]
+  Lines[Líneas]
+  Products[Productos maestros]
+  Lots[Lotes FEFO]
+  Accounting[Contabilidad]
+  Appcc[APPCC recepción]
+  Trace[Trazabilidad]
+  Labels[Etiquetas]
+
+  Supplier --> Document
+  Document --> Lines
+  Lines --> Products
+  Lines --> Lots
+  Document --> Accounting
+  Lines --> Appcc
+  Lots --> Trace
+  Lots --> Labels
+```
+
+### Normalización proveedor/producto
+
+El motor de normalización prepara:
+
+- proveedor normalizado por nombre y CIF/NIF;
+- producto normalizado por GTIN/EAN/nombre;
+- candidatos de deduplicación;
+- clasificación automática inicial:
+  `food`, `beverage`, `alcohol`, `cleaning`, `packaging`, `equipment`, `service`, `other`.
+
+La clasificación decide de forma preliminar si una línea requiere:
+
+- trazabilidad alimentaria;
+- recepción APPCC;
+- lote de inventario;
+- etiqueta;
+- categoría contable;
+- familia de producto;
+- ubicación y temperatura de conservación sugeridas.
+
+### Trazabilidad desde factura a lote
+
+El SQL añade contratos de relación:
+
+- `purchase_document_id`
+- `purchase_line_id`
+- `normalized_supplier_id`
+- `normalized_product_id`
+- `source_document_id`
+
+Estos campos permiten enlazar factura/albarán, línea, producto maestro, lote FEFO, recepción APPCC, contabilidad y etiqueta sin duplicar archivos ni romper el OCR actual.
+
+### Vistas de compras
+
+Se preparan vistas de lectura:
+
+- `admin_purchase_traceability_view`
+- `admin_purchase_lines_pending_review_view`
+- `admin_products_deduplication_candidates_view`
+- `admin_stock_ready_for_labels_view`
+
+Estas vistas son para auditoría, revisión y futuras pantallas; no sustituyen todavía el flujo actual.
+
+### Importador histórico
+
+El seed opcional:
+
+- `supabase/seeds/admin_kiosko_historical_purchases_seed.sql`
+
+no contiene datos productivos. Solo documenta el procedimiento para revisar facturas históricas ya subidas y enlazarlas manualmente con proveedores, productos, líneas y lotes cuando se decida hacer la migración.
+
 ## Flujo compras y recepcion APPCC
 
 ```mermaid

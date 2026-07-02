@@ -1,0 +1,26 @@
+-- Seed opcional para importación histórica manual de compras.
+-- No contiene datos productivos por seguridad.
+--
+-- Uso recomendado:
+-- 1. Ejecutar primero supabase/admin_kiosko_purchase_core.sql.
+-- 2. Revisar facturas/albaranes existentes en admin_uploaded_documents,
+--    admin_supplier_documents y admin_accounting_documents.
+-- 3. Insertar o actualizar manualmente normalized_supplier_id,
+--    purchase_document_id, purchase_line_id, normalized_product_id,
+--    lotes y flags APPCC por documento revisado.
+--
+-- Ejemplo orientativo, NO ejecutar sin sustituir UUID/datos:
+--
+-- update public.admin_accounting_documents
+-- set purchase_status = 'reviewed',
+--     normalized_supplier_id = '<supplier_uuid>'::uuid
+-- where id = '<accounting_document_uuid>'::uuid;
+--
+-- update public.admin_accounting_document_items
+-- set purchase_document_id = '<accounting_document_uuid>'::uuid,
+--     purchase_line_id = gen_random_uuid(),
+--     normalized_product_id = '<inventory_product_uuid>'::uuid,
+--     requires_traceability = true,
+--     requires_appcc_reception = true,
+--     generates_inventory_lot = true
+-- where accounting_document_id = '<accounting_document_uuid>'::uuid;
