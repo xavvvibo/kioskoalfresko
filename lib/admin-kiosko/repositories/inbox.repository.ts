@@ -1,6 +1,7 @@
 import type { InboxConfirmation, InboxDocumentRecord, InboxDocumentStatus, InboxDocumentType } from "../inbox/contracts";
 import type { InboxOcrQueueDocument, InboxOcrStructuredResult } from "../domain/inbox-ocr/contracts";
 import { normalizeDocumentProcessingStatus, normalizeDocumentType } from "./documents.repository";
+import { listDocumentReconciliations } from "./document-reconciliation.repository";
 import { findDomainEventsByCorrelationId } from "./events.repository";
 import { adminSupabaseRequest, downloadAdminStorageObject, uploadAdminStorageObject } from "./legacy-core";
 
@@ -233,6 +234,48 @@ function toInboxDocument(row: UploadedDocumentRow): InboxDocumentRecord {
     importDurationMs: row.import_duration_ms || undefined,
     importError: row.import_error || undefined,
     importHandlerResults: Array.isArray(row.import_handler_results) ? row.import_handler_results : undefined,
+  };
+}
+
+async function attachReconciliations(documents: InboxDocumentRecord[]): Promise<DbResult<InboxDocumentRecord[]>> {
+  if (!documents.length) return { ok: true, data: documents };
+  const reconciliations = await listDocumentReconciliations(documents.map((document) => document.uploadedDocumentId));
+  if (!reconciliations.ok) {
+    return { ok: true, data: documents };
+  }
+
+  return {
+    ok: true,
+    data: documents.map((document) => {
+      const reconciliation = reconciliations.data[document.uploadedDocumentId];
+      if (!reconciliation) return document;
+      return {
+        ...document,
+        reconciliation: {
+          status: reconciliation.status,
+          supplierName: reconciliation.supplierName,
+          supplierTaxId: reconciliation.supplierTaxId,
+          matchedSupplierId: reconciliation.matchedSupplierId,
+          supplierMatchStatus: reconciliation.supplierMatchStatus,
+          supplierMatchConfidence: reconciliation.supplierMatchConfidence,
+          documentNumber: reconciliation.documentNumber,
+          documentDate: reconciliation.documentDate,
+          taxableBase: reconciliation.taxableBase,
+          vatAmount: reconciliation.vatAmount,
+          totalAmount: reconciliation.totalAmount,
+          lineCount: reconciliation.lineCount,
+          matchedLines: reconciliation.matchedLines,
+          ambiguousLines: reconciliation.ambiguousLines,
+          unrecognizedLines: reconciliation.unrecognizedLines,
+          priceAlerts: reconciliation.priceAlerts,
+          taxAlerts: reconciliation.taxAlerts,
+          unitAlerts: reconciliation.unitAlerts,
+          warnings: reconciliation.warnings,
+          errors: reconciliation.errors,
+          summary: reconciliation.summary,
+        },
+      };
+    }),
   };
 }
 
@@ -656,7 +699,7 @@ export async function listInboxDocuments(filters: InboxListFilters = {}): Promis
   });
 
   if (!rows.ok) return rows;
-  return { ok: true, data: rows.data.map(toInboxDocument) };
+  return attachReconciliations(rows.data.map(toInboxDocument));
 }
 
 export async function getInboxDocument(uploadedDocumentId: string): Promise<DbResult<InboxDocumentRecord | null>> {
@@ -666,7 +709,11 @@ export async function getInboxDocument(uploadedDocumentId: string): Promise<DbRe
   });
 
   if (!rows.ok) return rows;
-  return { ok: true, data: rows.data[0] ? toInboxDocument(rows.data[0]) : null };
+  const document = rows.data[0] ? toInboxDocument(rows.data[0]) : null;
+  if (!document) return { ok: true, data: null };
+  const withReconciliation = await attachReconciliations([document]);
+  if (!withReconciliation.ok) return withReconciliation;
+  return { ok: true, data: withReconciliation.data[0] || document };
 }
 
 export async function bulkUpdateInboxDocuments(input: InboxBulkAction): Promise<DbResult<{ updated: number }>> {

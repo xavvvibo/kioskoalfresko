@@ -54,6 +54,29 @@ export type InboxDocumentRecord = {
     errors?: string[];
     durationMs?: number;
   }>;
+  reconciliation?: {
+    status: string;
+    supplierName?: string;
+    supplierTaxId?: string;
+    matchedSupplierId?: string;
+    supplierMatchStatus: string;
+    supplierMatchConfidence: number;
+    documentNumber?: string;
+    documentDate?: string;
+    taxableBase?: number;
+    vatAmount?: number;
+    totalAmount?: number;
+    lineCount: number;
+    matchedLines: number;
+    ambiguousLines: number;
+    unrecognizedLines: number;
+    priceAlerts: number;
+    taxAlerts: number;
+    unitAlerts: number;
+    warnings: string[];
+    errors: string[];
+    summary?: string;
+  };
 };
 
 export type InboxConfirmation = {

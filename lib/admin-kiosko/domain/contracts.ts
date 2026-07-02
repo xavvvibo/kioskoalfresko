@@ -10,6 +10,8 @@ export type DomainEventName =
   | "InboxDocumentClassified"
   | "InboxReviewCompleted"
   | "InboxImportConfirmed"
+  | "DocumentReconciliationProposed"
+  | "DocumentReconciliationFailed"
   | "DocumentImportCompleted"
   | "SupplierCreated"
   | "GoodsReceived"

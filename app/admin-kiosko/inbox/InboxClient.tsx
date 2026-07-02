@@ -65,6 +65,20 @@ function confidenceBadge(confidence?: number) {
   return { label: "Confianza baja · revisión obligatoria", className: "border-[#d94b2b]/40 bg-[#d94b2b]/10 text-[#f2c6bb]" };
 }
 
+function reconciliationStatusLabel(status: string) {
+  if (status === "reconciled") return "Conciliada";
+  if (status === "partially_reconciled") return "Conciliación parcial";
+  if (status === "requires_intervention") return "Requiere intervención";
+  if (status === "failed") return "Error de conciliación";
+  return "Pendiente de revisión";
+}
+
+function reconciliationStatusClass(status: string) {
+  if (status === "reconciled") return "border-emerald-300 bg-emerald-100 text-emerald-950";
+  if (status === "partially_reconciled" || status === "pending_review") return "border-amber-300 bg-amber-100 text-amber-950";
+  return "border-[#d94b2b]/40 bg-[#d94b2b]/10 text-[#f2c6bb]";
+}
+
 function DocumentReviewRow({ document }: { document: InboxDocumentRecord }) {
   const detectedType = document.selectedType || document.detectedType || "other";
   const progress = progressByStatus[document.status] || 15;
@@ -123,6 +137,54 @@ function DocumentReviewRow({ document }: { document: InboxDocumentRecord }) {
               <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Resumen OCR</p>
               <p><strong className="text-white">Tipo:</strong> {String(document.ocrJson.detectedType || document.detectedType || "Pendiente de revisión")}</p>
               <p><strong className="text-white">Campos extraídos:</strong> {Object.keys((document.ocrJson.result as Record<string, unknown> | undefined) || {}).slice(0, 8).join(", ") || "Revisión manual preparada."}</p>
+            </div>
+          ) : null}
+          {document.reconciliation ? (
+            <div className="mt-4 grid gap-3 rounded-2xl border border-white/10 bg-white/6 p-3 text-xs text-stone-300">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Propuesta de conciliación</p>
+                <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${reconciliationStatusClass(document.reconciliation.status)}`}>
+                  {reconciliationStatusLabel(document.reconciliation.status)}
+                </span>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <p><strong className="text-white">Proveedor detectado:</strong> {document.reconciliation.supplierName || "Pendiente de revisar"}</p>
+                <p><strong className="text-white">Proveedor relacionado:</strong> {document.reconciliation.matchedSupplierId ? `${document.reconciliation.supplierMatchStatus} · ${Math.round(document.reconciliation.supplierMatchConfidence * 100)}%` : "Sin relación automática"}</p>
+                <p><strong className="text-white">Documento:</strong> {document.reconciliation.documentNumber || "Número no detectado"}{document.reconciliation.documentDate ? ` · ${document.reconciliation.documentDate}` : ""}</p>
+                <p><strong className="text-white">Total factura:</strong> {document.reconciliation.totalAmount === undefined ? "Pendiente" : `${document.reconciliation.totalAmount.toFixed(2)} €`}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                {[
+                  ["Líneas", document.reconciliation.lineCount],
+                  ["Conciliadas", document.reconciliation.matchedLines],
+                  ["Ambiguas", document.reconciliation.ambiguousLines],
+                  ["No reconocidas", document.reconciliation.unrecognizedLines],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-xl border border-white/10 bg-black/20 p-3">
+                    <p className="text-[9px] font-black uppercase tracking-[0.12em] text-stone-400">{label}</p>
+                    <p className="mt-1 text-xl font-black text-white">{value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3">
+                <p className={document.reconciliation.priceAlerts ? "text-amber-200" : "text-emerald-200"}><strong>Precio:</strong> {document.reconciliation.priceAlerts} alerta(s)</p>
+                <p className={document.reconciliation.taxAlerts ? "text-amber-200" : "text-emerald-200"}><strong>IVA:</strong> {document.reconciliation.taxAlerts} alerta(s)</p>
+                <p className={document.reconciliation.unitAlerts ? "text-amber-200" : "text-emerald-200"}><strong>Unidad:</strong> {document.reconciliation.unitAlerts} alerta(s)</p>
+              </div>
+              {document.reconciliation.summary ? <p className="font-semibold text-white">{document.reconciliation.summary}</p> : null}
+              {document.reconciliation.warnings.length ? (
+                <div className="rounded-xl border border-amber-300 bg-amber-100 px-3 py-2 font-semibold text-amber-950">
+                  {document.reconciliation.warnings.map((warning) => <p key={warning}>{warning}</p>)}
+                </div>
+              ) : null}
+              {document.reconciliation.errors.length ? (
+                <div className="rounded-xl border border-[#d94b2b]/40 bg-[#d94b2b]/10 px-3 py-2 font-semibold text-[#f2c6bb]">
+                  {document.reconciliation.errors.map((error) => <p key={error}>{error}</p>)}
+                </div>
+              ) : null}
+              <p className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 font-semibold text-stone-300">
+                Esta propuesta no modifica inventario, contabilidad ni producción. Sirve para revisión antes de aplicar procesos ERP definitivos.
+              </p>
             </div>
           ) : null}
           {document.importHandlerResults?.length ? (

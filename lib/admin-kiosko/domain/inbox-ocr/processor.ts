@@ -23,6 +23,10 @@ import {
   markInboxOcrStarted,
   saveInboxOcrResult,
 } from "@/lib/admin-kiosko/repositories/inbox.repository";
+import {
+  markDocumentReconciliationFailed,
+  reconcileInboxDocument,
+} from "@/lib/admin-kiosko/repositories/document-reconciliation.repository";
 import type { InboxOcrBatchResult, InboxOcrQueueDocument, InboxOcrStructuredResult } from "./contracts";
 
 type DbResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
@@ -274,6 +278,13 @@ async function processOneInboxOcrDocument(document: InboxOcrQueueDocument): Prom
     const result = await runInboxOcr(document);
     const saved = await saveInboxOcrResult(result);
     if (!saved.ok) throw new OcrProcessingError(saved.error, "ocr_save", 500);
+
+    if (result.detectedType === "purchase_invoice" || result.detectedType === "credit_note" || result.detectedType === "accounting_document") {
+      const reconciliation = await reconcileInboxDocument(document.uploadedDocumentId);
+      if (!reconciliation.ok) {
+        await markDocumentReconciliationFailed(document.uploadedDocumentId, reconciliation.error);
+      }
+    }
 
     await emitOcrEvent(document, {
       name: "InboxOcrCompleted",

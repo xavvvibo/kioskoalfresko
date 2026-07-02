@@ -16,6 +16,8 @@ export const dashboardHandler: DomainEventHandler<AdminKioskoDomainEvent> = {
     "InboxReviewCompleted",
     "InboxImportConfirmed",
     "DocumentImportCompleted",
+    "DocumentReconciliationProposed",
+    "DocumentReconciliationFailed",
     "SupplierCreated",
     "GoodsReceived",
     "InventoryLotCreated",

@@ -796,7 +796,9 @@ flowchart TD
   Root --> Storage[Storage privado admin-kiosko-documents]
   Root --> Ocr[OCR batch OpenAI Vision]
   Ocr --> Classify[Clasificacion y extraccion estructurada]
+  Classify --> Reconciliation[Propuesta de conciliacion documental]
   Classify --> Review[Revision editable]
+  Reconciliation --> Review
   Review --> Confirm[Confirmar e importar]
   Confirm --> Events[Event Store]
   Confirm --> Accounting[Contabilidad]
@@ -815,11 +817,53 @@ Eventos emitidos por el flujo Inbox:
 - `InboxOcrFailed`
 - `InboxNeedsReview`
 - `InboxDocumentClassified`
+- `DocumentReconciliationProposed`
+- `DocumentReconciliationFailed`
 - `InboxReviewCompleted`
 - `InboxImportConfirmed`
 - compatibilidad paralela con `DocumentUploaded` y `DocumentClassified`
 
 La confirmacion documental todavia no sustituye todos los flujos legacy. Esta fase crea la bandeja, contratos, eventos y revision; la derivacion completa a compras, inventario, APPCC y etiquetas debe activarse de forma incremental desde handlers o servicios transaccionales para evitar efectos duplicados.
+
+## Conciliacion documental OCR
+
+La Inbox genera una propuesta de conciliacion para facturas de compra (`purchase_invoice`, `credit_note` y `accounting_document`) justo despues de guardar el OCR estructurado. La propuesta se persiste en:
+
+- `admin_document_reconciliations`
+- `admin_document_reconciliation_lines`
+- `admin_document_product_matches`
+
+La raiz documental sigue siendo `admin_uploaded_documents`; las tablas de conciliacion son una proyeccion revisable y no almacenan archivos ni sustituyen el documento original.
+
+La conciliacion intenta:
+
+- relacionar el proveedor OCR con `admin_supplier_records`;
+- detectar numero, fecha, base, IVA y total;
+- normalizar lineas de factura;
+- sugerir productos existentes de `admin_inventory_products`;
+- comparar precio, IVA y unidad contra historico de `admin_accounting_document_items`;
+- conservar lote, caducidad y temperatura cuando aparecen en OCR.
+
+Estados de conciliacion:
+
+- `pending_review`
+- `partially_reconciled`
+- `reconciled`
+- `requires_intervention`
+- `failed`
+
+Esta fase no aplica efectos irreversibles. No crea stock, no crea lotes, no genera asientos contables completos y no modifica produccion FEFO. La UI de `/admin-kiosko/inbox` muestra el resumen para revision humana y el Event Store registra `DocumentReconciliationProposed` o `DocumentReconciliationFailed` una sola vez por documento para mantener idempotencia auditable.
+
+```mermaid
+flowchart TD
+  Uploaded[admin_uploaded_documents] --> Ocr[OCR estructurado]
+  Ocr --> Proposal[admin_document_reconciliations]
+  Proposal --> Lines[admin_document_reconciliation_lines]
+  Lines --> Matches[admin_document_product_matches]
+  Proposal --> Review[Revision humana]
+  Review --> Confirm[InboxImportConfirmed]
+  Confirm --> Orchestrator[DocumentImportOrchestrator]
+```
 
 ## Orquestador documental
 

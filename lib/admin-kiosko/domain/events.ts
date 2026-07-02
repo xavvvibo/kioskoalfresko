@@ -87,6 +87,24 @@ export type InboxImportConfirmedPayload = {
   targets: string[];
 };
 
+export type DocumentReconciliationProposedPayload = {
+  uploadedDocumentId: string;
+  reconciliationId?: string;
+  status: string;
+  supplierName?: string;
+  matchedSupplierId?: string;
+  lineCount: number;
+  matchedLines: number;
+  ambiguousLines: number;
+  unrecognizedLines: number;
+  warnings?: string[];
+};
+
+export type DocumentReconciliationFailedPayload = {
+  uploadedDocumentId: string;
+  error: string;
+};
+
 export type DocumentImportCompletedPayload = {
   uploadedDocumentId: string;
   status: string;
@@ -233,6 +251,8 @@ export type AdminKioskoDomainEvent =
   | DomainEventEnvelope<"InboxDocumentClassified", InboxDocumentClassifiedPayload>
   | DomainEventEnvelope<"InboxReviewCompleted", InboxReviewCompletedPayload>
   | DomainEventEnvelope<"InboxImportConfirmed", InboxImportConfirmedPayload>
+  | DomainEventEnvelope<"DocumentReconciliationProposed", DocumentReconciliationProposedPayload>
+  | DomainEventEnvelope<"DocumentReconciliationFailed", DocumentReconciliationFailedPayload>
   | DomainEventEnvelope<"DocumentImportCompleted", DocumentImportCompletedPayload>
   | DomainEventEnvelope<"SupplierCreated", SupplierCreatedPayload>
   | DomainEventEnvelope<"GoodsReceived", GoodsReceivedPayload>

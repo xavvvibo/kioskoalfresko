@@ -12,6 +12,7 @@ export * from "./repositories/appcc.repository";
 export * from "./repositories/dashboard.repository";
 export * from "./repositories/documents.repository";
 export * from "./repositories/document-import.repository";
+export * from "./repositories/document-reconciliation.repository";
 export * from "./repositories/events.repository";
 export * from "./repositories/inventory.repository";
 export * from "./repositories/inbox.repository";
