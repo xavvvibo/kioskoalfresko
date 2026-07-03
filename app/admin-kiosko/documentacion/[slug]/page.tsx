@@ -43,6 +43,20 @@ export default async function DocumentoPage({
             <p className="rounded-2xl border border-white/10 bg-white/6 p-4"><span className="block text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Responsable</span>{document.responsible}</p>
           </div>
           <p className="mt-5 rounded-2xl border border-white/10 bg-white/6 p-4 text-sm leading-6 text-stone-200">{document.description}</p>
+          {document.sections?.length ? (
+            <div className="mt-5 grid gap-4">
+              {document.sections.map((section) => (
+                <section key={section.title} className="rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
+                  <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">{section.title}</h2>
+                  <ul className="mt-3 grid gap-2 text-sm leading-6 text-stone-200">
+                    {section.items.map((item) => (
+                      <li key={item} className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">{item}</li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          ) : null}
           <div className="mt-5 flex flex-wrap gap-3">
             <Link href="/admin-kiosko/documentacion" className="rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Volver</Link>
             {hasPdf ? (

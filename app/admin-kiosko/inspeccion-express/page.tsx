@@ -12,7 +12,6 @@ import {
   getRecentGoodsReceptionRecords,
   getRecentIncidentRecords,
   getRecentMaintenanceRecords,
-  getRecentWaterRecords,
 } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../_components/AdminHeader";
 
@@ -48,7 +47,6 @@ function ListBlock({ title, values }: { title: string; values: string[] }) {
     Incidencias: "No constan incidencias abiertas.",
     Equipos: "No hay alertas técnicas pendientes.",
     Mantenimiento: "No hay alertas técnicas pendientes.",
-    Agua: "Último registro no disponible todavía.",
   };
 
   return (
@@ -67,7 +65,7 @@ export default async function InspeccionExpressPage({ searchParams }: { searchPa
   await requireAdminSession();
   const params = await searchParams;
   const inspectorMode = params?.inspector === "1";
-  const [summary, metrics, cleaning, oil, receptions, incidents, maintenance, water, equipment] = await Promise.all([
+  const [summary, metrics, cleaning, oil, receptions, incidents, maintenance, equipment] = await Promise.all([
     getAdminDashboardSummary(),
     getExecutiveDashboardMetrics(),
     getRecentCleaningRecords(),
@@ -75,7 +73,6 @@ export default async function InspeccionExpressPage({ searchParams }: { searchPa
     getRecentGoodsReceptionRecords(),
     getRecentIncidentRecords(),
     getRecentMaintenanceRecords(),
-    getRecentWaterRecords(),
     getRecentEquipmentAssets(),
   ]);
   const dashboard = summary.ok ? summary.data : null;
@@ -197,7 +194,6 @@ export default async function InspeccionExpressPage({ searchParams }: { searchPa
             <ListBlock title="Limpieza" values={cleaning.ok ? cleaning.data.map((item) => `${item.record_date}: ${item.main}`) : []} />
             <ListBlock title="Recepciones" values={receptions.ok ? receptions.data.map((item) => `${item.record_date}: ${item.main}`) : []} />
             {!inspectorMode ? <ListBlock title="Mantenimiento" values={maintenance.ok ? maintenance.data.map((item) => `${item.record_date}: ${item.main}`) : []} /> : null}
-            {!inspectorMode ? <ListBlock title="Agua" values={water.ok ? water.data.map((item) => `${item.record_date}: ${item.main}`) : []} /> : null}
             </section>
           </FoldableSection>
 

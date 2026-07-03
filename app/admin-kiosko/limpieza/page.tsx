@@ -31,7 +31,7 @@ export default async function LimpiezaPage({
         action={saveCleaningRecordAction}
         subjectName="area"
         subjectLabel="Zona revisada"
-        options={["Cocina", "Barra", "Terraza", "Baños", "Almacén", "Zona común"]}
+        options={["Barra", "Cocina", "Plancha", "Freidoras", "Campana/extracción", "Cámaras", "Congeladores", "Mesas de trabajo", "Utensilios", "Almacén", "Terraza", "Baños", "Cubos/residuos", "TPV/superficies de contacto"]}
       >
         <label className="grid gap-2 text-sm font-semibold text-stone-200">
           Turno
@@ -48,6 +48,14 @@ export default async function LimpiezaPage({
         <label className="grid gap-2 text-sm font-semibold text-stone-200">
           Productos usados
           <input name="products_used" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+        </label>
+        <label className="grid gap-2 text-sm font-semibold text-stone-200">
+          Método aplicado
+          <input name="cleaning_method" placeholder="Retirada de restos, lavado, desinfección, aclarado si aplica..." className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
+        </label>
+        <label className="grid gap-2 text-sm font-semibold text-stone-200">
+          Verificación
+          <input name="verification" placeholder="Visual correcto, superficie seca, sin restos, olor correcto..." className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30" />
         </label>
       </BasicRecordForm>
     </RecordPageShell>

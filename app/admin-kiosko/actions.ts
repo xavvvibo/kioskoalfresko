@@ -506,6 +506,11 @@ export async function updateEquipmentAlertStatusAction(formData: FormData) {
 
 export async function saveCleaningRecordAction(formData: FormData) {
   await requireAdminSession();
+  const cleaningObservations = [
+    text(formData, "observations"),
+    text(formData, "cleaning_method") ? `Método aplicado: ${text(formData, "cleaning_method")}` : "",
+    text(formData, "verification") ? `Verificación: ${text(formData, "verification")}` : "",
+  ].filter(Boolean).join("\n");
 
   const result = await createCleaningRecord({
     record_date: text(formData, "record_date"),
@@ -515,7 +520,7 @@ export async function saveCleaningRecordAction(formData: FormData) {
     cleaning_done: checkbox(formData, "cleaning_done"),
     products_used: text(formData, "products_used"),
     status: text(formData, "status"),
-    observations: text(formData, "observations"),
+    observations: cleaningObservations,
     responsible: text(formData, "responsible"),
   });
 
@@ -530,6 +535,16 @@ export async function saveCleaningRecordAction(formData: FormData) {
 
 export async function saveFryerOilRecordAction(formData: FormData) {
   await requireAdminSession();
+  const oilObservations = [
+    text(formData, "observations"),
+    checkbox(formData, "oil_filtered") ? "Aceite filtrado." : "",
+    checkbox(formData, "waste_oil_removed") ? "Retirada de aceite usado registrada." : "",
+    text(formData, "waste_oil_manager") ? `Gestor autorizado: ${text(formData, "waste_oil_manager")}` : "",
+    text(formData, "waste_oil_contract") ? `Contrato/referencia gestor: ${text(formData, "waste_oil_contract")}` : "",
+    text(formData, "waste_oil_contact") ? `Contacto gestor: ${text(formData, "waste_oil_contact")}` : "",
+    text(formData, "waste_oil_pickup_date") ? `Fecha retirada aceite usado: ${text(formData, "waste_oil_pickup_date")}` : "",
+    text(formData, "waste_oil_document") ? `Justificante/documento asociado: ${text(formData, "waste_oil_document")}` : "",
+  ].filter(Boolean).join("\n");
 
   const result = await createFryerOilRecord({
     record_date: text(formData, "record_date"),
@@ -540,7 +555,7 @@ export async function saveFryerOilRecordAction(formData: FormData) {
     polar_compounds: text(formData, "polar_compounds"),
     color_smell_check: text(formData, "color_smell_check"),
     status: text(formData, "status"),
-    observations: text(formData, "observations"),
+    observations: oilObservations,
     responsible: text(formData, "responsible"),
   });
 
