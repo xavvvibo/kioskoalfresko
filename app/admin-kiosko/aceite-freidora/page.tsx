@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { getRecentFryerOilRecords } from "@/lib/admin-kiosko/database";
+import { resolveAppccRecordFilters } from "@/lib/admin-kiosko/appcc-record-filters";
 import { saveFryerOilRecordAction } from "../actions";
+import { AppccRecordFilters } from "../_components/AppccRecordFilters";
 import { BasicRecordForm } from "../_components/BasicRecordForm";
 import { RecordPageShell } from "../_components/RecordPageShell";
 
@@ -13,11 +15,15 @@ export const metadata: Metadata = {
 export default async function AceiteFreidoraPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ saved?: string; error?: string }>;
+  searchParams?: Promise<Record<string, string | undefined>>;
 }) {
   await requireAdminSession();
   const params = await searchParams;
-  const records = await getRecentFryerOilRecords();
+  const filters = resolveAppccRecordFilters(params);
+  const hasFilters = filters.preset !== "all" || Boolean(filters.subject || filters.status || filters.source || filters.dateFrom || filters.dateTo);
+  const records = await getRecentFryerOilRecords({ ...filters, limit: hasFilters ? 200 : 10 });
+  const data = records.ok ? records.data : [];
+  const fryerOptions = ["Freidora principal", "Freidora auxiliar", "Filtrado de aceite", "Cambio de aceite", "Limpieza de cuba", "Retirada aceite usado"];
 
   return (
     <RecordPageShell
@@ -25,13 +31,29 @@ export default async function AceiteFreidoraPage({
       description="Revisión del estado del aceite, cambios y observaciones."
       saved={params?.saved === "1"}
       error={params?.error}
-      records={records.ok ? records.data : []}
+      records={data}
+      recordsTitle={hasFilters ? "Registros encontrados" : "Últimos 10 registros"}
+      recordsIntro="Ordenados siempre de más reciente a más antiguo."
+      showRecordResponsible={false}
+      beforeRecords={(
+        <AppccRecordFilters
+          filters={filters}
+          subjectLabel="Punto control"
+          subjectOptions={fryerOptions.map((fryer) => ({ label: fryer, value: fryer }))}
+          statusOptions={[
+            { label: "Correcto", value: "correcto" },
+            { label: "Revisar", value: "revisar" },
+            { label: "Incidencia", value: "incidencia" },
+          ]}
+          foundCount={data.length}
+        />
+      )}
     >
       <BasicRecordForm
         action={saveFryerOilRecordAction}
         subjectName="fryer"
         subjectLabel="Freidora / punto de control"
-        options={["Freidora principal", "Freidora auxiliar", "Filtrado de aceite", "Cambio de aceite", "Limpieza de cuba", "Retirada aceite usado"]}
+        options={fryerOptions}
       >
         <label className="grid gap-2 text-sm font-semibold text-stone-200">
           Estado del aceite

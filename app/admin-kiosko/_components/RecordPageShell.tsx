@@ -10,6 +10,10 @@ export function RecordPageShell({
   saved,
   error,
   records,
+  recordsTitle,
+  recordsIntro,
+  showRecordResponsible,
+  beforeRecords,
   children,
 }: {
   title: string;
@@ -17,6 +21,10 @@ export function RecordPageShell({
   saved?: boolean;
   error?: string;
   records: RecentAdminRecord[];
+  recordsTitle?: string;
+  recordsIntro?: string;
+  showRecordResponsible?: boolean;
+  beforeRecords?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -29,7 +37,8 @@ export function RecordPageShell({
             <FormFeedback saved={saved} error={error} />
           </div>
           <div className="mt-6">{children}</div>
-          <RecentRecords records={records} />
+          {beforeRecords}
+          <RecentRecords records={records} title={recordsTitle} intro={recordsIntro} showResponsible={showRecordResponsible} />
         </div>
       </section>
     </main>

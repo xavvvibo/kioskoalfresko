@@ -1,6 +1,7 @@
 import { evaluateTemperature, isActiveTemperatureEquipment, getTemperatureEquipment, temperatureEquipment } from "../temperature-rules";
 import { getDocumentStats } from "../documents";
 import { normalizeDocumentType } from "../domain/document-types";
+import { appccSourceFilterValue, type AppccRecordListFilters } from "../appcc-record-filters";
 
 type DbResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -19,6 +20,8 @@ export type RecentAdminRecord = {
   record_time: string | null;
   responsible: string | null;
   status: string | null;
+  observations?: string | null;
+  source?: string | null;
   main: string;
 };
 
@@ -1175,12 +1178,38 @@ function storageFolderForDocumentType(type: string) {
   return "otros";
 }
 
-async function getRecentRows<T>(table: string, select: string) {
+function recentRecordQuery(select: string, filters?: AppccRecordListFilters & { limit?: number }) {
+  const params = [`select=${select}`];
+
+  if (filters?.dateFrom) {
+    params.push(`record_date=gte.${encodeURIComponent(filters.dateFrom)}`);
+  }
+
+  if (filters?.dateTo) {
+    params.push(`record_date=lte.${encodeURIComponent(filters.dateTo)}`);
+  }
+
+  if (filters?.status) {
+    params.push(`status=eq.${encodeURIComponent(filters.status)}`);
+  }
+
+  const source = appccSourceFilterValue(filters?.source);
+  if (source) {
+    params.push(`source=eq.${encodeURIComponent(source)}`);
+  }
+
+  params.push("order=record_date.desc,record_time.desc,created_at.desc");
+  params.push(`limit=${filters?.limit || 10}`);
+
+  return `?${params.join("&")}`;
+}
+
+async function getRecentRows<T>(table: string, select: string, filters?: AppccRecordListFilters & { limit?: number }) {
   return adminSupabaseRequest<T[]>(
     table,
     {
       method: "GET",
-      query: `?select=${select}&order=created_at.desc&limit=10`,
+      query: recentRecordQuery(select, filters),
     },
   );
 }
@@ -3321,18 +3350,22 @@ export async function createAnnualVerification(data: AnnualVerificationInput) {
   });
 }
 
-export async function getRecentTemperatureRecords(): Promise<DbResult<RecentAdminRecord[]>> {
+export async function getRecentTemperatureRecords(filters?: AppccRecordListFilters & { limit?: number }): Promise<DbResult<RecentAdminRecord[]>> {
   const result = await getRecentRows<RecentAdminRecord & { equipment: string; temperature: number }>(
     "admin_temperature_records",
-    "id,record_date,record_time,responsible,status,equipment,temperature",
+    "id,record_date,record_time,responsible,status,observations,source,equipment,temperature",
+    filters,
   );
 
   if (!result.ok) return result;
+
+  const subject = filters?.subject?.toLowerCase();
 
   return {
     ok: true,
     data: result.data
       .filter((record) => isActiveTemperatureEquipment(record.equipment))
+      .filter((record) => !subject || record.equipment.toLowerCase() === subject)
       .map((record) => ({
         ...record,
         main: `${record.equipment} · ${record.temperature} °C`,
@@ -3483,37 +3516,47 @@ export async function updateEquipmentAlertStatus(data: {
   });
 }
 
-export async function getRecentCleaningRecords(): Promise<DbResult<RecentAdminRecord[]>> {
+export async function getRecentCleaningRecords(filters?: AppccRecordListFilters & { limit?: number }): Promise<DbResult<RecentAdminRecord[]>> {
   const result = await getRecentRows<RecentAdminRecord & { area: string; cleaning_done: boolean }>(
     "admin_cleaning_records",
-    "id,record_date,record_time,responsible,status,area,cleaning_done",
+    "id,record_date,record_time,responsible,status,observations,source,area,cleaning_done",
+    filters,
   );
 
   if (!result.ok) return result;
 
+  const subject = filters?.subject?.toLowerCase();
+
   return {
     ok: true,
-    data: result.data.map((record) => ({
-      ...record,
-      main: `${record.area} · ${record.cleaning_done ? "Limpieza realizada" : "Sin marcar"}`,
-    })),
+    data: result.data
+      .filter((record) => !subject || record.area.toLowerCase() === subject)
+      .map((record) => ({
+        ...record,
+        main: `${record.area} · ${record.cleaning_done ? "Limpieza realizada" : "Sin marcar"}`,
+      })),
   };
 }
 
-export async function getRecentFryerOilRecords(): Promise<DbResult<RecentAdminRecord[]>> {
+export async function getRecentFryerOilRecords(filters?: AppccRecordListFilters & { limit?: number }): Promise<DbResult<RecentAdminRecord[]>> {
   const result = await getRecentRows<RecentAdminRecord & { fryer: string; oil_status: string }>(
     "admin_fryer_oil_records",
-    "id,record_date,record_time,responsible,status,fryer,oil_status",
+    "id,record_date,record_time,responsible,status,observations,source,fryer,oil_status",
+    filters,
   );
 
   if (!result.ok) return result;
 
+  const subject = filters?.subject?.toLowerCase();
+
   return {
     ok: true,
-    data: result.data.map((record) => ({
-      ...record,
-      main: `${record.fryer} · ${record.oil_status}`,
-    })),
+    data: result.data
+      .filter((record) => !subject || record.fryer.toLowerCase() === subject)
+      .map((record) => ({
+        ...record,
+        main: `${record.fryer} · ${record.oil_status}`,
+      })),
   };
 }
 

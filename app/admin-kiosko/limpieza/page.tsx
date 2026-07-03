@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { getRecentCleaningRecords } from "@/lib/admin-kiosko/database";
+import { resolveAppccRecordFilters } from "@/lib/admin-kiosko/appcc-record-filters";
 import { saveCleaningRecordAction } from "../actions";
+import { AppccRecordFilters } from "../_components/AppccRecordFilters";
 import { BasicRecordForm } from "../_components/BasicRecordForm";
 import { RecordPageShell } from "../_components/RecordPageShell";
 
@@ -13,11 +15,15 @@ export const metadata: Metadata = {
 export default async function LimpiezaPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ saved?: string; error?: string }>;
+  searchParams?: Promise<Record<string, string | undefined>>;
 }) {
   await requireAdminSession();
   const params = await searchParams;
-  const records = await getRecentCleaningRecords();
+  const filters = resolveAppccRecordFilters(params);
+  const hasFilters = filters.preset !== "all" || Boolean(filters.subject || filters.status || filters.source || filters.dateFrom || filters.dateTo);
+  const records = await getRecentCleaningRecords({ ...filters, limit: hasFilters ? 200 : 10 });
+  const data = records.ok ? records.data : [];
+  const areaOptions = ["Barra", "Cocina", "Plancha", "Freidoras", "Campana/extracción", "Cámaras", "Congeladores", "Mesas de trabajo", "Utensilios", "Almacén", "Terraza", "Baños", "Cubos/residuos", "TPV/superficies de contacto", "Cierre APPCC diario"];
 
   return (
     <RecordPageShell
@@ -25,13 +31,29 @@ export default async function LimpiezaPage({
       description="Control de limpieza por zonas, turnos y responsable."
       saved={params?.saved === "1"}
       error={params?.error}
-      records={records.ok ? records.data : []}
+      records={data}
+      recordsTitle={hasFilters ? "Registros encontrados" : "Últimos 10 registros"}
+      recordsIntro="Ordenados siempre de más reciente a más antiguo."
+      showRecordResponsible={false}
+      beforeRecords={(
+        <AppccRecordFilters
+          filters={filters}
+          subjectLabel="Zona"
+          subjectOptions={areaOptions.map((area) => ({ label: area, value: area }))}
+          statusOptions={[
+            { label: "Correcto", value: "correcto" },
+            { label: "Revisar", value: "revisar" },
+            { label: "Incidencia", value: "incidencia" },
+          ]}
+          foundCount={data.length}
+        />
+      )}
     >
       <BasicRecordForm
         action={saveCleaningRecordAction}
         subjectName="area"
         subjectLabel="Zona revisada"
-        options={["Barra", "Cocina", "Plancha", "Freidoras", "Campana/extracción", "Cámaras", "Congeladores", "Mesas de trabajo", "Utensilios", "Almacén", "Terraza", "Baños", "Cubos/residuos", "TPV/superficies de contacto"]}
+        options={areaOptions.filter((area) => area !== "Cierre APPCC diario")}
       >
         <label className="grid gap-2 text-sm font-semibold text-stone-200">
           Turno

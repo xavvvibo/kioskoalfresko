@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { resolveAppccRecordFilters } from "@/lib/admin-kiosko/appcc-record-filters";
 import { adminDocuments } from "@/lib/admin-kiosko/documents";
 import { getAdminDashboardSummary, getExecutiveDashboardMetrics, getRecentCleaningRecords, getRecentFryerOilRecords, getRecentGoodsReceptionRecords, getRecentIncidentRecords, getRecentMaintenanceRecords, getRecentSupplierRecords, getRecentTemperatureRecords } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../_components/AdminHeader";
@@ -83,16 +84,23 @@ const cleaningPlanRows = [
   ["Terraza/baños/residuos", "Productos específicos por zona", "Limpieza, reposición y retirada de residuos", "Diaria", "Turno"],
 ];
 
-export default async function ModoInspeccionPage() {
+export default async function ModoInspeccionPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | undefined>>;
+}) {
   await requireAdminSession();
+  const params = await searchParams;
+  const recordFilters = resolveAppccRecordFilters(params);
+  const inspectionRecordFilters = recordFilters.preset === "all" ? { ...recordFilters, limit: 10 } : { ...recordFilters, limit: 50 };
   const [dashboard, metricsResult, temperatures, incidents, goods, cleaning, oil, suppliers, maintenance] = await Promise.all([
     getAdminDashboardSummary(),
     getExecutiveDashboardMetrics(),
-    getRecentTemperatureRecords(),
+    getRecentTemperatureRecords(inspectionRecordFilters),
     getRecentIncidentRecords(),
     getRecentGoodsReceptionRecords(),
-    getRecentCleaningRecords(),
-    getRecentFryerOilRecords(),
+    getRecentCleaningRecords(inspectionRecordFilters),
+    getRecentFryerOilRecords(inspectionRecordFilters),
     getRecentSupplierRecords(),
     getRecentMaintenanceRecords(),
   ]);
@@ -285,11 +293,24 @@ export default async function ModoInspeccionPage() {
           </section>
 
           <section className="grid gap-6 lg:grid-cols-2">
-            <RecentRecords records={temperatures.ok ? temperatures.data : []} title="Últimas temperaturas" />
-            <RecentRecords records={incidents.ok ? incidents.data : []} title="Últimas incidencias" />
+            <div className="lg:col-span-2 rounded-[2rem] border border-white/10 bg-[#151515] p-5">
+              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Registros recientes APPCC</h2>
+                  <p className="mt-2 text-sm text-stone-300">Ordenados de más reciente a más antiguo. Cambia el periodo para enseñar la ventana de inspección solicitada.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link href="/admin-kiosko/inspeccion?period=7d" className="rounded-full border border-white/12 bg-white/6 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-white">Últimos 7 días</Link>
+                  <Link href="/admin-kiosko/inspeccion?period=month" className="rounded-full border border-white/12 bg-white/6 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-white">Último mes</Link>
+                  <Link href="/admin-kiosko/temperaturas?period=all&status=incidencia" className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-white">Incidencias temperatura</Link>
+                </div>
+              </div>
+            </div>
+            <RecentRecords records={temperatures.ok ? temperatures.data : []} title="Últimas temperaturas" intro="Temperaturas filtradas por el periodo seleccionado." showResponsible={false} />
+            <RecentRecords records={incidents.ok ? incidents.data : []} title="Últimas incidencias" showResponsible={false} />
             <RecentRecords records={goods.ok ? goods.data : []} title="Últimas recepciones" />
-            <RecentRecords records={cleaning.ok ? cleaning.data : []} title="Últimos registros de limpieza" />
-            <RecentRecords records={oil.ok ? oil.data : []} title="Últimos controles de aceite" />
+            <RecentRecords records={cleaning.ok ? cleaning.data : []} title="Últimos registros de limpieza" intro="Limpieza filtrada por el periodo seleccionado." showResponsible={false} />
+            <RecentRecords records={oil.ok ? oil.data : []} title="Últimos controles de aceite" intro="Aceite filtrado por el periodo seleccionado." showResponsible={false} />
             <RecentRecords records={suppliers.ok ? suppliers.data : []} title="Proveedores recientes" />
             <RecentRecords records={maintenance.ok ? maintenance.data : []} title="Mantenimiento reciente" />
           </section>
