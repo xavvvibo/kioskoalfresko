@@ -6,8 +6,8 @@ import { clearAdminSession, createAdminSession, isCorrectAdminPassword, requireA
 import { createDomainEvent, emitDomainEventSafe } from "@/lib/admin-kiosko/domain";
 import { processPendingInboxOcr, reprocessInboxOcr } from "@/lib/admin-kiosko/domain/inbox-ocr/processor";
 import { DOCUMENT_TYPES } from "@/lib/admin-kiosko/domain/document-types";
-import { generateGodexTraceabilityEzpl, type GodexLabelTemplate } from "@/lib/admin-kiosko/printing/godex-ezpl";
-import { sendGodexEzplToPrintService } from "@/lib/admin-kiosko/printing/godex-print-client";
+import type { GodexLabelTemplate } from "@/lib/admin-kiosko/printing/godex-ezpl";
+import { DEFAULT_GODEX_G500_PRINTER_KEY, printService } from "@/lib/admin-kiosko/printing/print-service";
 import {
   createChecklistRecord,
   createCleaningRecord,
@@ -34,6 +34,7 @@ import {
   createProductionBatch,
   createProductionMovement,
   generateFinishedProductLabel,
+  getInventoryProductById,
   ensureSupplierRecord,
   applyInventoryMovement,
   planProductionBatch,
@@ -50,6 +51,9 @@ import {
   confirmInboxDocument,
   createInboxUploadGroupId,
   queueInboxDocument,
+  createPrintJob,
+  enqueuePrintJob,
+  getPrintJobById,
 } from "@/lib/admin-kiosko/database";
 import type { InboxDocumentType } from "@/lib/admin-kiosko/inbox";
 
@@ -1393,6 +1397,228 @@ export async function saveInventoryProductAction(formData: FormData) {
   redirectAfterSave("/admin-kiosko/inventario", result);
 }
 
+export type IngredientPrintState = {
+  ok: boolean;
+  message: string;
+  jobId?: string;
+  status?: string;
+} | null;
+
+function printIngredientErrorMessage(error: string) {
+  if (/no puede superar|necesita|obligatorio|Template no soportado/i.test(error)) {
+    return error;
+  }
+
+  if (/Supabase|configur|No se pudo crear/i.test(error)) {
+    return "No se pudo crear el trabajo de impresión. Revisa la configuración de impresión del servidor.";
+  }
+
+  return "No se pudo enviar la etiqueta a impresión. Revisa el producto y vuelve a intentarlo.";
+}
+
+export async function printIngredientLabelAction(_previousState: IngredientPrintState, formData: FormData): Promise<IngredientPrintState> {
+  await requireAdminSession();
+
+  const productId = text(formData, "product_id");
+  if (!productId) {
+    return { ok: false, message: "Falta el ingrediente/materia prima." };
+  }
+
+  const productResult = await getInventoryProductById(productId);
+  if (!productResult.ok) {
+    console.error("[INGREDIENT LABEL PRODUCT ERROR]", {
+      productId,
+      error: productResult.error,
+    });
+    return { ok: false, message: "No se pudo cargar el ingrediente para imprimir." };
+  }
+
+  if (!productResult.data) {
+    return { ok: false, message: "Ingrediente no encontrado." };
+  }
+
+  const product = productResult.data;
+  if (!product.name?.trim()) {
+    return { ok: false, message: "El producto no tiene nombre imprimible." };
+  }
+
+  const printResult = await printService.printLabel({
+    printerKey: DEFAULT_GODEX_G500_PRINTER_KEY,
+    template: "ingredient_label_basic",
+    data: {
+      ingredientName: product.name,
+      supplierName: product.usual_supplier || undefined,
+      lot: product.current_batch || undefined,
+      expiryDate: product.expiry_date || undefined,
+    },
+    metadata: {
+      requestedBy: text(formData, "requested_by") || "admin-kiosko",
+      module: "ingredients",
+      sourceType: "ingredient",
+      sourceId: product.id,
+      createdFrom: "erp_ui",
+      reason: "print_ingredient_label",
+    },
+  });
+
+  if (!printResult.ok) {
+    return { ok: false, message: printIngredientErrorMessage(printResult.error) };
+  }
+
+  revalidatePath("/admin-kiosko/inventario");
+  return {
+    ok: true,
+    message: "Etiqueta enviada a GoDEX.",
+    jobId: printResult.data.id,
+    status: printResult.data.status,
+  };
+}
+
+export type PrepPrintState = {
+  ok: boolean;
+  message: string;
+  jobId?: string;
+  status?: string;
+} | null;
+
+function printPrepErrorMessage(error: string) {
+  if (/no puede superar|necesita|obligatorio|Template no soportado|fecha|caducidad|elaboracion|shelfLifeDays/i.test(error)) {
+    return error;
+  }
+
+  if (/Supabase|configur|No se pudo crear/i.test(error)) {
+    return "No se pudo crear el trabajo de impresion. Revisa la configuracion de impresion del servidor.";
+  }
+
+  return "No se pudo enviar la etiqueta de preparacion. Revisa los datos y vuelve a intentarlo.";
+}
+
+export async function printPrepLabelAction(_previousState: PrepPrintState, formData: FormData): Promise<PrepPrintState> {
+  await requireAdminSession();
+
+  const prepName = text(formData, "prepName");
+  const productionDateTime = text(formData, "productionDateTime");
+  const expiryDateTime = text(formData, "expiryDateTime");
+  const shelfLifeDays = optionalNumber(formData, "shelfLifeDays");
+
+  if (!prepName) {
+    return { ok: false, message: "Indica el nombre de la preparacion." };
+  }
+
+  const printResult = await printService.printLabel({
+    printerKey: DEFAULT_GODEX_G500_PRINTER_KEY,
+    template: "prep_label_basic",
+    data: {
+      prepName,
+      productionDateTime: productionDateTime || undefined,
+      expiryDateTime: expiryDateTime || undefined,
+      shelfLifeDays,
+    },
+    metadata: {
+      requestedBy: text(formData, "requestedBy") || "admin-kiosko",
+      module: "prep",
+      sourceType: "prep_batch",
+      createdFrom: "erp_ui",
+      reason: "print_prep_label",
+    },
+  });
+
+  if (!printResult.ok) {
+    return { ok: false, message: printPrepErrorMessage(printResult.error) };
+  }
+
+  revalidatePath("/admin-kiosko/etiquetas-prep");
+  return {
+    ok: true,
+    message: "Etiqueta de preparacion enviada a GoDEX.",
+    jobId: printResult.data.id,
+    status: printResult.data.status,
+  };
+}
+
+export type ReprintPrintJobState = {
+  ok: boolean;
+  message: string;
+  jobId?: string;
+  status?: string;
+} | null;
+
+function printJobPayloadRecord(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function printJobPayloadText(payload: Record<string, unknown>, key: string) {
+  const value = payload[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function isReprintCompatiblePayload(payload: Record<string, unknown>) {
+  return Boolean(
+    printJobPayloadText(payload, "title")
+    && typeof payload.line1 === "string"
+    && typeof payload.line2 === "string"
+    && printJobPayloadText(payload, "template")
+    && payload.data
+    && typeof payload.data === "object"
+    && !Array.isArray(payload.data)
+    && payload.metadata
+    && typeof payload.metadata === "object"
+    && !Array.isArray(payload.metadata),
+  );
+}
+
+export async function reprintPrintJobAction(_previousState: ReprintPrintJobState, formData: FormData): Promise<ReprintPrintJobState> {
+  await requireAdminSession();
+
+  const jobId = text(formData, "job_id");
+  if (!jobId) {
+    return { ok: false, message: "Falta el job original." };
+  }
+
+  const original = await getPrintJobById(jobId);
+  if (!original.ok) {
+    console.error("[PRINT JOB REPRINT LOAD ERROR]", { jobId, error: original.error });
+    return { ok: false, message: "No se pudo cargar el job original." };
+  }
+
+  if (!original.data) {
+    return { ok: false, message: "Job original no encontrado." };
+  }
+
+  const payload = printJobPayloadRecord(original.data.payload);
+  if (!isReprintCompatiblePayload(payload)) {
+    return { ok: false, message: "Este job no tiene payload compatible para reimprimir." };
+  }
+
+  const metadata = printJobPayloadRecord(payload.metadata);
+  const result = await enqueuePrintJob({
+    printerKey: original.data.printer_key,
+    payload: {
+      ...payload,
+      metadata: {
+        ...metadata,
+        copiedFromJobId: original.data.id,
+        reason: "reprint",
+        createdFrom: "erp_ui",
+        module: "printing",
+      },
+    },
+  });
+
+  if (!result.ok) {
+    console.error("[PRINT JOB REPRINT ERROR]", { jobId, error: result.error });
+    return { ok: false, message: "No se pudo crear la reimpresión." };
+  }
+
+  revalidatePath("/admin-kiosko/impresiones");
+  return {
+    ok: true,
+    message: "Reimpresión enviada.",
+    jobId: result.data.id,
+    status: result.data.status,
+  };
+}
+
 export async function saveInventoryMovementAction(formData: FormData) {
   await requireAdminSession();
 
@@ -1517,40 +1743,31 @@ export async function printGodexLabelAction(_previousState: { ok: boolean; messa
     return { ok: false, message: "La etiqueta necesita producto y lote antes de imprimir en Godex." };
   }
 
-  const ezpl = generateGodexTraceabilityEzpl({
-    template: godexTemplateFromModel(model),
-    product,
-    batch,
-    supplier,
-    productionDate: text(formData, "elaboration_date") || text(formData, "opening_date"),
-    freezingDate: text(formData, "freezing_date"),
-    defrostingDate: text(formData, "defrosting_date"),
-    expiryDate: text(formData, "best_before_date"),
-    receptionDate: text(formData, "opening_date") || text(formData, "elaboration_date"),
-    responsible,
-    traceabilityCode: text(formData, "inventory_lot_id") || batch,
-    qrPayload: parseJson<Record<string, unknown>>(text(formData, "qr_payload"), {
-      type: "appcc-label",
-      product,
-      batch,
-      supplier,
-      expiry_date: text(formData, "best_before_date"),
-      inventory_lot_id: text(formData, "inventory_lot_id"),
-    }),
-    sanitaryText: text(formData, "review_warning") || "APPCC interno - conservar segun procedimiento",
-    copies,
-  });
-
-  const printResult = await sendGodexEzplToPrintService({
-    ezpl,
-    jobName: `${batch || product}-godex-appcc`,
-    copies,
-    metadata: {
-      product,
-      batch,
-      model,
-      responsible,
-      inventory_lot_id: text(formData, "inventory_lot_id"),
+  const printResult = await createPrintJob({
+    printerKey: "godex_g500_kiosko",
+    labelType: text(formData, "label_type") || "godex_appcc",
+    payload: {
+      nombre_producto: product,
+      lote: batch,
+      fecha_elaboracion: text(formData, "elaboration_date") || text(formData, "opening_date"),
+      fecha_caducidad: text(formData, "best_before_date"),
+      alergenos: text(formData, "allergens"),
+      codigo_barras: text(formData, "inventory_lot_id") || batch,
+      cantidad: text(formData, "quantity"),
+      responsable: responsible,
+      proveedor: supplier,
+      tipo: godexTemplateFromModel(model),
+      copies,
+      freezing_date: text(formData, "freezing_date"),
+      defrosting_date: text(formData, "defrosting_date"),
+      qr_payload: parseJson<Record<string, unknown>>(text(formData, "qr_payload"), {
+        type: "appcc-label",
+        product,
+        batch,
+        supplier,
+        expiry_date: text(formData, "best_before_date"),
+        inventory_lot_id: text(formData, "inventory_lot_id"),
+      }),
     },
   });
 
@@ -1605,7 +1822,7 @@ export async function printGodexLabelAction(_previousState: { ok: boolean; messa
   revalidatePath("/admin-kiosko/etiquetas");
   return {
     ok: true,
-    message: `Etiqueta enviada a Godex G500${printResult.jobId ? ` · trabajo ${printResult.jobId}` : ""}.`,
+    message: `Etiqueta encolada para Godex G500 · trabajo ${printResult.data.id}.`,
   };
 }
 

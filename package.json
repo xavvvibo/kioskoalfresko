@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "print:smoke": "node scripts/admin-kiosko/print-smoke.mjs",
+    "godex:bridge": "node scripts/godex-print-service/server.mjs",
+    "godex:test-label": "node scripts/godex-print-service/test-label.mjs",
+    "godex:list-printers": "node scripts/godex-print-service/list-printers.mjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.1",

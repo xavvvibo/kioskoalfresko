@@ -5,6 +5,7 @@ import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
 import { ZebraPrintButton } from "../_components/ZebraPrintButton";
 import { saveInventoryLotReviewAction, saveInventoryMovementAction, saveInventoryProductAction } from "../actions";
+import { IngredientPrintButton } from "./IngredientPrintButton";
 
 export const metadata: Metadata = {
   title: "Inventario APPCC | Panel interno",
@@ -368,6 +369,7 @@ export default async function InventarioPage({
                                 <a href={`/admin-kiosko/inventario?product=${product.id}`} className="rounded-full border border-stone-950 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em]">Editar</a>
                                 <a href={`/admin-kiosko/inventario?product=${product.id}#movimientos`} className="rounded-full border border-stone-950 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em]">Movimientos</a>
                                 <a href={`/admin-kiosko/trazabilidad?q=${encodeURIComponent(product.current_batch || product.name)}`} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Trazar</a>
+                                <IngredientPrintButton productId={product.id} />
                                 <ZebraPrintButton
                                   zpl={zpl}
                                   filename={`${product.current_batch || product.name}.zpl`}
