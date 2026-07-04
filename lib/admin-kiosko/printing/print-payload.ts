@@ -1,6 +1,6 @@
 export const DEFAULT_GODEX_G500_PRINTER_KEY = "kiosko_godex_g500";
 
-export const PRINT_LABEL_TEMPLATES = ["test_label", "product_label_basic", "ingredient_label_basic", "prep_label_basic"] as const;
+export const PRINT_LABEL_TEMPLATES = ["test_label", "product_label_basic", "ingredient_label_basic", "prep_label_basic", "prep_label_professional"] as const;
 
 export type PrintLabelTemplate = typeof PRINT_LABEL_TEMPLATES[number];
 
@@ -33,6 +33,10 @@ export type PrepLabelBasicData = {
   productionDate?: string;
   expiryDate?: string;
   batchCode?: string;
+  responsibleName?: string;
+  storageCondition?: string;
+  brandName?: string;
+  qrUrl?: string;
 };
 
 export type PrintJobMetadata = {
@@ -42,6 +46,7 @@ export type PrintJobMetadata = {
   sourceId?: string;
   createdFrom?: string;
   reason?: string;
+  batchCode?: string;
 };
 
 export type PrintLabelData = TestLabelData | ProductLabelBasicData | IngredientLabelBasicData | PrepLabelBasicData;
@@ -212,6 +217,7 @@ function normalizedMetadata(value: unknown): PrintJobMetadata {
     sourceId: sanitizeLabelText(value.sourceId, 120),
     createdFrom: sanitizeLabelText(value.createdFrom, 80),
     reason: sanitizeLabelText(value.reason, 120),
+    batchCode: sanitizeLabelText(value.batchCode, 120),
   };
 }
 
@@ -333,6 +339,9 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
   const lengthError = validateLabelTextLength([
     ["prepName", input.data.prepName],
     ["batchCode", input.data.batchCode],
+    ["responsibleName", input.data.responsibleName],
+    ["storageCondition", input.data.storageCondition],
+    ["brandName", input.data.brandName],
   ]);
   if (lengthError) return { ok: false, error: lengthError };
 
@@ -343,9 +352,13 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
   const shelfLifeDays = parseShelfLifeDays(input.data.shelfLifeDays);
   let expiryDateTime = parseDateTimeInput(input.data.expiryDateTime) || parseDateTimeInput(input.data.expiryDate);
   const batchCode = sanitizeLabelText(input.data.batchCode);
+  const responsibleName = sanitizeLabelText(input.data.responsibleName) || undefined;
+  const storageCondition = sanitizeLabelText(input.data.storageCondition) || "Refrigerado 0-4 C";
+  const brandName = sanitizeLabelText(input.data.brandName) || "KIOSKO ALFRESKO";
+  const qrUrl = sanitizeLabelText(input.data.qrUrl, 180) || undefined;
 
   if (!prepName) {
-    return { ok: false, error: "prep_label_basic necesita prepName." };
+    return { ok: false, error: `${template} necesita prepName.` };
   }
 
   if (Number.isNaN(shelfLifeDays)) {
@@ -357,7 +370,7 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
   }
 
   if (!expiryDateTime) {
-    return { ok: false, error: "prep_label_basic necesita expiryDateTime o shelfLifeDays." };
+    return { ok: false, error: `${template} necesita expiryDateTime o shelfLifeDays.` };
   }
 
   if (expiryDateTime.getTime() <= productionDateTime.getTime()) {
@@ -385,6 +398,10 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
         expiryDateTime: expiryDateTime.toISOString(),
         shelfLifeDays,
         batchCode,
+        responsibleName,
+        storageCondition,
+        brandName,
+        qrUrl,
       },
       metadata: normalizedMetadata(input.metadata),
     },

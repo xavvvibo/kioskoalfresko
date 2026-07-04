@@ -51,18 +51,18 @@ function formatMoney(value: number | null | undefined) {
 
 function Field({ name, label, value = "", type = "text", required = false, step }: { name: string; label: string; value?: string | number | null; type?: string; required?: boolean; step?: string }) {
   return (
-    <label className="grid gap-2 text-sm font-semibold text-stone-200">
+    <label className="grid min-w-0 gap-2 text-sm font-semibold text-stone-200">
       {label}
-      <input name={name} type={type} step={step} defaultValue={value ?? ""} required={required} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]" />
+      <input name={name} type={type} step={step} defaultValue={value ?? ""} required={required} className="w-full min-w-0 rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]" />
     </label>
   );
 }
 
 function SelectField({ name, label, value, options }: { name: string; label: string; value?: string | null; options: string[] }) {
   return (
-    <label className="grid gap-2 text-sm font-semibold text-stone-200">
+    <label className="grid min-w-0 gap-2 text-sm font-semibold text-stone-200">
       {label}
-      <select name={name} defaultValue={value || options[0]} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]">
+      <select name={name} defaultValue={value || options[0]} className="w-full min-w-0 rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]">
         {options.map((option) => <option key={option} value={option}>{option}</option>)}
       </select>
     </label>
@@ -71,19 +71,19 @@ function SelectField({ name, label, value, options }: { name: string; label: str
 
 function TextArea({ name, label, value = "" }: { name: string; label: string; value?: string | null }) {
   return (
-    <label className="grid gap-2 text-sm font-semibold text-stone-200">
+    <label className="grid min-w-0 gap-2 text-sm font-semibold text-stone-200">
       {label}
-      <textarea name={name} defaultValue={value || ""} rows={4} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]" />
+      <textarea name={name} defaultValue={value || ""} rows={4} className="w-full min-w-0 rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]" />
     </label>
   );
 }
 
 function MaterialSelector({ materials }: { materials: ProductionMaterialOption[] }) {
   return (
-    <div className="grid gap-3">
-      <label className="grid gap-2 text-sm font-semibold text-stone-200">
+    <div className="grid min-w-0 gap-3">
+      <label className="grid min-w-0 gap-2 text-sm font-semibold text-stone-200">
         Materia prima disponible
-        <select name="source_material" required className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]">
+        <select name="source_material" required className="w-full min-w-0 rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]">
           {materials.map((item) => (
             <option
               key={item.key}
@@ -116,10 +116,10 @@ function RecipeSummary({ recipe }: { recipe: InternalRecipe | undefined }) {
   }
 
   return (
-    <div className="grid gap-3 rounded-[1.3rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
-      <p className="font-black text-white">{recipe.recipe_name} · {recipe.output_product}</p>
-      <p>Resultado previsto: {recipe.expected_yield || 0} {recipe.output_unit || "ud"} · peso unitario {recipe.unit_weight || 0} g · merma {recipe.expected_waste || 0} g.</p>
-      <p>Vida útil: {recipe.shelf_life_refrigerated_hours || 0} h refrigerado · {recipe.shelf_life_frozen_days || 0} días congelado · conservación {recipe.conservation_type || "refrigerado"}.</p>
+    <div className="grid min-w-0 gap-3 rounded-[1.3rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
+      <p className="break-words font-black text-white">{recipe.recipe_name} · {recipe.output_product}</p>
+      <p className="break-words">Resultado previsto: {recipe.expected_yield || 0} {recipe.output_unit || "ud"} · peso unitario {recipe.unit_weight || 0} g · merma {recipe.expected_waste || 0} g.</p>
+      <p className="break-words">Vida útil: {recipe.shelf_life_refrigerated_hours || 0} h refrigerado · {recipe.shelf_life_frozen_days || 0} días congelado · conservación {recipe.conservation_type || "refrigerado"}.</p>
     </div>
   );
 }
@@ -128,12 +128,12 @@ function InventoryProductSelect({ inventory, defaultName }: { inventory: Invento
   const selected = inventory.find((product) => product.name === defaultName) || inventory[0];
 
   return (
-    <label className="grid gap-2 text-sm font-semibold text-stone-200">
+    <label className="grid min-w-0 gap-2 text-sm font-semibold text-stone-200">
       Ingrediente desde inventario
       <select
         name="recipe_input_product"
         defaultValue={selected ? JSON.stringify({ id: selected.id, name: selected.name, unit: selected.unit }) : ""}
-        className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]"
+        className="w-full min-w-0 rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]"
       >
         {inventory.map((product) => (
           <option key={product.id} value={JSON.stringify({ id: product.id, name: product.name, unit: product.unit })}>
@@ -166,32 +166,32 @@ function ProductionCalculatorResult({ preview }: { preview: ProductionPreview | 
 
   return (
     <div className="grid gap-5">
-      <section className="grid gap-3 md:grid-cols-4">
+      <section className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ["Producto", scaling.outputProduct],
           ["Factor", `x${formatNumber(scaling.factor, 3)}`],
           ["Rendimiento", `${formatNumber(scaling.expectedYieldQuantity, 3)} ${scaling.expectedYieldUnit}`],
           ["Coste", formatMoney(scaling.cost.ingredientsCost)],
         ].map(([label, value]) => (
-          <article key={label} className="rounded-[1.2rem] border border-white/10 bg-[#0d0d0d] p-4">
+          <article key={label} className="min-w-0 rounded-[1.2rem] border border-white/10 bg-[#0d0d0d] p-4">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">{label}</p>
-            <p className="mt-2 text-lg font-black text-white">{value}</p>
+            <p className="mt-2 break-words text-lg font-black text-white">{value}</p>
           </article>
         ))}
       </section>
 
-      <section className="grid gap-3 md:grid-cols-3">
-        <article className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
+      <section className="grid min-w-0 gap-3 md:grid-cols-3">
+        <article className="min-w-0 rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Coste por ración</p>
-          <p className="mt-2 text-lg font-black text-white">{costPerServing ? formatMoney(costPerServing) : "Calculable al usar raciones"}</p>
+          <p className="mt-2 break-words text-lg font-black text-white">{costPerServing ? formatMoney(costPerServing) : "Calculable al usar raciones"}</p>
         </article>
-        <article className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
+        <article className="min-w-0 rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Merma prevista</p>
-          <p className="mt-2 text-lg font-black text-white">{formatNumber(scaling.expectedWasteQuantity, 3)} {scaling.expectedWasteUnit}</p>
+          <p className="mt-2 break-words text-lg font-black text-white">{formatNumber(scaling.expectedWasteQuantity, 3)} {scaling.expectedWasteUnit}</p>
         </article>
-        <article className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
+        <article className="min-w-0 rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Caducidad</p>
-          <p className="mt-2 text-lg font-black text-white">{scaling.expiryDate || "Vida útil por definir"}</p>
+          <p className="mt-2 break-words text-lg font-black text-white">{scaling.expiryDate || "Vida útil por definir"}</p>
         </article>
       </section>
 
@@ -207,12 +207,12 @@ function ProductionCalculatorResult({ preview }: { preview: ProductionPreview | 
 
       <section className="grid gap-3">
         <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Ingredientes escalados</h3>
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid min-w-0 gap-3 xl:grid-cols-2">
           {scaling.scaledIngredients.map((ingredient) => (
-            <article key={ingredient.id || ingredient.name} className={`rounded-[1.2rem] border p-4 text-sm ${ingredient.limiting ? "border-amber-300 bg-amber-100 text-amber-950" : "border-white/10 bg-white/6 text-stone-200"}`}>
+            <article key={ingredient.id || ingredient.name} className={`min-w-0 rounded-[1.2rem] border p-4 text-sm ${ingredient.limiting ? "border-amber-300 bg-amber-100 text-amber-950" : "border-white/10 bg-white/6 text-stone-200"}`}>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className={`font-black ${ingredient.limiting ? "text-amber-950" : "text-white"}`}>{ingredient.name}</p>
+                  <p className={`break-words font-black ${ingredient.limiting ? "text-amber-950" : "text-white"}`}>{ingredient.name}</p>
                   <p className="mt-1">
                     Necesario: {formatNumber(ingredient.totalRequiredQuantity, 3)} {ingredient.unit}
                     {ingredient.scaledWasteQuantity ? ` · merma ${formatNumber(ingredient.scaledWasteQuantity, 3)} ${ingredient.unit}` : ""}
@@ -227,7 +227,7 @@ function ProductionCalculatorResult({ preview }: { preview: ProductionPreview | 
                 {ingredient.missingQuantity ? <p>Faltante: {formatNumber(ingredient.missingQuantity, 3)} {ingredient.unit}</p> : null}
                 <p>Coste estimado: {ingredient.estimatedCost == null ? "sin coste unitario" : formatMoney(ingredient.estimatedCost)}</p>
                 {ingredient.candidates?.slice(0, 3).map((candidate) => (
-                  <p key={`${candidate.lotId || candidate.productName}-${candidate.batch || "stock"}`} className={`rounded-xl px-3 py-2 ${ingredient.limiting ? "bg-white/60" : "bg-[#0d0d0d]"}`}>
+                  <p key={`${candidate.lotId || candidate.productName}-${candidate.batch || "stock"}`} className={`break-words rounded-xl px-3 py-2 ${ingredient.limiting ? "bg-white/60" : "bg-[#0d0d0d]"}`}>
                     {candidate.fefo ? "FEFO · " : ""}{candidate.supplier || "Proveedor"} · lote {candidate.batch || "stock"} · {formatNumber(candidate.availableQuantity, 3)} {candidate.unit || ingredient.unit} · caduca {candidate.expiryDate || "sin fecha"} · {candidate.location || "ubicación"}
                   </p>
                 ))}
@@ -237,12 +237,12 @@ function ProductionCalculatorResult({ preview }: { preview: ProductionPreview | 
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <article className="rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
+      <section className="grid min-w-0 gap-4 xl:grid-cols-2">
+        <article className="min-w-0 rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
           <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Pasos de elaboración</h3>
           <div className="mt-3 grid gap-2 text-sm text-stone-200">
             {scaling.steps.map((step) => (
-              <p key={`${step.order}-${step.title}`} className="rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2">
+              <p key={`${step.order}-${step.title}`} className="break-words rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2">
                 <span className="font-black text-white">{step.order}. {step.title}</span> · {step.description}
                 {step.criticalControlPoint ? <span className="block text-[#f2c6bb]">APPCC: {step.criticalControlPoint}</span> : null}
               </p>
@@ -251,7 +251,7 @@ function ProductionCalculatorResult({ preview }: { preview: ProductionPreview | 
           </div>
         </article>
 
-        <article className="rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
+        <article className="min-w-0 rounded-[1.3rem] border border-white/10 bg-white/6 p-4">
           <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">APPCC y etiqueta futura</h3>
           <div className="mt-3 grid gap-2 text-sm text-stone-200">
             <p>Alérgenos: {scaling.allergens.length ? scaling.allergens.join(", ") : "Sin alérgenos declarados en la ficha."}</p>
@@ -283,6 +283,9 @@ export default async function ProduccionPage({
     target_servings?: string;
     serving_quantity?: string;
     serving_unit?: string;
+    print_job?: string;
+    print_error?: string;
+    batch_code?: string;
   }>;
 }) {
   await requireAdminSession();
@@ -322,9 +325,12 @@ export default async function ProduccionPage({
         title="Producción interna"
         description="Transformación de materias primas, elaboraciones, congelación, descongelación, mermas y salidas internas."
       />
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12">
-        <div className="grid gap-6">
+      <section className="mx-auto max-w-7xl overflow-x-hidden px-4 py-8 sm:px-6 md:py-12">
+        <div className="grid min-w-0 gap-6">
           {params?.saved === "1" ? <p className="rounded-2xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-black text-emerald-950">Producción interna registrada.</p> : null}
+          {params?.batch_code ? <p className="rounded-2xl border border-white/10 bg-[#151515] px-4 py-3 text-sm font-semibold text-stone-200">Lote creado: <span className="font-black text-white">{params.batch_code}</span></p> : null}
+          {params?.print_job ? <p className="rounded-2xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-black text-emerald-950">Etiqueta profesional enviada a GoDEX. Job: <span className="font-mono">{params.print_job}</span></p> : null}
+          {params?.print_error ? <p className="rounded-2xl border border-amber-300 bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-950">Lote registrado, pero no se imprimió la etiqueta: {params.print_error}</p> : null}
           {params?.warning ? <p className="rounded-2xl border border-amber-300 bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-950">{params.warning}</p> : null}
           {params?.error ? <p className="rounded-2xl border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-3 text-sm font-semibold text-[#f2c6bb]">{params.error}</p> : null}
 
@@ -337,6 +343,7 @@ export default async function ProduccionPage({
               ["Congelación", "#lotes"],
               ["Descongelación", "#lotes"],
               ["Mermas", "#lotes"],
+              ["Imprimir etiqueta manual", "/admin-kiosko/etiquetas-prep"],
               ["Etiquetas", "/admin-kiosko/etiquetas"],
               ["Inventario", "/admin-kiosko/inventario"],
               ["Trazabilidad", "/admin-kiosko/trazabilidad"],
@@ -345,7 +352,7 @@ export default async function ProduccionPage({
             ))}
           </nav>
 
-          <section className="grid gap-3 md:grid-cols-4 xl:grid-cols-8">
+          <section className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
             {[
               ["Hoy", metrics?.productionToday ?? 0],
               ["Semana", metrics?.productionWeek ?? 0],
@@ -356,14 +363,14 @@ export default async function ProduccionPage({
               ["Coste materia prima", `${(metrics?.rawMaterialCostMonth ?? 0).toFixed(2)} €`],
               ["Stock producido", metrics?.producedStock ?? 0],
             ].map(([label, value]) => (
-              <article key={label} className="rounded-[1.2rem] border border-white/10 bg-[#151515] p-4">
+              <article key={label} className="min-w-0 rounded-[1.2rem] border border-white/10 bg-[#151515] p-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">{label}</p>
-                <p className="mt-2 text-xl font-black text-white">{value}</p>
+                <p className="mt-2 break-words text-xl font-black text-white">{value}</p>
               </article>
             ))}
           </section>
 
-          <section id="calculadora-produccion" className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+          <section id="calculadora-produccion" className="min-w-0 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
             <div className="flex flex-col gap-3 border-b border-white/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Preview sin consumir stock</p>
@@ -375,24 +382,24 @@ export default async function ProduccionPage({
               <span className="w-fit rounded-full border border-emerald-300 bg-emerald-100 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-950">Solo cálculo</span>
             </div>
 
-            <form action="/admin-kiosko/produccion#calculadora-produccion" className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr_0.8fr_auto]">
+            <form action="/admin-kiosko/produccion#calculadora-produccion" className="mt-5 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(12rem,0.8fr)] 2xl:grid-cols-[minmax(0,1.2fr)_minmax(10rem,0.7fr)_minmax(0,1fr)_auto]">
               <input type="hidden" name="preview" value="1" />
-              <label className="grid gap-2 text-sm font-semibold text-stone-200">
+              <label className="grid min-w-0 gap-2 text-sm font-semibold text-stone-200">
                 Receta técnica
-                <select name="recipe" defaultValue={selectedRecipe?.id || ""} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]">
+                <select name="recipe" defaultValue={selectedRecipe?.id || ""} className="w-full min-w-0 rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]">
                   {recipes.map((recipe) => (
                     <option key={recipe.id} value={recipe.id}>{recipe.recipe_name} · {recipe.output_product}</option>
                   ))}
                 </select>
               </label>
-              <label className="grid gap-2 text-sm font-semibold text-stone-200">
+              <label className="grid min-w-0 gap-2 text-sm font-semibold text-stone-200">
                 Modo
-                <select name="preview_mode" defaultValue={previewMode} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]">
+                <select name="preview_mode" defaultValue={previewMode} className="w-full min-w-0 rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950 outline-none focus:border-[#d94b2b]">
                   <option value="quantity">Cantidad final</option>
                   <option value="servings">Número de raciones</option>
                 </select>
               </label>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <div className="grid min-w-0 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                 <Field name="target_quantity" label="Cantidad final" type="number" step="0.001" value={params?.target_quantity || selectedRecipe?.expected_yield || 3} />
                 <Field name="target_unit" label="Unidad" value={params?.target_unit || selectedRecipe?.output_unit || "kg"} />
                 <Field name="target_servings" label="Raciones" type="number" value={params?.target_servings || 20} />
@@ -413,8 +420,8 @@ export default async function ProduccionPage({
             </div>
           </section>
 
-          <section className="grid gap-6 xl:grid-cols-[1fr_24rem]">
-            <form id="nueva-produccion" action={saveProductionBatchAction} className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+          <section className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
+            <form id="nueva-produccion" action={saveProductionBatchAction} className="min-w-0 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
               <div className="flex flex-col gap-3 border-b border-white/10 pb-5 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Nuevo lote interno</p>
@@ -423,9 +430,9 @@ export default async function ProduccionPage({
                 <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Registrar producción</button>
               </div>
 
-              <div className="mt-5 grid gap-6 lg:grid-cols-2">
+              <div className="mt-5 grid min-w-0 gap-6 xl:grid-cols-2">
                 <input type="hidden" name="recipe_id" value={selectedRecipe?.id || ""} />
-                <section className="rounded-[1.4rem] border border-white/10 bg-white/6 p-4">
+                <section className="min-w-0 rounded-[1.4rem] border border-white/10 bg-white/6 p-4">
                   <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Materia prima</h3>
                   <div className="mt-4 grid gap-4">
                     <MaterialSelector materials={materials} />
@@ -436,7 +443,7 @@ export default async function ProduccionPage({
                   </div>
                 </section>
 
-                <section className="rounded-[1.4rem] border border-white/10 bg-white/6 p-4">
+                <section className="min-w-0 rounded-[1.4rem] border border-white/10 bg-white/6 p-4">
                   <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Elaboración resultante</h3>
                   <div className="mt-4 grid gap-4">
                     <RecipeSummary recipe={selectedRecipe} />
@@ -452,30 +459,44 @@ export default async function ProduccionPage({
                 </section>
               </div>
 
-              <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div className="mt-5 grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <Field name="production_date" label="Fecha producción" type="date" value={todayValue} required />
                 <Field name="production_time" label="Hora producción" type="time" />
                 <Field name="responsible" label="Responsable" value="F. Javier Bocanegra Sanjuan" />
                 <Field name="expiry_date" label="Caducidad / consumir antes de" type="date" />
-                <div className="md:col-span-2"><TextArea name="observations" label="Observaciones" /></div>
+                <div className="min-w-0 md:col-span-2"><TextArea name="observations" label="Observaciones" /></div>
               </div>
+
+              <label className="mt-5 flex items-start gap-3 rounded-[1.2rem] border border-emerald-300/30 bg-emerald-100/10 p-4 text-sm font-semibold text-emerald-100">
+                <input
+                  type="checkbox"
+                  name="print_label_after_register"
+                  defaultChecked
+                  className="mt-1 h-4 w-4 rounded border-white/20"
+                />
+                <span>
+                  <span className="block font-black text-white">Imprimir etiqueta profesional al registrar</span>
+                  <span className="mt-1 block text-xs text-emerald-100/85">Usa nombre, lote, elaboración, caducidad, responsable y conservación.</span>
+                  <span className="mt-1 block text-xs text-emerald-100/75">Al registrar, se enviará una etiqueta a GoDEX si hay caducidad.</span>
+                </span>
+              </label>
             </form>
 
-            <section id="recetas" className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+            <section id="recetas" className="min-w-0 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Recetas base</h2>
               <form action={saveInternalRecipeAction} className="mt-5 grid gap-4">
                 <Field name="recipe_name" label="Nombre receta" value="Bolas smash" required />
                 <InventoryProductSelect inventory={inventory} defaultName="Carne fresca burgers" />
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid min-w-0 gap-4 sm:grid-cols-2">
                   <Field name="input_quantity" label="Cantidad input" type="number" value={1} />
                   <Field name="input_unit" label="Unidad input" value="kg" />
                 </div>
                 <Field name="output_product" label="Elaboración resultante" value="Bolas smash" required />
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid min-w-0 gap-4 sm:grid-cols-2">
                   <Field name="expected_yield" label="Rendimiento" type="number" value={18} />
                   <Field name="output_unit" label="Unidad salida" value="ud" />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid min-w-0 gap-4 sm:grid-cols-2">
                   <Field name="unit_weight" label="Peso unitario g" type="number" value={100} />
                   <Field name="expected_waste" label="Merma esperada g" type="number" value={40} />
                   <Field name="final_weight" label="Peso final g" type="number" />
@@ -491,10 +512,10 @@ export default async function ProduccionPage({
 
               <div className="mt-5 grid gap-3">
                 {recipes.slice(0, 6).map((recipe) => (
-                  <article key={recipe.id} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
-                    <p className="font-black text-white">{recipe.recipe_name}</p>
-                    <p className="mt-1">{recipe.inputs?.map((input) => `${input.input_product} ${input.quantity || ""} ${input.unit || ""}`.trim()).join(", ") || "Materia prima por definir"} → {recipe.output_product}</p>
-                    <p className="mt-1 text-xs text-stone-400">Rendimiento: {recipe.expected_yield || "por definir"} {recipe.output_unit || "ud"} · peso {recipe.unit_weight || "por definir"} g · vida útil {recipe.shelf_life_refrigerated_hours || 0} h / {recipe.shelf_life_frozen_days || 0} días.</p>
+                  <article key={recipe.id} className="min-w-0 rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
+                    <p className="break-words font-black text-white">{recipe.recipe_name}</p>
+                    <p className="mt-1 break-words">{recipe.inputs?.map((input) => `${input.input_product} ${input.quantity || ""} ${input.unit || ""}`.trim()).join(", ") || "Materia prima por definir"} → {recipe.output_product}</p>
+                    <p className="mt-1 break-words text-xs text-stone-400">Rendimiento: {recipe.expected_yield || "por definir"} {recipe.output_unit || "ud"} · peso {recipe.unit_weight || "por definir"} g · vida útil {recipe.shelf_life_refrigerated_hours || 0} h / {recipe.shelf_life_frozen_days || 0} días.</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Link href={`/admin-kiosko/produccion?recipe=${recipe.id}`} className="rounded-full border border-white/20 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Repetir elaboración</Link>
                     </div>
@@ -504,7 +525,7 @@ export default async function ProduccionPage({
                         <input type="hidden" name="id" value={recipe.id} />
                         <Field name="recipe_name" label="Nombre receta" value={recipe.recipe_name} required />
                         <InventoryProductSelect inventory={inventory} defaultName={recipe.inputs?.[0]?.input_product} />
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid min-w-0 gap-3 sm:grid-cols-2">
                           <Field name="input_quantity" label="Cantidad input" type="number" value={recipe.inputs?.[0]?.quantity || ""} />
                           <Field name="input_unit" label="Unidad input" value={recipe.inputs?.[0]?.unit || "kg"} />
                           <Field name="output_product" label="Elaboración resultante" value={recipe.output_product} required />

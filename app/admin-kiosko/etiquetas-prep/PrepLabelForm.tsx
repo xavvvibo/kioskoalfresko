@@ -32,6 +32,37 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="grid gap-1">
+          <label className="text-sm font-semibold text-stone-700" htmlFor="template">
+            Plantilla
+          </label>
+          <select
+            id="template"
+            name="template"
+            defaultValue="prep_label_professional"
+            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
+          >
+            <option value="prep_label_professional">Profesional compacta</option>
+            <option value="prep_label_basic">Basica compatible</option>
+          </select>
+        </div>
+
+        <div className="grid gap-1">
+          <label className="text-sm font-semibold text-stone-700" htmlFor="batchCode">
+            Lote interno
+          </label>
+          <input
+            id="batchCode"
+            name="batchCode"
+            type="text"
+            maxLength={36}
+            placeholder="GM-040726-01"
+            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-1">
           <label className="text-sm font-semibold text-stone-700" htmlFor="productionDateTime">
             Fecha/hora elaboracion
           </label>
@@ -55,6 +86,36 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
             type="datetime-local"
             required
             defaultValue={defaultExpiryDateTime}
+            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-1">
+          <label className="text-sm font-semibold text-stone-700" htmlFor="responsibleName">
+            Responsable
+          </label>
+          <input
+            id="responsibleName"
+            name="responsibleName"
+            type="text"
+            maxLength={36}
+            defaultValue="J. Bocanegra"
+            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
+          />
+        </div>
+
+        <div className="grid gap-1">
+          <label className="text-sm font-semibold text-stone-700" htmlFor="storageCondition">
+            Conservacion
+          </label>
+          <input
+            id="storageCondition"
+            name="storageCondition"
+            type="text"
+            maxLength={36}
+            defaultValue="Refrigerado 0-4 C"
             className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
           />
         </div>

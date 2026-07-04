@@ -41,12 +41,15 @@ import { DEFAULT_GODEX_G500_PRINTER_KEY, printService } from "@/lib/admin-kiosko
 
 await printService.printLabel({
   printerKey: DEFAULT_GODEX_G500_PRINTER_KEY,
-  template: "prep_label_basic",
+  template: "prep_label_professional",
   data: {
     prepName: "GUACAMOLE",
     productionDateTime: "2026-07-04T12:30",
     expiryDateTime: "2026-07-06T12:30",
-    batchCode: "PREP-TEST",
+    batchCode: "GM-040726-01",
+    responsibleName: "J. Bocanegra",
+    storageCondition: "Refrigerado 0-4 C",
+    brandName: "KIOSKO ALFRESKO",
   },
 });
 ```
@@ -57,6 +60,7 @@ Templates soportados:
 - `product_label_basic`: `{ productName, internalCode?, lot?, expiryDate? }`
 - `ingredient_label_basic`: `{ ingredientName, supplierName?, internalCode?, lot?, expiryDate? }`
 - `prep_label_basic`: `{ prepName, productionDateTime?, expiryDateTime?, shelfLifeDays?, productionDate?, expiryDate?, batchCode? }`
+- `prep_label_professional`: `{ prepName, productionDateTime?, expiryDateTime?, shelfLifeDays?, batchCode?, responsibleName?, storageCondition?, brandName?, qrUrl? }`
 
 `prep_label_basic` imprime siempre:
 
@@ -68,6 +72,8 @@ CAD dd/mm/yy HH:mm
 
 Si falta `productionDateTime`, se usa la hora actual del servidor. Si falta `expiryDateTime`, se calcula con `shelfLifeDays`. Los campos antiguos `productionDate` y `expiryDate` siguen aceptados por compatibilidad.
 
+`prep_label_professional` genera EZPL especifico para GoDEX G500 80x50 mm desde backend cuando el bridge reclama el trabajo por `/api/print-jobs/pending`. La version actual es `professional_compact`: no imprime QR para priorizar legibilidad y evitar cortes. `qrUrl` queda persistido en `payload.data` para una version futura con QR si la validacion fisica lo permite.
+
 El payload final insertado es compatible extendido. El bridge sigue usando solo `payload.title`, `payload.line1` y `payload.line2`; `template`, `data` y `metadata` son trazabilidad ERP.
 
 ```json
@@ -75,12 +81,15 @@ El payload final insertado es compatible extendido. El bridge sigue usando solo 
   "title": "GUACAMOLE",
   "line1": "ELAB 04/07/26 12:30",
   "line2": "CAD 06/07/26 12:30",
-  "template": "prep_label_basic",
+  "template": "prep_label_professional",
   "data": {
     "prepName": "GUACAMOLE",
     "productionDateTime": "2026-07-04T10:30:00.000Z",
     "expiryDateTime": "2026-07-06T10:30:00.000Z",
-    "batchCode": "PREP-TEST"
+    "batchCode": "GM-040726-01",
+    "responsibleName": "J. Bocanegra",
+    "storageCondition": "Refrigerado 0-4 C",
+    "brandName": "KIOSKO ALFRESKO"
   },
   "metadata": {
     "requestedBy": "test",
@@ -239,13 +248,17 @@ Ruta UI disponible:
 /admin-kiosko/etiquetas-prep
 ```
 
-Esta pantalla interna exige sesion admin y no expone tokens. Usa `printPrepLabelAction`, `PrintService` y el template `prep_label_basic`.
+Esta pantalla interna exige sesion admin y no expone tokens. Usa `printPrepLabelAction`, `PrintService` y por defecto el template `prep_label_professional`.
 
 Campos:
 
 - Nombre preparacion.
+- Plantilla: profesional compacta o basica compatible.
+- Lote interno.
 - Fecha/hora elaboracion, por defecto ahora.
 - Fecha/hora caducidad, por defecto ahora + 2 dias.
+- Responsable, por defecto `J. Bocanegra`.
+- Conservacion, por defecto `Refrigerado 0-4 C`.
 
 Para imprimir con hora actual:
 
@@ -268,6 +281,10 @@ Ejemplo final impreso:
 GUACAMOLE
 ELAB 04/07/26 12:30
 CAD 06/07/26 12:30
+LOTE GM-040726-01
+RESPONSABLE J. Bocanegra
+CONSERVACION Refrigerado 0-4 C
+KIOSKO ALFRESKO
 ```
 
 Metadata del flujo UI urgente:
@@ -277,9 +294,81 @@ Metadata del flujo UI urgente:
   "requestedBy": "admin-kiosko",
   "module": "prep",
   "sourceType": "prep_batch",
+  "sourceId": "GM-040726-01",
   "createdFrom": "erp_ui",
   "reason": "print_prep_label"
 }
+```
+
+## Flujo real produccion
+
+Ruta:
+
+```text
+/admin-kiosko/produccion
+```
+
+En el formulario `Registrar elaboracion` existe el checkbox `Imprimir etiqueta profesional al registrar`, activado por defecto. Si queda marcado:
+
+1. El ERP registra el lote interno.
+2. El backend crea un `print_job` con template `prep_label_professional`.
+3. La UI vuelve a `/admin-kiosko/produccion#lotes` mostrando lote creado y job de impresion.
+4. El bridge Windows reclama el job e imprime la etiqueta GoDEX 80x50 mm.
+
+Si falta fecha de caducidad, el lote se registra pero no se imprime automaticamente. La UI muestra:
+
+```text
+No se puede imprimir etiqueta sin fecha de caducidad.
+```
+
+Diferencias:
+
+- `/admin-kiosko/etiquetas-prep`: impresion manual urgente, no necesariamente vinculada a un lote real.
+- `/admin-kiosko/produccion`: impresion vinculada al lote interno real creado por el registro de elaboracion.
+
+Metadata del flujo real:
+
+```json
+{
+  "requestedBy": "F. Javier Bocanegra Sanjuan",
+  "module": "production",
+  "sourceType": "prep_batch",
+  "sourceId": "ID_LOTE_INTERNO",
+  "createdFrom": "erp_ui",
+  "reason": "print_after_production",
+  "batchCode": "KA-040726-001"
+}
+```
+
+## Checklist inspeccion
+
+- [ ] Registrar elaboracion real en `/admin-kiosko/produccion`.
+- [ ] Confirmar lote creado en la pantalla de produccion.
+- [ ] Confirmar etiqueta impresa en GoDEX.
+- [ ] Verificar nombre de preparacion.
+- [ ] Verificar `ELAB` con fecha/hora correcta.
+- [ ] Verificar `CAD` con fecha/hora correcta.
+- [ ] Verificar conservacion.
+- [ ] Verificar responsable.
+- [ ] Si hay error o hay que corregir fecha/hora, usar `/admin-kiosko/etiquetas-prep` como impresion manual.
+
+SQL rapido para inspeccion:
+
+```sql
+select
+  id,
+  status,
+  payload->>'title' as nombre,
+  payload->>'line1' as elaboracion,
+  payload->>'line2' as caducidad,
+  payload->'data'->>'batchCode' as lote,
+  payload->'data'->>'responsibleName' as responsable,
+  payload->'data'->>'storageCondition' as conservacion,
+  created_at
+from public.print_jobs
+where payload->>'template' = 'prep_label_professional'
+order by created_at desc
+limit 20;
 ```
 
 ## Ejemplos curl
@@ -455,6 +544,12 @@ Codigos HTTP:
 
 Las etiquetas fisicas actuales son 80x50 mm. El bridge sigue consumiendo solo `payload.title`, `payload.line1` y `payload.line2`; cualquier ajuste fino de composicion fisica debe validarse con impresiones reales sin cambiar este contrato.
 
+## Nota UI etiquetas
+
+La ruta `/admin-kiosko/etiquetas` separa controles y vista imprimible en dos columnas solo cuando hay ancho suficiente. En pantallas medianas o pequenas se apila verticalmente. La vista imprimible tiene scroll propio para no invadir el formulario ni forzar scroll horizontal global.
+
+La ruta `/admin-kiosko/produccion#recetas` usa grids responsivos y campos con ancho contenido para evitar que selects largos de recetas o inventario rompan las columnas.
+
 ## Validacion fisica 80x50 mm
 
 Checklist de aceptacion antes de conectar botones reales del ERP:
@@ -463,6 +558,7 @@ Checklist de aceptacion antes de conectar botones reales del ERP:
 - [ ] `product_label_basic` imprime.
 - [ ] `ingredient_label_basic` imprime.
 - [ ] `prep_label_basic` imprime.
+- [ ] `prep_label_professional` imprime en 80x50 mm sin cortes.
 - [ ] No corta texto lateral.
 - [ ] No corta texto vertical.
 - [ ] Orientacion correcta.
@@ -476,5 +572,6 @@ Que observar fisicamente:
 - `product_label_basic`: debe mostrar `TOMATE RAF`, `MP-TOM-RAF` y fecha de caducidad.
 - `ingredient_label_basic`: debe mostrar `TOMATE RAF`, `MP-TOM-RAF` y fecha de caducidad.
 - `prep_label_basic`: debe mostrar `GUACAMOLE`, `ELAB dd/mm/yy HH:mm` y `CAD dd/mm/yy HH:mm`.
+- `prep_label_professional`: debe mostrar nombre grande, `ELAB`, `CAD`, lote, responsable, conservacion y `KIOSKO ALFRESKO`.
 
 Si alguna etiqueta corta texto o sale descentrada, no cambiar el bridge Windows ni el schema. Ajustar primero datos/template ERP o la configuracion fisica de etiqueta 80x50 mm validada en el kiosco.
