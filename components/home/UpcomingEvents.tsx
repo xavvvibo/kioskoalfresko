@@ -40,7 +40,7 @@ export function UpcomingEvents() {
                 {item.description}
               </p>
               <p className="mt-4 text-[11px] font-black uppercase tracking-[0.18em] text-[#d94b2b]">
-                Si te encaja, reserva
+                Alta afluencia prevista · kioskoalfresko.es
               </p>
               <div className="mt-5">
                 <ActionButton href={item.cta.href} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "upcoming_events_card", event_title: item.title }}>{item.cta.label}</ActionButton>
@@ -71,6 +71,43 @@ export function UpcomingEvents() {
             </ActionButton>
           </div>
         </article>
+      </div>
+
+      <div className="rounded-[1.8rem] border border-stone-950/12 bg-stone-100 p-6">
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-stone-500">
+          Histórico
+        </p>
+        <h4 className="mt-3 text-[1.7rem] font-black uppercase leading-none tracking-[-0.03em] text-stone-950">
+          {upcomingEvents.historicTitle}
+        </h4>
+        <p className="mt-3 text-sm leading-6 text-stone-600">
+          {upcomingEvents.historicIntro}
+        </p>
+        <div className="mt-5 grid gap-3">
+          {upcomingEvents.pastItems.map((item) => (
+            <article
+              key={`${item.date}-${item.title}`}
+              className="rounded-[1.4rem] border border-stone-950/10 bg-white/70 p-5 text-stone-600"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-stone-500">
+                    {item.date}
+                  </p>
+                  <h5 className="mt-2 text-lg font-black uppercase tracking-[-0.02em] text-stone-700">
+                    {item.title}
+                  </h5>
+                </div>
+                <span className="rounded-full border border-stone-950/10 bg-stone-200 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-600">
+                  {item.status}
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-stone-600">
+                {item.description}
+              </p>
+            </article>
+          ))}
+        </div>
       </div>
     </div>
   );
