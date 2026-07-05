@@ -467,19 +467,14 @@ export default async function ProduccionPage({
                 <div className="min-w-0 md:col-span-2"><TextArea name="observations" label="Observaciones" /></div>
               </div>
 
-              <label className="mt-5 flex items-start gap-3 rounded-[1.2rem] border border-emerald-300/30 bg-emerald-100/10 p-4 text-sm font-semibold text-emerald-100">
-                <input
-                  type="checkbox"
-                  name="print_label_after_register"
-                  defaultChecked
-                  className="mt-1 h-4 w-4 rounded border-white/20"
-                />
+              <div className="mt-5 flex items-start gap-3 rounded-[1.2rem] border border-emerald-300/30 bg-emerald-100/10 p-4 text-sm font-semibold text-emerald-100">
+                <span className="mt-1 h-4 w-4 rounded-full border border-emerald-300 bg-emerald-100" />
                 <span>
-                  <span className="block font-black text-white">Imprimir etiqueta profesional al registrar</span>
+                  <span className="block font-black text-white">Etiqueta profesional automática al finalizar</span>
                   <span className="mt-1 block text-xs text-emerald-100/85">Usa nombre, lote, elaboración, caducidad, responsable y conservación.</span>
-                  <span className="mt-1 block text-xs text-emerald-100/75">Al registrar, se enviará una etiqueta a GoDEX si hay caducidad.</span>
+                  <span className="mt-1 block text-xs text-emerald-100/75">Al registrar/cerrar el lote, se enviará una etiqueta a cola GoDEX si hay caducidad.</span>
                 </span>
-              </label>
+              </div>
             </form>
 
             <section id="recetas" className="min-w-0 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">

@@ -36,6 +36,8 @@ export type PrepLabelBasicData = {
   responsibleName?: string;
   storageCondition?: string;
   brandName?: string;
+  quantity?: number;
+  unit?: string;
   qrUrl?: string;
   qrValue?: string;
   includeQr?: boolean;
@@ -368,6 +370,10 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
   const responsibleName = sanitizeLabelText(input.data.responsibleName) || undefined;
   const storageCondition = sanitizeLabelText(input.data.storageCondition) || "Refrigerado 0-4 C";
   const brandName = sanitizeLabelText(input.data.brandName) || "KIOSKO ALFRESKO";
+  const quantity = typeof input.data.quantity === "number" && Number.isFinite(input.data.quantity)
+    ? input.data.quantity
+    : undefined;
+  const unit = sanitizeLabelText(input.data.unit, 20) || undefined;
   const qrValue = sanitizeLabelText(input.data.qrValue, 180)
     || (batchCode ? `ERP:prep_batch:${batchCode}` : undefined);
   const qrUrl = sanitizeLabelText(input.data.qrUrl, 240) || buildInternalQrUrl(qrValue);
@@ -417,6 +423,8 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
         responsibleName,
         storageCondition,
         brandName,
+        quantity,
+        unit,
         qrUrl,
         qrValue,
         includeQr,

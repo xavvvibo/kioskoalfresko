@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { getProductionBatchById, getRecentPrintJobs } from "@/lib/admin-kiosko/database";
-import { registerBatchConsumption } from "@/app/admin-kiosko/actions";
+import { registerBatchConsumption, reprintProductionBatchLabelAction } from "@/app/admin-kiosko/actions";
 import {
   buildProductionBatchTraceability,
   printJobMatchesProductionBatch,
@@ -36,7 +36,8 @@ function statusClass(status: ProductionBatchStatus) {
 function printStatusClass(status: string) {
   if (status === "printed") return "border-emerald-300 bg-emerald-100 text-emerald-950";
   if (status === "error") return "border-[#d94b2b]/40 bg-[#d94b2b]/12 text-[#f2c6bb]";
-  if (status === "claimed") return "border-amber-300 bg-amber-100 text-amber-950";
+  if (status === "claimed" || status === "printing") return "border-amber-300 bg-amber-100 text-amber-950";
+  if (status === "queued") return "border-sky-300 bg-sky-100 text-sky-950";
   return "border-white/15 bg-white/8 text-stone-100";
 }
 
@@ -74,20 +75,40 @@ function timeMadrid() {
   }).format(new Date());
 }
 
+function minutesSince(value?: string | null) {
+  if (!value) return 0;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 0;
+  return Math.max(0, Math.round((Date.now() - date.getTime()) / 60000));
+}
+
+function printFeedback(job?: { status: string; createdAt: string; printedAt: string | null; error: string | null } | null) {
+  if (!job) return "Sin etiquetas impresas asociadas.";
+  if (job.status === "printed") return "Última impresión correcta.";
+  if (job.status === "error") return "Error en última impresión.";
+  if (job.status === "queued" && minutesSince(job.createdAt) >= 10) return "Bridge offline o pendiente de impresión.";
+  if (job.status === "queued") return "Etiqueta enviada a cola.";
+  if (job.status === "claimed" || job.status === "printing") return "Bridge procesando etiqueta.";
+  return "Etiqueta enviada a cola.";
+}
+
 function EmptyState({ children }: { children: React.ReactNode }) {
   return <p className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-400">{children}</p>;
 }
 
 export default async function ProductionBatchDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ print_job?: string; print_error?: string; saved?: string }>;
 }) {
   await requireAdminSession();
   const { id } = await params;
+  const query = searchParams ? await searchParams : {};
   const [batchResult, jobsResult] = await Promise.all([
     getProductionBatchById(id),
-    getRecentPrintJobs({ limit: 100, template: "prep_label_professional", sourceType: "prep_batch" }),
+    getRecentPrintJobs({ limit: 100, template: "prep_label_professional" }),
   ]);
 
   if (!batchResult.ok) {
@@ -139,7 +160,18 @@ export default async function ProductionBatchDetailPage({
         <div className="flex flex-wrap gap-2">
           <Link href="/admin-kiosko/produccion#lotes" className="rounded-full border border-white/15 bg-white/6 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Volver a produccion</Link>
           <Link href="/admin-kiosko/etiquetas-prep" className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Imprimir etiqueta manual</Link>
+          <form action={reprintProductionBatchLabelAction}>
+            <input type="hidden" name="batch_id" value={productionBatch.id} />
+            <button className="rounded-full border border-emerald-300 bg-emerald-100 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-950">Reimprimir etiqueta</button>
+          </form>
         </div>
+
+        {query.print_job ? (
+          <p className="rounded-2xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-black text-emerald-950">Etiqueta enviada a cola: {query.print_job}</p>
+        ) : null}
+        {query.print_error ? (
+          <p className="rounded-2xl border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-3 text-sm font-semibold text-[#f2c6bb]">No se pudo encolar la etiqueta: {query.print_error}</p>
+        ) : null}
 
         <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -271,7 +303,16 @@ export default async function ProductionBatchDetailPage({
             </section>
 
             <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
-              <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Impresiones</h2>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Impresiones</h2>
+                  <p className="mt-2 text-sm font-semibold text-stone-300">{printFeedback(latestPrintJob)}</p>
+                </div>
+                <form action={reprintProductionBatchLabelAction}>
+                  <input type="hidden" name="batch_id" value={productionBatch.id} />
+                  <button className="w-fit rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Reimprimir etiqueta</button>
+                </form>
+              </div>
               {!jobsResult.ok ? <p className="mt-4 rounded-xl border border-[#d94b2b]/40 bg-[#d94b2b]/12 p-3 text-sm text-[#f2c6bb]">{jobsResult.error}</p> : null}
               {latestPrintJob ? (
                 <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-[#0d0d0d] p-4">

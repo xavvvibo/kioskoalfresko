@@ -71,6 +71,8 @@ export type PrintJobListFilters = {
   status?: string;
   template?: string;
   sourceType?: string;
+  sourceId?: string;
+  reason?: string;
   printerKey?: string;
   search?: string;
 };
@@ -176,10 +178,14 @@ function metadataText(payload: PrintJobPayload, key: string) {
 function matchesPrintJobFilters(job: PrintJob, filters: PrintJobListFilters) {
   const template = cleanText(filters.template);
   const sourceType = cleanText(filters.sourceType);
+  const sourceId = cleanText(filters.sourceId);
+  const reason = cleanText(filters.reason);
   const search = cleanText(filters.search).toLowerCase();
 
   if (template && payloadText(job.payload, "template") !== template) return false;
   if (sourceType && metadataText(job.payload, "sourceType") !== sourceType) return false;
+  if (sourceId && metadataText(job.payload, "sourceId") !== sourceId) return false;
+  if (reason && metadataText(job.payload, "reason") !== reason) return false;
 
   if (search) {
     const haystack = [
@@ -218,6 +224,42 @@ export async function getRecentPrintJobs(filtersOrLimit: PrintJobListFilters | n
     data: result.data
       .map((job) => toPrintJob(job))
       .filter((job) => matchesPrintJobFilters(job, filters)),
+  };
+}
+
+export async function getPrintJobsByProductionBatch(input: {
+  batchId: string;
+  batchCode?: string;
+  template?: string;
+  reason?: string;
+  limit?: number;
+}) {
+  const batchId = cleanText(input.batchId);
+  const batchCode = cleanText(input.batchCode);
+  const template = cleanText(input.template);
+  const reason = cleanText(input.reason);
+  const safeLimit = Math.max(1, Math.min(200, Math.round(input.limit || 100)));
+
+  if (!batchId && !batchCode) {
+    return { ok: false as const, error: "batchId o batchCode es obligatorio." };
+  }
+
+  const result = await getRecentPrintJobs({ limit: safeLimit, template, reason });
+  if (!result.ok) return result;
+
+  return {
+    ok: true as const,
+    data: result.data.filter((job) => {
+      const data = payloadRecord(job.payload, "data");
+      const metadata = payloadRecord(job.payload, "metadata");
+      const candidates = [
+        cleanText(data.batchCode),
+        cleanText(metadata.batchCode),
+        cleanText(metadata.sourceId),
+      ].filter(Boolean);
+
+      return (batchId && cleanText(metadata.sourceId) === batchId) || (batchCode && candidates.includes(batchCode));
+    }),
   };
 }
 

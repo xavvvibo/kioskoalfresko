@@ -55,6 +55,8 @@ import {
   createPrintJob,
   enqueuePrintJob,
   getPrintJobById,
+  getPrintJobsByProductionBatch,
+  getProductionBatchById,
 } from "@/lib/admin-kiosko/database";
 import type { InboxDocumentType } from "@/lib/admin-kiosko/inbox";
 
@@ -188,6 +190,11 @@ async function createProductionPrepPrintJob(input: {
   productionBatchId: string;
   responsibleName: string;
   storageState: string;
+  quantity?: number;
+  unit?: string;
+  sourceType?: string;
+  createdFrom: string;
+  reason: string;
 }) {
   if (!input.expiryDate) {
     return { ok: false as const, error: "No se puede imprimir etiqueta sin fecha de caducidad." };
@@ -204,19 +211,98 @@ async function createProductionPrepPrintJob(input: {
       responsibleName: input.responsibleName,
       storageCondition: storageConditionFromState(input.storageState),
       brandName: "KIOSKO ALFRESKO",
+      quantity: input.quantity,
+      unit: input.unit,
       qrValue: `ERP:prep_batch:${input.batchCode}`,
       includeQr: false,
     },
     metadata: {
       requestedBy: input.responsibleName || "admin-kiosko",
       module: "production",
-      sourceType: "prep_batch",
+      sourceType: input.sourceType || "production_batch",
       sourceId: input.productionBatchId,
-      createdFrom: "erp_ui",
-      reason: "print_after_production",
+      createdFrom: input.createdFrom,
+      reason: input.reason,
       batchCode: input.batchCode,
     },
   });
+}
+
+async function queueProductionCloseLabel(input: {
+  prepName: string;
+  productionDate: string;
+  productionTime: string;
+  expiryDate: string;
+  batchCode: string;
+  productionBatchId: string;
+  responsibleName: string;
+  storageState: string;
+  quantity?: number;
+  unit?: string;
+}) {
+  const existing = await getPrintJobsByProductionBatch({
+    batchId: input.productionBatchId,
+    batchCode: input.batchCode,
+    template: "prep_label_professional",
+    reason: "auto_print_on_batch_close",
+  });
+
+  if (existing.ok && existing.data.length) {
+    return { ok: true as const, skipped: true as const, data: existing.data[0] };
+  }
+
+  const printResult = await createProductionPrepPrintJob({
+    ...input,
+    sourceType: "production_batch",
+    createdFrom: "production_close",
+    reason: "auto_print_on_batch_close",
+  });
+
+  if (printResult.ok) {
+    console.info("[PRODUCTION LABEL AUTO QUEUED]", {
+      batchId: input.productionBatchId,
+      batchCode: input.batchCode,
+      printerKey: DEFAULT_GODEX_G500_PRINTER_KEY,
+      template: "prep_label_professional",
+      jobId: printResult.data.id,
+    });
+  }
+
+  return printResult.ok
+    ? { ok: true as const, skipped: false as const, data: printResult.data }
+    : printResult;
+}
+
+async function queueProductionBatchManualReprint(input: {
+  prepName: string;
+  productionDate: string;
+  productionTime: string;
+  expiryDate: string;
+  batchCode: string;
+  productionBatchId: string;
+  responsibleName: string;
+  storageState: string;
+  quantity?: number;
+  unit?: string;
+}) {
+  const printResult = await createProductionPrepPrintJob({
+    ...input,
+    sourceType: "production_batch",
+    createdFrom: "production_batch_detail",
+    reason: "manual_reprint_batch_label",
+  });
+
+  if (printResult.ok) {
+    console.info("[PRODUCTION LABEL REPRINT QUEUED]", {
+      batchId: input.productionBatchId,
+      batchCode: input.batchCode,
+      printerKey: DEFAULT_GODEX_G500_PRINTER_KEY,
+      template: "prep_label_professional",
+      jobId: printResult.data.id,
+    });
+  }
+
+  return printResult;
 }
 
 async function resolveSupplierFromForm(formData: FormData, fieldPrefix = "supplier") {
@@ -1056,7 +1142,6 @@ export async function saveProductionBatchAction(formData: FormData) {
   const productionTime = text(formData, "production_time") || timeMadrid();
   const responsible = text(formData, "responsible") || "F. Javier Bocanegra Sanjuan";
   const storageState = text(formData, "storage_state") || "refrigerado";
-  const shouldPrintPrepLabel = checkbox(formData, "print_label_after_register");
 
   if (recipeId) {
     const plan = await planProductionBatch({
@@ -1144,41 +1229,28 @@ export async function saveProductionBatchAction(formData: FormData) {
       },
     }));
 
-    if (shouldPrintPrepLabel) {
-      const params = new URLSearchParams({
-        saved: "1",
-        batch_code: executed.data.batchCode,
-      });
-      const printResult = await createProductionPrepPrintJob({
-        prepName: executed.data.outputProduct,
-        productionDate,
-        productionTime,
-        expiryDate: executed.data.expiryDate || label.bestBeforeDate || expiryDate,
-        batchCode: executed.data.batchCode,
-        productionBatchId: executed.data.productionBatchId,
-        responsibleName: responsible,
-        storageState,
-      });
-      if (printResult.ok) {
-        params.set("print_job", printResult.data.id);
-      } else {
-        params.set("print_error", printResult.error.slice(0, 240));
-      }
-      redirect(`/admin-kiosko/produccion?${params.toString()}#lotes`);
+    const params = new URLSearchParams({
+      saved: "1",
+      batch_code: executed.data.batchCode,
+    });
+    const printResult = await queueProductionCloseLabel({
+      prepName: executed.data.outputProduct,
+      productionDate,
+      productionTime,
+      expiryDate: executed.data.expiryDate || label.bestBeforeDate || expiryDate,
+      batchCode: executed.data.batchCode,
+      productionBatchId: executed.data.productionBatchId,
+      responsibleName: responsible,
+      storageState,
+      quantity: executed.data.outputQuantity,
+      unit: executed.data.outputUnit,
+    });
+    if (printResult.ok) {
+      params.set(printResult.skipped ? "print_existing" : "print_job", printResult.data.id);
     } else {
-      const params = new URLSearchParams({
-        model: "Elaboración",
-        product: label.product,
-        batch: label.batch,
-        elaboration_date: label.elaborationDate,
-        best_before_date: label.bestBeforeDate || "",
-        responsible,
-        print_format: "termica",
-        copies: "1",
-        qr_payload: JSON.stringify(label.qrPayload),
-      });
-      redirect(`/admin-kiosko/etiquetas?${params.toString()}`);
+      params.set("print_error", printResult.error.slice(0, 240));
     }
+    redirect(`/admin-kiosko/produccion?${params.toString()}#lotes`);
   }
 
   const result = await createProductionBatch({
@@ -1220,44 +1292,29 @@ export async function saveProductionBatchAction(formData: FormData) {
         sourceInventoryLotId: material.lot_id,
       },
     }));
-    if (shouldPrintPrepLabel) {
-      const params = new URLSearchParams({
-        saved: "1",
-        batch_code: result.data.batch_code,
-      });
-      if (result.data.warnings.length) params.set("warning", result.data.warnings.join(" · ").slice(0, 240));
-      const printResult = await createProductionPrepPrintJob({
-        prepName: text(formData, "output_product"),
-        productionDate,
-        productionTime,
-        expiryDate,
-        batchCode: result.data.batch_code,
-        productionBatchId: result.data.id,
-        responsibleName: responsible,
-        storageState,
-      });
-      if (printResult.ok) {
-        params.set("print_job", printResult.data.id);
-      } else {
-        params.set("print_error", printResult.error.slice(0, 240));
-      }
-      redirect(`/admin-kiosko/produccion?${params.toString()}#lotes`);
+    const params = new URLSearchParams({
+      saved: "1",
+      batch_code: result.data.batch_code,
+    });
+    if (result.data.warnings.length) params.set("warning", result.data.warnings.join(" · ").slice(0, 240));
+    const printResult = await queueProductionCloseLabel({
+      prepName: text(formData, "output_product"),
+      productionDate,
+      productionTime,
+      expiryDate,
+      batchCode: result.data.batch_code,
+      productionBatchId: result.data.id,
+      responsibleName: responsible,
+      storageState,
+      quantity: optionalNumber(formData, "output_quantity"),
+      unit: text(formData, "output_unit"),
+    });
+    if (printResult.ok) {
+      params.set(printResult.skipped ? "print_existing" : "print_job", printResult.data.id);
     } else {
-      const params = new URLSearchParams({
-        model: "Elaboración",
-        product: text(formData, "output_product"),
-        batch: result.data.batch_code,
-        supplier: material.supplier || "",
-        source_batch_number: material.batch || "",
-        elaboration_date: productionDate,
-        best_before_date: expiryDate,
-        responsible,
-        print_format: "termica",
-        copies: "1",
-      });
-      if (result.data.warnings.length) params.set("warning", result.data.warnings.join(" · ").slice(0, 240));
-      redirect(`/admin-kiosko/etiquetas?${params.toString()}`);
+      params.set("print_error", printResult.error.slice(0, 240));
     }
+    redirect(`/admin-kiosko/produccion?${params.toString()}#lotes`);
   }
 
   redirect(`/admin-kiosko/produccion?error=${encodeURIComponent(result.error.slice(0, 240))}`);
@@ -1324,6 +1381,47 @@ export async function registerBatchConsumption(formData: FormData) {
   }));
 
   redirect(`/admin-kiosko/produccion/lotes/${batchId}?saved=consumption`);
+}
+
+export async function reprintProductionBatchLabelAction(formData: FormData) {
+  await requireAdminSession();
+
+  const batchId = text(formData, "batch_id");
+  if (!batchId) {
+    redirect("/admin-kiosko/produccion?error=Falta%20lote");
+  }
+
+  const batchResult = await getProductionBatchById(batchId);
+  if (!batchResult.ok) {
+    redirect(`/admin-kiosko/produccion/lotes/${batchId}?print_error=${encodeURIComponent(batchResult.error.slice(0, 240))}`);
+  }
+
+  if (!batchResult.data) {
+    redirect("/admin-kiosko/produccion?error=Lote%20no%20encontrado");
+  }
+
+  const batch = batchResult.data;
+  const printResult = await queueProductionBatchManualReprint({
+    prepName: batch.output_product || "Preparacion",
+    productionDate: batch.production_date || todayMadrid(),
+    productionTime: batch.production_time || timeMadrid(),
+    expiryDate: batch.expiry_date || "",
+    batchCode: batch.batch_code || "",
+    productionBatchId: batch.id,
+    responsibleName: batch.responsible || "admin-kiosko",
+    storageState: batch.storage_state || "refrigerado",
+    quantity: batch.output_quantity || undefined,
+    unit: batch.output_unit || undefined,
+  });
+
+  revalidatePath(`/admin-kiosko/produccion/lotes/${batchId}`);
+  revalidatePath("/admin-kiosko/impresiones");
+
+  if (!printResult.ok) {
+    redirect(`/admin-kiosko/produccion/lotes/${batchId}?print_error=${encodeURIComponent(printResult.error.slice(0, 240))}`);
+  }
+
+  redirect(`/admin-kiosko/produccion/lotes/${batchId}?print_job=${encodeURIComponent(printResult.data.id)}`);
 }
 
 export async function saveInternalRecipeAction(formData: FormData) {

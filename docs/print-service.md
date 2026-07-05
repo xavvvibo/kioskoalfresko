@@ -645,6 +645,191 @@ curl -X POST "http://localhost:3000/api/print-jobs/test-prep-label?qr=1" \
   -H "Authorization: Bearer PRINT_JOBS_API_TOKEN"
 ```
 
+## Impresion Godex por TCP/IP directa
+
+La GoDEX G500 queda soportada por dos transportes en el bridge local:
+
+- `windows_spooler`: modo historico por cola de impresion Windows.
+- `tcp_9100`: envio RAW EZPL directo por socket TCP al puerto 9100 de la impresora.
+
+Si `GODEX_PRINT_TRANSPORT` no esta definido, el bridge usa `windows_spooler` para mantener compatibilidad con instalaciones existentes.
+
+Configuracion validada en red:
+
+```text
+IP impresora: 192.168.1.38
+Puerto RAW: 9100
+PC bridge Windows: 192.168.1.39
+Etiqueta fisica: 80x50 mm
+```
+
+Variables `.env` para TCP/IP:
+
+```env
+GODEX_PRINT_TRANSPORT=tcp_9100
+GODEX_PRINTER_HOST=192.168.1.38
+GODEX_PRINTER_PORT=9100
+GODEX_TCP_TIMEOUT_MS=5000
+PRINT_DEBUG_EZPL=true
+```
+
+Variables `.env` para spooler Windows:
+
+```env
+GODEX_PRINT_TRANSPORT=windows_spooler
+WINDOWS_PRINTER_NAME=GoDEX G500
+```
+
+Dry-run sigue teniendo prioridad sobre cualquier transporte:
+
+```env
+GODEX_DRY_RUN=true
+DRY_RUN_MARK_PRINTED=true
+```
+
+Con `GODEX_DRY_RUN=true`, el bridge no conecta con la impresora y puede marcar el job como printed si `DRY_RUN_MARK_PRINTED=true`.
+
+Comandos de prueba en Windows:
+
+```powershell
+npm run godex:test-label:tcp
+```
+
+Ese comando envia una etiqueta EZPL de prueba directamente a `GODEX_PRINTER_HOST:GODEX_PRINTER_PORT`. No usa Supabase, no reclama `print_jobs` y no marca nada como `printed`.
+
+Prueba minima si TCP conecta pero no sale etiqueta fisica:
+
+```powershell
+npm run godex:test-label:tcp:minimal
+```
+
+La prueba minima envia solo texto grande `TEST GODEX`, sin QR, sin barcode y con una sola copia. Ambos scripts imprimen el EZPL completo en consola antes de enviarlo.
+
+Test real por cola:
+
+```powershell
+curl -X POST "http://localhost:3000/api/print-jobs/test-godex-real-path" -H "Authorization: Bearer PRINT_JOBS_API_TOKEN"
+```
+
+Este endpoint crea un `print_job` real con:
+
+- `printer_key = kiosko_godex_g500`;
+- `template = test_godex_real_path`;
+- `raw_command` igual al EZPL usado por `npm run godex:test-label:tcp`;
+- `metadata.reason = test_real_path_same_ezpl_as_tcp`.
+
+Diferencia de diagnostico:
+
+- TCP directo: `npm run godex:test-label:tcp` envia EZPL directo a `192.168.1.38:9100`, sin Supabase ni cola.
+- Test real por cola: `POST /api/print-jobs/test-godex-real-path` crea un job en Supabase, el bridge lo reclama y envia el mismo EZPL.
+- Templates reales: `prep_label_basic`, `prep_label_professional`, `ingredient_label_basic`, `product_label_basic` y `test_label` pasan por el generador comun GoDEX 80x50.
+
+Lectura del resultado:
+
+```text
+A) TCP directo imprime
+B) real-path imprime
+C) templates reales no imprimen
+=> problema en datos del template o generador especifico.
+```
+
+Si A imprime y B no imprime, el bridge no esta enviando el `raw_command` esperado o el job reclamado no contiene el payload correcto.
+
+Arrancar bridge con TCP/IP:
+
+```powershell
+$env:GODEX_PRINT_TRANSPORT="tcp_9100"
+$env:GODEX_PRINTER_HOST="192.168.1.38"
+$env:GODEX_PRINTER_PORT="9100"
+$env:GODEX_TCP_TIMEOUT_MS="5000"
+npm run godex:bridge
+```
+
+Arrancar bridge con spooler Windows:
+
+```powershell
+$env:GODEX_PRINT_TRANSPORT="windows_spooler"
+$env:WINDOWS_PRINTER_NAME="GoDEX G500"
+npm run godex:bridge
+```
+
+El bridge registra por job:
+
+- `id`;
+- `template`;
+- `printer_key`;
+- transporte usado;
+- host/puerto cuando usa `tcp_9100`;
+- `WINDOWS_PRINTER_NAME` cuando usa `windows_spooler`;
+- claves recibidas en el job;
+- claves de `payload_json`, `payload_json.data` y `payload_json.metadata`;
+- tamano del EZPL en bytes;
+- primeras y ultimas lineas del EZPL;
+- status anterior/nuevo;
+- attempts;
+- error y stack si falla.
+
+Con `PRINT_DEBUG_EZPL=true`, el bridge imprime el EZPL completo antes de enviarlo a `printRawEzpl`. Esto permite comparar el job real con `npm run godex:test-label:tcp`.
+
+Ejemplo de log esperado:
+
+```text
+[PRINT JOB EZPL INSPECT] {
+  "id":"...",
+  "template":"prep_label_professional",
+  "printer_key":"kiosko_godex_g500",
+  "payloadKeys":["data","line1","line2","metadata","template","title"],
+  "payloadDataKeys":["batchCode","prepName","productionDateTime"],
+  "ezplBytes":512,
+  "firstLines":["^Q50,3","^W80","^H10","^S4","^P1","^C1","^R0","~Q+0"],
+  "lastLines":["AA,18,286,1,1,1,0,0,CONSERVACION","AA,18,314,1,1,2,0,0,Refrigerado 0-4 C","AA,18,360,1,2,1,0,0,KIOSKO ALFRESKO","E"]
+}
+```
+
+Si el comando no empieza por `^Q`, no contiene `^W` y `^L`, o no termina en `E`, el bridge no llama a la impresora y marca el job como error con:
+
+```text
+Invalid or empty EZPL payload
+```
+
+Troubleshooting TCP/IP:
+
+```powershell
+ping 192.168.1.38
+Test-NetConnection 192.168.1.38 -Port 9100
+```
+
+Si `TcpTestSucceeded = False`:
+
+- revisar que la impresora tenga IP fija o reserva DHCP;
+- confirmar que el PC bridge esta en la misma red;
+- revisar firewall Windows o antivirus;
+- comprobar que el puerto RAW 9100 esta activo en la impresora.
+
+Si la etiqueta sale en blanco:
+
+- confirmar que la impresora esta en lenguaje EZPL;
+- confirmar que el payload empieza por comandos EZPL y termina en `E`;
+- revisar ribbon/papel y sensor de etiqueta;
+- probar `npm run godex:test-label:tcp` antes del bridge.
+
+Si TCP devuelve OK pero no imprime fisicamente:
+
+- probar primero `npm run godex:test-label:tcp:minimal`;
+- revisar que la impresora no este en modo dump/hex;
+- comprobar LED de pausa, feed, error o tapa abierta;
+- pulsar Feed y verificar que avanza una etiqueta;
+- calibrar gap/media desde el panel o utilidad GoDEX;
+- confirmar lenguaje de impresora EZPL;
+- confirmar etiqueta fisica 80x50 mm y gap detectado;
+- apagar/encender la impresora despues de cambiar lenguaje o media.
+
+Si el tamano no cuadra:
+
+- confirmar etiqueta fisica 80x50 mm;
+- confirmar que el template GoDEX usa 80x50 mm;
+- revisar calibracion de sensor en la G500.
+
 Consultar estado por id:
 
 ```bash
@@ -819,3 +1004,104 @@ Que observar fisicamente:
 - `prep_label_professional`: debe mostrar nombre grande, `ELAB`, `CAD`, lote, responsable, conservacion y `KIOSKO ALFRESKO`.
 
 Si alguna etiqueta corta texto o sale descentrada, no cambiar el bridge Windows ni el schema. Ajustar primero datos/template ERP o la configuracion fisica de etiqueta 80x50 mm validada en el kiosco.
+
+## Etiquetas automaticas al cerrar lote
+
+Produccion trata el registro de un lote interno como cierre/finalizacion operativa del lote. Al guardar una produccion, el ERP intenta crear automaticamente un `print_job` para la GoDEX G500.
+
+Contrato del job:
+
+- `printer_key`: `kiosko_godex_g500`
+- `template`: `prep_label_professional`
+- `payload.raw_command`: EZPL GoDEX 80x50 generado por el generador comun.
+- `payload.data`: nombre/preparacion, lote, elaboracion, caducidad, cantidad si existe, unidad si existe, responsable y conservacion.
+- `payload.metadata.module`: `production`
+- `payload.metadata.sourceType`: `production_batch`
+- `payload.metadata.sourceId`: id del lote.
+- `payload.metadata.createdFrom`: `production_close`
+- `payload.metadata.reason`: `auto_print_on_batch_close`
+
+No se crean columnas nuevas. La relacion lote -> print_job se resuelve por `payload.metadata.sourceId` y `payload.metadata.reason`.
+
+### Evitar duplicados
+
+Antes de crear la etiqueta automatica, el ERP busca jobs existentes del mismo lote con:
+
+- `template = prep_label_professional`
+- `metadata.sourceId = batchId`
+- `metadata.reason = auto_print_on_batch_close`
+
+Si ya existe, no crea otro job automatico. La reimpresion manual sigue permitida y crea un job nuevo.
+
+### Reimpresion manual
+
+En `/admin-kiosko/produccion/lotes/[id]` hay un boton `Reimprimir etiqueta`.
+
+Ese boton crea un nuevo `print_job` con:
+
+- `metadata.createdFrom`: `production_batch_detail`
+- `metadata.reason`: `manual_reprint_batch_label`
+
+### Verificar print_jobs pendientes
+
+Desde casa, sin impresora:
+
+```bash
+npm run dev
+```
+
+1. Entrar en `/admin-kiosko/produccion`.
+2. Registrar/cerrar un lote de prueba con caducidad.
+3. Abrir la ficha del lote.
+4. Revisar el bloque `Impresiones`.
+
+Consulta SQL recomendada:
+
+```sql
+select
+  id,
+  printer_key,
+  status,
+  payload->>'template' as template,
+  payload->'metadata'->>'sourceId' as batch_id,
+  payload->'metadata'->>'reason' as reason,
+  length(payload->>'raw_command') as raw_command_length,
+  left(payload->>'raw_command', 20) as raw_command_start,
+  right(payload->>'raw_command', 5) as raw_command_end,
+  attempts,
+  claimed_at,
+  printed_at,
+  error,
+  created_at
+from public.print_jobs
+where printer_key = 'kiosko_godex_g500'
+  and payload->'metadata'->>'module' = 'production'
+order by created_at desc
+limit 20;
+```
+
+El `raw_command_start` debe empezar por `^Q50,3` y el final debe terminar en `E`.
+
+Check local sin impresora:
+
+```bash
+npm run godex:check-production-label:auto
+```
+
+Este check valida:
+
+- cerrar lote sin job previo permite crear print_job;
+- no se duplica una etiqueta automatica ya existente;
+- la reimpresion manual usa `manual_reprint_batch_label`;
+- el EZPL simulado es GoDEX 80x50 valido.
+
+### Pendiente de validar fisicamente en kiosko
+
+Cuando el bridge este online en la red del kiosko:
+
+1. Crear/cerrar un lote real de prueba desde Produccion.
+2. Confirmar que aparece un `print_job` `queued`.
+3. Confirmar transicion `queued -> claimed -> printed`.
+4. Confirmar que sale una etiqueta fisica 80x50 mm.
+5. Confirmar que la ficha del lote muestra `Ultima impresion correcta`.
+6. Pulsar `Reimprimir etiqueta` y confirmar que crea e imprime un segundo job.

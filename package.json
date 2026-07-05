@@ -9,7 +9,11 @@
     "lint": "eslint",
     "print:smoke": "node scripts/admin-kiosko/print-smoke.mjs",
     "godex:bridge": "node scripts/godex-print-service/server.mjs",
+    "godex:bridge:prod": "node scripts/godex-print-service/server.mjs",
     "godex:test-label": "node scripts/godex-print-service/test-label.mjs",
+    "godex:test-label:tcp": "node scripts/godex-print-service/test-label-tcp.mjs",
+    "godex:test-label:tcp:minimal": "node scripts/godex-print-service/test-label-tcp-minimal.mjs",
+    "godex:check-production-label:auto": "node scripts/godex-print-service/check-production-label-auto.mjs",
     "godex:list-printers": "node scripts/godex-print-service/list-printers.mjs"
   },
   "dependencies": {

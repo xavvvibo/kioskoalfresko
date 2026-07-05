@@ -1,8 +1,14 @@
 import fs from "node:fs/promises";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
+
+export const GODEX_PRINT_TRANSPORTS = {
+  WINDOWS_SPOOLER: "windows_spooler",
+  TCP_9100: "tcp_9100",
+};
 
 const rawPrinterPowerShell = String.raw`
 param(
@@ -105,4 +111,158 @@ export async function sendRawToWindowsPrinter(rawCommand, windowsPrinterName) {
     await fs.rm(commandPath, { force: true }).catch(() => undefined);
     await fs.rm(scriptPath, { force: true }).catch(() => undefined);
   }
+}
+
+export async function sendRawToTcpPrinter(rawCommand, host, port = 9100, timeoutMs = 5000) {
+  const payload = Buffer.isBuffer(rawCommand) ? rawCommand : Buffer.from(String(rawCommand), "utf8");
+  const printerPort = Number(port || 9100);
+  const socketTimeoutMs = Math.max(1000, Number(timeoutMs || 5000));
+  const debugTcp = process.env.PRINT_DEBUG_TCP === "true";
+
+  if (!host) {
+    throw new Error("Falta GODEX_PRINTER_HOST para transporte tcp_9100.");
+  }
+  if (!Number.isFinite(printerPort) || printerPort <= 0) {
+    throw new Error(`Puerto TCP invalido para Godex: ${port}`);
+  }
+
+  await new Promise((resolve, reject) => {
+    const socket = new net.Socket();
+    let settled = false;
+    let timer;
+    let phase = "connect";
+    const startedAt = Date.now();
+    let connectStartedAt = startedAt;
+    let writeStartedAt = 0;
+
+    function tcpLog(message, meta = {}, debugOnly = false) {
+      if (debugOnly && !debugTcp) return;
+      process.stdout.write(`${new Date().toISOString()} ${message} ${JSON.stringify({
+        host,
+        port: printerPort,
+        phase,
+        ...meta,
+      })}\n`);
+    }
+
+    function clearPhaseTimer() {
+      if (timer) clearTimeout(timer);
+      timer = undefined;
+    }
+
+    function armPhaseTimer(nextPhase) {
+      phase = nextPhase;
+      clearPhaseTimer();
+      timer = setTimeout(() => {
+        finish(new Error(`Timeout TCP Godex ${host}:${printerPort} durante ${phase} tras ${socketTimeoutMs}ms.`));
+      }, socketTimeoutMs);
+    }
+
+    function finish(error) {
+      if (settled) return;
+      settled = true;
+      clearPhaseTimer();
+      tcpLog("[TCP SOCKET DESTROY]", {
+        error: error instanceof Error ? error.message : undefined,
+        totalDurationMs: Date.now() - startedAt,
+      });
+      socket.destroy();
+      if (error) reject(error);
+      else resolve();
+    }
+
+    socket.on("error", (error) => {
+      tcpLog("[TCP ERROR]", {
+        error: error.message,
+        totalDurationMs: Date.now() - startedAt,
+      }, true);
+      finish(new Error(`Error TCP Godex ${host}:${printerPort}: ${error.message}`));
+    });
+
+    socket.on("timeout", () => {
+      tcpLog("[TCP TIMEOUT EVENT]", {
+        totalDurationMs: Date.now() - startedAt,
+      }, true);
+    });
+
+    socket.on("end", () => {
+      tcpLog("[TCP REMOTE END]", {
+        totalDurationMs: Date.now() - startedAt,
+      }, true);
+    });
+
+    socket.on("close", (hadError) => {
+      tcpLog("[TCP REMOTE CLOSE]", {
+        hadError,
+        totalDurationMs: Date.now() - startedAt,
+      }, true);
+    });
+
+    socket.on("drain", () => {
+      tcpLog("[TCP DRAIN]", {
+        bytes: payload.length,
+        writeDurationMs: writeStartedAt ? Date.now() - writeStartedAt : undefined,
+      });
+    });
+
+    socket.on("finish", () => {
+      tcpLog("[TCP LOCAL FINISHED]", {
+        totalDurationMs: Date.now() - startedAt,
+      });
+      finish();
+    });
+
+    armPhaseTimer("connect");
+    connectStartedAt = Date.now();
+
+    socket.connect(printerPort, host, () => {
+      tcpLog("[TCP CONNECTED]", {
+        connectDurationMs: Date.now() - connectStartedAt,
+        totalDurationMs: Date.now() - startedAt,
+      });
+
+      armPhaseTimer("write");
+      writeStartedAt = Date.now();
+      tcpLog("[TCP WRITE START]", {
+        bytes: payload.length,
+      });
+
+      const writeAccepted = socket.write(payload, (error) => {
+        if (error) {
+          finish(new Error(`No se pudo enviar EZPL a Godex ${host}:${printerPort}: ${error.message}`));
+          return;
+        }
+        clearPhaseTimer();
+        tcpLog("[TCP WRITE OK]", {
+          bytes: payload.length,
+          writeDurationMs: Date.now() - writeStartedAt,
+          totalDurationMs: Date.now() - startedAt,
+        });
+        tcpLog("[TCP END SENT]", {
+          totalDurationMs: Date.now() - startedAt,
+        });
+        socket.end();
+      });
+
+      if (!writeAccepted) {
+        tcpLog("[TCP WRITE BACKPRESSURE]", {
+          bytes: payload.length,
+        }, true);
+      }
+    });
+  });
+}
+
+export async function printRawEzpl(rawCommand, options = {}) {
+  const transport = options.transport || GODEX_PRINT_TRANSPORTS.WINDOWS_SPOOLER;
+
+  if (transport === GODEX_PRINT_TRANSPORTS.TCP_9100) {
+    return sendRawToTcpPrinter(rawCommand, options.host, options.port || 9100, options.timeoutMs || 5000);
+  }
+
+  if (transport === GODEX_PRINT_TRANSPORTS.WINDOWS_SPOOLER) {
+    return sendRawToWindowsPrinter(rawCommand, options.windowsPrinterName);
+  }
+
+  throw new Error(`Transporte Godex no soportado: ${transport}`);
 }
