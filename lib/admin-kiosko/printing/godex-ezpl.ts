@@ -112,7 +112,7 @@ function qrPayload(input: GodexTraceabilityLabelInput) {
 function textCommand(x: number, y: number, value: string, options?: { width?: number; height?: number; max?: number }) {
   const width = options?.width ?? 1;
   const height = options?.height ?? 1;
-  return `AA,${x},${y},1,${width},${height},0,0,${sanitizeGodexEzplText(value, options?.max ?? 42)}`;
+  return `AA,${x},${y},1,${width},${height},0,${sanitizeGodexEzplText(value, options?.max ?? 42)}`;
 }
 
 function lineCommand(x1: number, y1: number, x2: number, y2: number, thickness = 2) {

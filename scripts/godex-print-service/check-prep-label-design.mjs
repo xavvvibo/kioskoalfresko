@@ -30,13 +30,15 @@ assert.equal(lines[lines.length - 1], "E");
 assert.equal(isValidGodex80x50Ezpl(command), true);
 assert.equal(command.includes("GUACAMOLE"), true);
 assert.equal(command.includes(batchCode), true);
-assert.equal(command.includes(`ERP:prep_batch:${batchCode}`), true);
-assert.equal(command.includes("QRCODE"), true);
+assert.equal(command.includes("GW,"), true);
+assert.equal(command.includes("QRCODE"), false);
 assert.equal(/(^|[,\s])0\.(?=[,\s]|$)/.test(visiblePayload), false);
 assert.equal(command.includes("undefined"), false);
 assert.equal(command.includes("null"), false);
 assert.equal(command.includes("sourceId"), false);
 assert.equal(lines.some((line) => /AA,\d+,\d+,1,\d+,\d+,0,0,$/.test(line)), false);
+assert.equal(lines.some((line) => /AA,\d+,\d+,1,\d+,\d+,0,0,/.test(line)), false);
+assert.equal(lines.some((line) => /AA,\d+,\d+,1,\d+,\d+,0,[^,]/.test(line)), true);
 
 console.info("[PREP LABEL DESIGN CHECK OK]", {
   batchCode,

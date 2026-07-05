@@ -14,6 +14,7 @@
     "godex:test-label": "node scripts/godex-print-service/test-label.mjs",
     "godex:test-label:tcp": "node scripts/godex-print-service/test-label-tcp.mjs",
     "godex:test-label:tcp:minimal": "node scripts/godex-print-service/test-label-tcp-minimal.mjs",
+    "godex:test-label:qr": "node scripts/godex-print-service/test-label-qr.mjs",
     "godex:check-production-label:auto": "node scripts/godex-print-service/check-production-label-auto.mjs",
     "godex:check-prep-label-design": "node scripts/godex-print-service/check-prep-label-design.mjs",
     "godex:list-printers": "node scripts/godex-print-service/list-printers.mjs"
@@ -23,6 +24,7 @@
     "next": "16.2.4",
     "openai": "^6.45.0",
     "pdfjs-dist": "^6.0.227",
+    "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },

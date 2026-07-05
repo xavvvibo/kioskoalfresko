@@ -810,6 +810,22 @@ npm run godex:test-label:tcp:minimal
 
 La prueba minima envia solo texto grande `TEST GODEX`, sin QR, sin barcode y con una sola copia. Ambos scripts imprimen el EZPL completo en consola antes de enviarlo.
 
+Prueba fisica de QR:
+
+```powershell
+npm run godex:test-label:qr
+```
+
+La GoDEX G500 validada no imprime QR nativo `QRCODE`, por lo que produccion usa QR como bitmap monocromo 1-bit.
+
+Sintaxis grafica usada:
+
+```text
+GW,x,y,widthBytes,height,dataHex
+```
+
+`dataHex` contiene el QR generado en Node con `qrcode`, convertido a filas de bits MSB-first. Si falla la generacion del QR, el generador omite el grafico y la etiqueta sigue imprimiendo texto/lote.
+
 Test real por cola:
 
 ```powershell
