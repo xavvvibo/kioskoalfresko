@@ -165,6 +165,16 @@ export type ProductionBatchCreatedPayload = {
   sourceInventoryLotId?: string;
 };
 
+export type ProductionBatchConsumedPayload = {
+  batchId: string;
+  batchCode: string;
+  recipeId?: string;
+  recipeName: string;
+  quantity: number;
+  unit?: string;
+  stockMutation: false;
+};
+
 export type FinishedProductLotCreatedPayload = {
   productionBatchId: string;
   inventoryLotId: string;
@@ -259,6 +269,7 @@ export type AdminKioskoDomainEvent =
   | DomainEventEnvelope<"InventoryLotCreated", InventoryLotCreatedPayload>
   | DomainEventEnvelope<"InventoryLotConsumed", InventoryLotConsumedPayload>
   | DomainEventEnvelope<"ProductionBatchCreated", ProductionBatchCreatedPayload>
+  | DomainEventEnvelope<"ProductionBatchConsumed", ProductionBatchConsumedPayload>
   | DomainEventEnvelope<"FinishedProductLotCreated", FinishedProductLotCreatedPayload>
   | DomainEventEnvelope<"LabelPrepared", LabelPreparedPayload>
   | DomainEventEnvelope<"LabelPrinted", LabelPrintedPayload>

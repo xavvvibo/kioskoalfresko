@@ -9,6 +9,7 @@ export type * from "./repositories/legacy-core";
 
 export * from "./repositories/accounting.repository";
 export * from "./repositories/appcc.repository";
+export * from "./repositories/batch-consumption.repository";
 export * from "./repositories/dashboard.repository";
 export * from "./repositories/documents.repository";
 export * from "./repositories/document-import.repository";

@@ -33,6 +33,7 @@ import {
   createLabelRecord,
   createProductionBatch,
   createProductionMovement,
+  registerBatchConsumption as registerBatchConsumptionRecord,
   generateFinishedProductLabel,
   getInventoryProductById,
   ensureSupplierRecord,
@@ -1282,6 +1283,47 @@ export async function saveProductionMovementAction(formData: FormData) {
   });
 
   redirectAfterSave("/admin-kiosko/produccion", result);
+}
+
+export async function registerBatchConsumption(formData: FormData) {
+  await requireAdminSession();
+
+  const batchId = text(formData, "batch_id");
+  const result = await registerBatchConsumptionRecord({
+    batchId,
+    recipeId: text(formData, "recipe_id"),
+    recipeName: text(formData, "recipe_name"),
+    quantity: requiredNumber(formData, "quantity"),
+    unit: text(formData, "unit"),
+    consumedAt: `${text(formData, "consumed_date") || todayMadrid()} ${text(formData, "consumed_time") || timeMadrid()}`,
+    consumedBy: text(formData, "consumed_by") || "F. Javier Bocanegra Sanjuan",
+    notes: text(formData, "notes"),
+  });
+
+  revalidatePath(`/admin-kiosko/produccion/lotes/${batchId}`);
+  revalidatePath("/admin-kiosko/produccion");
+  revalidatePath("/admin-kiosko/trazabilidad");
+
+  if (!result.ok) {
+    redirect(`/admin-kiosko/produccion/lotes/${batchId}?error=${encodeURIComponent(result.error.slice(0, 240))}`);
+  }
+
+  await emitDomainEventSafe(createDomainEvent("ProductionBatchConsumed", {
+    source: "production",
+    correlationId: result.data.id,
+    trace: { productionBatchId: result.data.batchId },
+    payload: {
+      batchId: result.data.batchId,
+      batchCode: result.data.batchCode,
+      recipeId: result.data.recipeId || undefined,
+      recipeName: result.data.recipeName,
+      quantity: result.data.quantity,
+      unit: result.data.unit,
+      stockMutation: false,
+    },
+  }));
+
+  redirect(`/admin-kiosko/produccion/lotes/${batchId}?saved=consumption`);
 }
 
 export async function saveInternalRecipeAction(formData: FormData) {

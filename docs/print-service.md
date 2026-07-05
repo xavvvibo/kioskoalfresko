@@ -343,8 +343,72 @@ Desde la lista de lotes internos en `/admin-kiosko/produccion` se puede abrir `V
 - QR interno preparado mediante `ERP:prep_batch:<lote>` y ruta privada `/admin-kiosko/qr/[value]`.
 - QR fisico experimental: se puede probar manualmente, pero no queda activado por defecto.
 - Checklist inspeccion visible en la ficha del lote para comprobar nombre, ELAB, CAD, lote, responsable, conservacion, etiqueta impresa y resolucion del QR.
+- Consumo logico de lotes preparado en ficha privada sin descuento real de stock.
 - Produccion automatica sin QR por defecto: `includeQr: false` se mantiene en el flujo operativo.
 - Etiqueta manual desde `/admin-kiosko/etiquetas-prep` queda como plan B si hace falta reimprimir o resolver una urgencia.
+
+### Consumo de lotes
+
+La fase actual introduce la entidad logica `BatchConsumption` para preparar el ciclo de vida completo de subelaboraciones sin tocar schema Supabase.
+
+Modelo logico:
+
+```text
+id
+batchId
+batchCode
+recipeId
+recipeName
+quantity
+unit
+consumedAt
+consumedBy
+notes
+status
+```
+
+Implementacion temporal:
+
+- `BatchConsumption` se proyecta desde `admin_production_movements`.
+- Los nuevos consumos usan `movement_type = consumo_logico`.
+- El payload especifico del consumo se guarda en `observations` como JSON interno.
+- No se llama a `createProductionMovement`, porque esa funcion descuenta cantidad y puede aplicar movimiento de inventario.
+- No se modifica `output_quantity`, inventario, POS, OCR, etiquetas, QR ni bridge.
+- Cuando exista tabla definitiva de consumos, solo debe cambiar el repositorio `batch-consumption.repository.ts`.
+
+Ejemplo operativo:
+
+```text
+Lote KA-040726-001 · GUACAMOLE
+Consumo: 2 kg
+Receta destino: 10 Bocadillos Mexicanos
+Estado: registered
+Stock real: sin modificar en esta fase
+```
+
+La ficha del lote muestra:
+
+- tabla `Consumos`;
+- fecha;
+- receta;
+- cantidad;
+- usuario;
+- estado;
+- resumen simulado de cantidad producida, consumida y pendiente.
+
+El resumen de vida del lote es simulado mientras no exista tabla definitiva ni descuento real de stock. Sirve para validar trazabilidad y UX operativa.
+
+Timeline previsto:
+
+```text
+Produccion registrada
+Etiqueta GoDEX enviada/impresa/error
+APPCC disponible
+Consumo registrado
+Consumo completo
+```
+
+`Consumo completo` aparece cuando el consumo logico acumulado alcanza o supera la cantidad producida simulada.
 
 El valor QR interno queda preparado en el payload de etiquetas profesionales:
 

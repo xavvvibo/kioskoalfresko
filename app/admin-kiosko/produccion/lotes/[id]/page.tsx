@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { getProductionBatchById, getRecentPrintJobs } from "@/lib/admin-kiosko/database";
+import { registerBatchConsumption } from "@/app/admin-kiosko/actions";
 import {
   buildProductionBatchTraceability,
   printJobMatchesProductionBatch,
@@ -55,6 +56,24 @@ function configuredAppBaseUrl() {
   return (process.env.NEXT_PUBLIC_APP_BASE_URL || "").trim().replace(/\/+$/, "");
 }
 
+function todayMadrid() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function timeMadrid() {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Madrid",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date());
+}
+
 function EmptyState({ children }: { children: React.ReactNode }) {
   return <p className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-400">{children}</p>;
 }
@@ -95,6 +114,9 @@ export default async function ProductionBatchDetailPage({
   const qrUrl = appBaseUrl && qrRoute ? `${appBaseUrl}${qrRoute}` : "";
   const latestPrintJob = [...productionBatch.printJobs]
     .sort((a, b) => (b.printedAt || b.createdAt).localeCompare(a.printedAt || a.createdAt))[0];
+  const currentDate = todayMadrid();
+  const currentTime = timeMadrid();
+  const currentUser = "F. Javier Bocanegra Sanjuan";
   const inspectionChecklist = [
     { label: "Nombre visible", value: productionBatch.recipeName, ok: Boolean(productionBatch.recipeName) },
     { label: "ELAB visible", value: productionBatch.productionDateTime || "-", ok: Boolean(productionBatch.productionDateTime) },
@@ -305,18 +327,99 @@ export default async function ProductionBatchDetailPage({
               </div>
 
               <div className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
-                <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Consumo posterior</h2>
-                <div className="mt-4 grid gap-3">
-                  {productionBatch.consumptions.map((consumption) => (
-                    <article key={consumption.id} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
-                      <p className="font-black text-white">{consumption.type} · {consumption.dateTime || "-"}</p>
-                      <p className="mt-1">{consumption.quantity ?? 0} {consumption.unit}</p>
-                      {consumption.detail ? <p className="mt-1 text-xs text-stone-400">{consumption.detail}</p> : null}
-                    </article>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Vida del lote</h2>
+                    <p className="mt-2 text-sm text-stone-400">Resumen simulado: no descuenta stock real en esta fase.</p>
+                  </div>
+                  <details className="group relative">
+                    <summary className="w-fit cursor-pointer list-none rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white marker:hidden">
+                      Registrar consumo
+                    </summary>
+                    <div className="absolute right-0 z-20 mt-3 w-[min(88vw,28rem)] rounded-[1.4rem] border border-white/15 bg-[#0d0d0d] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
+                      <form action={registerBatchConsumption} className="grid gap-3">
+                        <input type="hidden" name="batch_id" value={productionBatch.id} />
+                        <input type="hidden" name="consumed_by" value={currentUser} />
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Receta</label>
+                          <input name="recipe_name" required placeholder="Bocadillo Mexicano" className="mt-2 w-full rounded-xl border border-white/12 bg-white px-3 py-2 text-sm text-stone-950 outline-none focus:border-[#d94b2b]" />
+                        </div>
+                        <input name="recipe_id" placeholder="Recipe ID opcional" className="rounded-xl border border-white/12 bg-white px-3 py-2 text-sm text-stone-950 outline-none focus:border-[#d94b2b]" />
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Cantidad</label>
+                            <input name="quantity" required inputMode="decimal" placeholder="1" className="mt-2 w-full rounded-xl border border-white/12 bg-white px-3 py-2 text-sm text-stone-950 outline-none focus:border-[#d94b2b]" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Unidad</label>
+                            <input name="unit" defaultValue={productionBatch.unit} className="mt-2 w-full rounded-xl border border-white/12 bg-white px-3 py-2 text-sm text-stone-950 outline-none focus:border-[#d94b2b]" />
+                          </div>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <input type="date" name="consumed_date" defaultValue={currentDate} className="rounded-xl border border-white/12 bg-white px-3 py-2 text-sm text-stone-950 outline-none focus:border-[#d94b2b]" />
+                          <input type="time" name="consumed_time" defaultValue={currentTime} className="rounded-xl border border-white/12 bg-white px-3 py-2 text-sm text-stone-950 outline-none focus:border-[#d94b2b]" />
+                        </div>
+                        <textarea name="notes" placeholder="Notas" rows={3} className="rounded-xl border border-white/12 bg-white px-3 py-2 text-sm text-stone-950 outline-none focus:border-[#d94b2b]" />
+                        <p className="text-xs text-stone-400">Usuario actual: {currentUser}</p>
+                        <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Guardar consumo logico</button>
+                      </form>
+                    </div>
+                  </details>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  {[
+                    ["Cantidad producida", `${productionBatch.lifeSummary.producedQuantity} ${productionBatch.lifeSummary.unit}`],
+                    ["Cantidad consumida", `${productionBatch.lifeSummary.consumedQuantity} ${productionBatch.lifeSummary.unit}`],
+                    ["Cantidad pendiente", `${productionBatch.lifeSummary.pendingQuantity} ${productionBatch.lifeSummary.unit}`],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-[1rem] border border-white/10 bg-white/6 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-stone-400">{label}</p>
+                      <p className="mt-2 text-lg font-black text-white">{value}</p>
+                    </div>
                   ))}
-                  {!productionBatch.consumptions.length ? <EmptyState>Sin consumo posterior registrado. La arquitectura queda preparada para enlazar elaboraciones futuras.</EmptyState> : null}
                 </div>
               </div>
+            </section>
+
+            <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Consumos</h2>
+                  <p className="mt-2 text-sm text-stone-400">Consumo logico de subelaboraciones. No modifica stock todavia.</p>
+                </div>
+              </div>
+              {productionBatch.consumptions.length ? (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">
+                      <tr>
+                        <th className="px-3 py-2">Fecha</th>
+                        <th className="px-3 py-2">Receta</th>
+                        <th className="px-3 py-2">Cantidad</th>
+                        <th className="px-3 py-2">Usuario</th>
+                        <th className="px-3 py-2">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/10 text-stone-200">
+                      {productionBatch.consumptions.map((consumption) => (
+                        <tr key={consumption.id}>
+                          <td className="px-3 py-3 font-mono text-xs">{shortDateTime(consumption.consumedAt)}</td>
+                          <td className="px-3 py-3 font-black text-white">
+                            {consumption.recipeName}
+                            {consumption.notes ? <span className="mt-1 block text-xs font-normal text-stone-400">{consumption.notes}</span> : null}
+                          </td>
+                          <td className="px-3 py-3">{consumption.quantity} {consumption.unit}</td>
+                          <td className="px-3 py-3">{consumption.consumedBy || "-"}</td>
+                          <td className="px-3 py-3">
+                            <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-stone-100">{consumption.status}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : <EmptyState>Sin consumos registrados</EmptyState>}
             </section>
           </div>
 

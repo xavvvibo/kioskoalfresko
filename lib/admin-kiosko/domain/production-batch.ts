@@ -1,3 +1,4 @@
+import { getBatchConsumptionsFromBatch, type BatchConsumption } from "../repositories/batch-consumption.repository";
 import type { PrintJob, PrintJobPayload } from "../repositories/print-jobs.repository";
 import type { ProductionBatch as LegacyProductionBatch, ProductionMovement } from "../repositories/legacy-core";
 
@@ -49,14 +50,12 @@ export type ProductionBatchAppccRecord = {
   createdAt?: string;
 };
 
-export type ProductionBatchConsumption = {
-  id: string;
-  dateTime: string;
-  type: string;
-  quantity: number | null;
+export type ProductionBatchLifeSummary = {
+  producedQuantity: number;
+  consumedQuantity: number;
+  pendingQuantity: number;
   unit: string;
-  responsible: string;
-  detail: string;
+  simulated: boolean;
 };
 
 export type ProductionBatchTimelineEvent = {
@@ -86,11 +85,12 @@ export type ProductionBatch = {
   printJobs: ProductionBatchPrintJob[];
   documents: ProductionBatchDocument[];
   appcc: ProductionBatchAppccRecord[];
-  consumptions: ProductionBatchConsumption[];
+  consumptions: BatchConsumption[];
+  lifeSummary: ProductionBatchLifeSummary;
   timeline: ProductionBatchTimelineEvent[];
 };
 
-const CONSUMPTION_MOVEMENT_TYPES = ["consumo", "personal", "invitacion", "degustacion", "merma"];
+const CONSUMPTION_MOVEMENT_TYPES = ["consumo", "consumo_logico", "personal", "invitacion", "degustacion", "merma"];
 const BLOCKED_STATES = ["bloqueado", "blocked"];
 const DISCARDED_STATES = ["descartado", "mermado", "discarded"];
 const CONSUMED_STATES = ["consumido", "consumed", "personal"];
@@ -254,18 +254,17 @@ function mapAppcc(batch: LegacyProductionBatch): ProductionBatchAppccRecord[] {
   return appcc;
 }
 
-function mapConsumptions(batch: LegacyProductionBatch): ProductionBatchConsumption[] {
-  return (batch.movements || [])
-    .filter((movement) => CONSUMPTION_MOVEMENT_TYPES.includes(cleanText(movement.movement_type)))
-    .map((movement) => ({
-      id: movement.id,
-      dateTime: dateTimeFromParts(movement.movement_date, movement.movement_time),
-      type: movement.movement_type || "consumo",
-      quantity: movement.quantity,
-      unit: movement.unit || batch.output_unit || "ud",
-      responsible: movement.responsible || "",
-      detail: movement.reason || movement.observations || movement.to_state || "",
-    }));
+function buildLifeSummary(batch: LegacyProductionBatch, consumptions: BatchConsumption[]): ProductionBatchLifeSummary {
+  const producedQuantity = Number(batch.output_quantity || 0);
+  const consumedQuantity = consumptions.reduce((total, consumption) => total + Number(consumption.quantity || 0), 0);
+
+  return {
+    producedQuantity,
+    consumedQuantity,
+    pendingQuantity: Math.max(0, producedQuantity - consumedQuantity),
+    unit: batch.output_unit || consumptions[0]?.unit || "ud",
+    simulated: true,
+  };
 }
 
 function movementTone(movement: ProductionMovement): ProductionBatchTimelineEvent["tone"] {
@@ -275,7 +274,7 @@ function movementTone(movement: ProductionMovement): ProductionBatchTimelineEven
   return "success";
 }
 
-function buildTimeline(batch: LegacyProductionBatch, printJobs: ProductionBatchPrintJob[], appcc: ProductionBatchAppccRecord[]): ProductionBatchTimelineEvent[] {
+function buildTimeline(batch: LegacyProductionBatch, printJobs: ProductionBatchPrintJob[], appcc: ProductionBatchAppccRecord[], consumptions: BatchConsumption[], lifeSummary: ProductionBatchLifeSummary): ProductionBatchTimelineEvent[] {
   const events: ProductionBatchTimelineEvent[] = [{
     id: `production-${batch.id}`,
     occurredAt: dateTimeFromParts(batch.production_date, batch.production_time) || batch.created_at,
@@ -285,6 +284,8 @@ function buildTimeline(batch: LegacyProductionBatch, printJobs: ProductionBatchP
   }];
 
   (batch.movements || []).forEach((movement) => {
+    if (CONSUMPTION_MOVEMENT_TYPES.includes(cleanText(movement.movement_type))) return;
+
     events.push({
       id: `movement-${movement.id}`,
       occurredAt: dateTimeFromParts(movement.movement_date, movement.movement_time) || movement.created_at,
@@ -314,6 +315,26 @@ function buildTimeline(batch: LegacyProductionBatch, printJobs: ProductionBatchP
     });
   });
 
+  consumptions.forEach((consumption) => {
+    events.push({
+      id: `consumption-${consumption.id}`,
+      occurredAt: consumption.consumedAt,
+      label: "Consumo registrado",
+      detail: `${consumption.recipeName} · ${consumption.quantity} ${consumption.unit}`,
+      tone: "neutral",
+    });
+  });
+
+  if (consumptions.length && lifeSummary.pendingQuantity <= 0) {
+    events.push({
+      id: `consumption-complete-${batch.id}`,
+      occurredAt: consumptions[0].consumedAt,
+      label: "Consumo completo",
+      detail: `Consumo logico acumulado: ${lifeSummary.consumedQuantity} ${lifeSummary.unit}`,
+      tone: "warning",
+    });
+  }
+
   return events.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
 }
 
@@ -323,6 +344,8 @@ export function buildProductionBatchTraceability(batch: LegacyProductionBatch, m
   const expiryDateTime = batch.expiry_date ? dateTimeFromParts(batch.expiry_date, batch.production_time) : null;
   const printJobs = mapPrintJobs(matchingPrintJobs);
   const appcc = mapAppcc(batch);
+  const consumptions = getBatchConsumptionsFromBatch(batch);
+  const lifeSummary = buildLifeSummary(batch, consumptions);
 
   return {
     id: batch.id,
@@ -343,7 +366,8 @@ export function buildProductionBatchTraceability(batch: LegacyProductionBatch, m
     printJobs,
     documents: mapDocuments(batch),
     appcc,
-    consumptions: mapConsumptions(batch),
-    timeline: buildTimeline(batch, printJobs, appcc),
+    consumptions,
+    lifeSummary,
+    timeline: buildTimeline(batch, printJobs, appcc, consumptions, lifeSummary),
   };
 }
