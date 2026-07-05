@@ -1,35 +1,148 @@
 # PrintService ERP -> GoDEX G500
 
-## Arquitectura validada
+## Arquitectura final validada
 
-La impresion remota de la GoDEX G500 funciona en produccion. El ERP crea filas en `public.print_jobs`; el bridge Windows del kiosco lee Supabase, reclama trabajos y envia la impresion a la GoDEX G500.
-
-```text
-ERP backend -> public.print_jobs -> bridge Windows del kiosco -> GoDEX G500
-```
-
-No tocar el bridge Windows salvo mantenimiento del kiosco. El ERP no usa drivers locales, no abre conexion TCP con la impresora y no expone `SUPABASE_SERVICE_ROLE_KEY` al frontend.
-
-## Configuracion
-
-Printer key real:
+La impresion remota de la GoDEX G500 funciona en produccion. El ERP crea filas en `public.print_jobs`; el bridge standalone del kiosco consume la API publica del ERP, reclama trabajos y envia la impresion a la GoDEX G500 por TCP RAW 9100.
 
 ```text
-kiosko_godex_g500
+ERP backend -> public.print_jobs -> API publica ERP -> bridge kiosco -> TCP RAW 9100 -> GoDEX G500 80x50
 ```
 
-Variables necesarias en backend:
+Datos finales validados:
+
+- `printer_key`: `kiosko_godex_g500`
+- IP GoDEX G500: `192.168.1.38`
+- Puerto RAW: `9100`
+- Transporte: `tcp_9100`
+- Etiqueta fisica: `80x50 mm`
+
+El ERP no usa drivers locales, no abre conexion TCP con la impresora y no expone `SUPABASE_SERVICE_ROLE_KEY` al frontend. El bridge no debe depender de `localhost`; debe apuntar a `ERP_API_URL=https://kioskoalfresko.es` o la URL publica vigente del ERP.
+
+## Variables validas
+
+Variables del bridge standalone:
 
 ```env
-SUPABASE_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-PRINT_JOBS_API_TOKEN=...
+ERP_API_URL=https://kioskoalfresko.es
+ERP_API_TOKEN=...
+PRINTER_KEY=kiosko_godex_g500
+GODEX_PRINT_TRANSPORT=tcp_9100
+GODEX_PRINTER_HOST=192.168.1.38
+GODEX_PRINTER_PORT=9100
 ```
 
-Todos los endpoints de impresion exigen:
+Variables opcionales del bridge:
 
-```http
-Authorization: Bearer PRINT_JOBS_API_TOKEN
+```env
+GODEX_TCP_TIMEOUT_MS=5000
+PRINT_DEBUG_TCP=false
+PRINT_DEBUG_EZPL=false
+BRIDGE_HEALTH_HOST=127.0.0.1
+BRIDGE_HEALTH_PORT=8787
+POLL_INTERVAL_MS=2000
+MAX_JOBS_PER_POLL=1
+GODEX_DRY_RUN=false
+DRY_RUN_MARK_PRINTED=false
+```
+
+Variables antiguas no validas:
+
+- `GODEX_HOST`
+- `GODEX_PORT`
+
+Si aparecen en el PC del kiosco, eliminarlas. El caso validado que fallo fue un bridge antiguo con `GODEX_HOST=192.168.1.35`.
+
+Variables backend del ERP:
+
+- `PRINT_JOBS_API_TOKEN`: token que exige la API publica de impresion.
+- `ERP_API_TOKEN`: mismo valor en el bridge para autenticarse contra el ERP.
+- `SUPABASE_SERVICE_ROLE_KEY`: solo en servidor ERP, nunca en navegador ni bridge si no hace falta.
+
+## Carga de entorno
+
+El bridge y scripts GoDEX cargan automaticamente:
+
+1. `.env`
+2. `.env.local`
+
+No hace falta ejecutar `export ...` para arrancar el bridge. En produccion del PC del kiosco usar `.env.local`.
+
+## Instalacion Windows
+
+PowerShell como administrador:
+
+```powershell
+cd C:\kioskoalfresko
+powershell -ExecutionPolicy Bypass -File scripts\godex-print-service\install-service.ps1 -NssmExe C:\nssm\win64\nssm.exe
+```
+
+El instalador:
+
+- ejecuta `npm install`;
+- copia `.env.example` a `.env.local` si no existe;
+- verifica conectividad TCP con `192.168.1.38:9100`;
+- registra `KioskoGodexBridge` con NSSM;
+- configura reinicio automatico;
+- arranca el servicio;
+- ejecuta `npm run godex:doctor`.
+
+## Instalacion Mac
+
+Uso de desarrollo o diagnostico:
+
+```bash
+cp .env.example .env.local
+npm install
+npm run godex:doctor
+npm run godex:bridge:prod
+```
+
+En Mac no instalar servicio Windows. Para pruebas TCP directas desde una red con acceso a la GoDEX:
+
+```bash
+npm run godex:test-label:tcp:minimal
+npm run godex:test-label:tcp
+```
+
+## Health check y doctor
+
+Health local del bridge:
+
+```text
+GET http://127.0.0.1:8787/health
+```
+
+Doctor no destructivo:
+
+```bash
+npm run godex:doctor
+```
+
+Comprueba configuracion, ERP, token, TCP impresora, `printer_key`, health del bridge, polling, version y ultima impresion si hay credenciales Supabase de servidor disponibles.
+
+## Recuperacion automatica
+
+Cuando el bridge consulta `/api/print-jobs/pending`, el ERP recupera automaticamente jobs en `error` por conectividad:
+
+- `ECONNREFUSED`
+- `timeout`
+- `timed out`
+- `ETIMEDOUT`
+- `EHOSTUNREACH`
+- `ENETUNREACH`
+- `ECONNRESET`
+
+Tras `PRINT_JOBS_STALE_MINUTES` minutos, esos jobs vuelven a `queued` y quedan disponibles para que el bridge los reclame. No hay intervencion manual ni cambio de schema.
+
+## Flujo ERP -> GoDEX
+
+```text
+ERP crea print_job con raw_command EZPL
+  -> bridge llama GET /api/print-jobs/pending?printer_key=kiosko_godex_g500
+  -> API reclama job
+  -> bridge valida EZPL
+  -> bridge envia por TCP 192.168.1.38:9100
+  -> bridge marca printed o error
 ```
 
 ## API interna
@@ -645,14 +758,13 @@ curl -X POST "http://localhost:3000/api/print-jobs/test-prep-label?qr=1" \
   -H "Authorization: Bearer PRINT_JOBS_API_TOKEN"
 ```
 
-## Impresion Godex por TCP/IP directa
+## Impresion GoDEX por TCP/IP directa
 
-La GoDEX G500 queda soportada por dos transportes en el bridge local:
+La GoDEX G500 queda operativa en produccion con un unico transporte vigente:
 
-- `windows_spooler`: modo historico por cola de impresion Windows.
 - `tcp_9100`: envio RAW EZPL directo por socket TCP al puerto 9100 de la impresora.
 
-Si `GODEX_PRINT_TRANSPORT` no esta definido, el bridge usa `windows_spooler` para mantener compatibilidad con instalaciones existentes.
+El modo historico por spooler Windows ya no forma parte de la configuracion de produccion del kiosco.
 
 Configuracion validada en red:
 
@@ -663,7 +775,7 @@ PC bridge Windows: 192.168.1.39
 Etiqueta fisica: 80x50 mm
 ```
 
-Variables `.env` para TCP/IP:
+Variables `.env.local` para TCP/IP:
 
 ```env
 GODEX_PRINT_TRANSPORT=tcp_9100
@@ -671,13 +783,6 @@ GODEX_PRINTER_HOST=192.168.1.38
 GODEX_PRINTER_PORT=9100
 GODEX_TCP_TIMEOUT_MS=5000
 PRINT_DEBUG_EZPL=true
-```
-
-Variables `.env` para spooler Windows:
-
-```env
-GODEX_PRINT_TRANSPORT=windows_spooler
-WINDOWS_PRINTER_NAME=GoDEX G500
 ```
 
 Dry-run sigue teniendo prioridad sobre cualquier transporte:
@@ -738,19 +843,7 @@ Si A imprime y B no imprime, el bridge no esta enviando el `raw_command` esperad
 Arrancar bridge con TCP/IP:
 
 ```powershell
-$env:GODEX_PRINT_TRANSPORT="tcp_9100"
-$env:GODEX_PRINTER_HOST="192.168.1.38"
-$env:GODEX_PRINTER_PORT="9100"
-$env:GODEX_TCP_TIMEOUT_MS="5000"
-npm run godex:bridge
-```
-
-Arrancar bridge con spooler Windows:
-
-```powershell
-$env:GODEX_PRINT_TRANSPORT="windows_spooler"
-$env:WINDOWS_PRINTER_NAME="GoDEX G500"
-npm run godex:bridge
+npm run godex:bridge:prod
 ```
 
 El bridge registra por job:
@@ -760,7 +853,6 @@ El bridge registra por job:
 - `printer_key`;
 - transporte usado;
 - host/puerto cuando usa `tcp_9100`;
-- `WINDOWS_PRINTER_NAME` cuando usa `windows_spooler`;
 - claves recibidas en el job;
 - claves de `payload_json`, `payload_json.data` y `payload_json.metadata`;
 - tamano del EZPL en bytes;

@@ -1,43 +1,17 @@
-import fs from "node:fs/promises";
 import http from "node:http";
 import net from "node:net";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { loadGodexEnv, packageVersion } from "./env.mjs";
 import { GODEX_PRINT_TRANSPORTS, printRawEzpl } from "./raw-printer.mjs";
 
-const serviceDir = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(serviceDir, "../..");
-
-async function loadEnvFile(filePath, { override = false } = {}) {
-  const content = await fs.readFile(filePath, "utf8").catch(() => "");
-  for (const line of content.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
-    const [key, ...rest] = trimmed.split("=");
-    const value = rest.join("=").trim().replace(/^"|"$/g, "");
-    if (override || !process.env[key]) process.env[key] = value;
-  }
-}
-
-async function packageVersion() {
-  const content = await fs.readFile(path.join(repoRoot, "package.json"), "utf8").catch(() => "");
-  if (!content) return "unknown";
-  return JSON.parse(content).version || "unknown";
-}
-
-await loadEnvFile(path.join(serviceDir, ".env"));
-await loadEnvFile(path.join(process.cwd(), ".env"));
-await loadEnvFile(path.join(serviceDir, "bridge.env"), { override: true });
-await loadEnvFile(path.join(process.cwd(), "bridge.env"), { override: true });
+const loadedEnvFiles = await loadGodexEnv();
 
 const bridgeVersion = process.env.BRIDGE_VERSION || process.env.npm_package_version || await packageVersion();
 
 const config = {
   erpApiUrl: (process.env.ERP_API_URL || "").replace(/\/$/, ""),
-  token: process.env.ERP_API_TOKEN || process.env.PRINT_JOBS_API_TOKEN || "",
-  printerKey: process.env.PRINTER_KEY || "godex_g500_kiosko",
-  transport: process.env.GODEX_PRINT_TRANSPORT || GODEX_PRINT_TRANSPORTS.WINDOWS_SPOOLER,
-  windowsPrinterName: process.env.WINDOWS_PRINTER_NAME || "GoDEX G500",
+  token: process.env.ERP_API_TOKEN || "",
+  printerKey: process.env.PRINTER_KEY || "kiosko_godex_g500",
+  transport: process.env.GODEX_PRINT_TRANSPORT || GODEX_PRINT_TRANSPORTS.TCP_9100,
   printerHost: process.env.GODEX_PRINTER_HOST || "",
   printerPort: Number(process.env.GODEX_PRINTER_PORT || 9100),
   tcpTimeoutMs: Number(process.env.GODEX_TCP_TIMEOUT_MS || 5000),
@@ -64,10 +38,9 @@ function assertConfig() {
   if (!config.erpApiUrl) missing.push("ERP_API_URL");
   if (!config.token) missing.push("ERP_API_TOKEN");
   if (!config.printerKey) missing.push("PRINTER_KEY");
-  if (![GODEX_PRINT_TRANSPORTS.WINDOWS_SPOOLER, GODEX_PRINT_TRANSPORTS.TCP_9100].includes(config.transport)) {
+  if (config.transport !== GODEX_PRINT_TRANSPORTS.TCP_9100) {
     throw new Error(`GODEX_PRINT_TRANSPORT no soportado: ${config.transport}`);
   }
-  if (config.transport === GODEX_PRINT_TRANSPORTS.WINDOWS_SPOOLER && !config.windowsPrinterName) missing.push("WINDOWS_PRINTER_NAME");
   if (config.transport === GODEX_PRINT_TRANSPORTS.TCP_9100 && !config.printerHost) missing.push("GODEX_PRINTER_HOST");
   if (config.transport === GODEX_PRINT_TRANSPORTS.TCP_9100 && (!Number.isFinite(config.printerPort) || config.printerPort <= 0)) missing.push("GODEX_PRINTER_PORT");
   if (missing.length) {
@@ -76,17 +49,12 @@ function assertConfig() {
 }
 
 function transportMeta() {
-  return config.transport === GODEX_PRINT_TRANSPORTS.TCP_9100
-    ? {
-        transport: config.transport,
-        host: config.printerHost,
-        port: config.printerPort,
-        timeoutMs: config.tcpTimeoutMs,
-      }
-    : {
-        transport: config.transport,
-        windowsPrinterName: config.windowsPrinterName,
-      };
+  return {
+    transport: config.transport,
+    host: config.printerHost,
+    port: config.printerPort,
+    timeoutMs: config.tcpTimeoutMs,
+  };
 }
 
 function objectKeys(value) {
@@ -188,14 +156,6 @@ async function checkApiHealth() {
 }
 
 async function checkPrinterTcpHealth() {
-  if (config.transport !== GODEX_PRINT_TRANSPORTS.TCP_9100) {
-    return {
-      ok: true,
-      skipped: true,
-      reason: "printer_health_tcp_only",
-    };
-  }
-
   const started = Date.now();
   return new Promise((resolve) => {
     const socket = new net.Socket();
@@ -236,6 +196,9 @@ async function healthPayload() {
     version: config.bridgeVersion,
     printerKey: config.printerKey,
     transport: config.transport,
+    polling: true,
+    pollIntervalMs: config.pollIntervalMs,
+    maxJobsPerPoll: config.maxJobsPerPoll,
     details: {
       api,
       printerTcp,
@@ -358,7 +321,6 @@ async function pollOnce() {
         } else {
           await printRawEzpl(job.raw_command, {
             transport: config.transport,
-            windowsPrinterName: config.windowsPrinterName,
             host: config.printerHost,
             port: config.printerPort,
             timeoutMs: config.tcpTimeoutMs,
@@ -418,6 +380,7 @@ logInfo("[PRINT BRIDGE START]", {
   erpApiUrl: config.erpApiUrl,
   printerKey: config.printerKey,
   version: config.bridgeVersion,
+  loadedEnvFiles,
   ...transportMeta(),
   pollIntervalMs: config.pollIntervalMs,
   dryRun: config.dryRun,

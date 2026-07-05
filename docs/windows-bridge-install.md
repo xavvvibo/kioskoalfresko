@@ -42,13 +42,13 @@ git pull
 npm install
 ```
 
-## 3. Crear `bridge.env`
+## 3. Crear `.env.local`
 
 Copiar el ejemplo:
 
 ```powershell
-copy scripts\godex-print-service\bridge.env.example bridge.env
-notepad bridge.env
+copy .env.example .env.local
+notepad .env.local
 ```
 
 Contenido esperado:
@@ -82,6 +82,7 @@ Desde `C:\kioskoalfresko`:
 npm run godex:test-label:tcp:minimal
 npm run godex:test-label:tcp
 npm run godex:bridge:prod
+npm run godex:doctor
 ```
 
 En otra ventana de PowerShell:
@@ -120,6 +121,17 @@ cd C:\kioskoalfresko
 powershell -ExecutionPolicy Bypass -File scripts\godex-print-service\install-service.ps1 -NssmExe C:\nssm\win64\nssm.exe
 ```
 
+Ese unico comando:
+
+- ejecuta `npm install`;
+- copia `.env.example` a `.env.local` si falta;
+- verifica conectividad TCP con `192.168.1.38:9100`;
+- registra el bridge como servicio NSSM;
+- configura reinicio automatico;
+- arranca el servicio;
+- ejecuta `npm run godex:doctor`;
+- muestra estado final.
+
 El instalador crea y arranca:
 
 - Servicio: `KioskoGodexBridge`
@@ -149,7 +161,7 @@ nssm start KioskoGodexBridge
 Invoke-RestMethod http://127.0.0.1:8787/health
 ```
 
-Si cambia `bridge.env.example`, revisar si hay variables nuevas y actualizar `bridge.env` manualmente.
+Si cambia `.env.example`, revisar si hay variables nuevas y actualizar `.env.local` manualmente.
 
 ## 8. Recuperacion tras reinicio del PC
 
@@ -193,7 +205,7 @@ Servicio arranca pero no imprime:
 
 - Ejecutar `npm run godex:test-label:tcp:minimal`.
 - Revisar `printer_key` en logs.
-- Activar temporalmente `PRINT_DEBUG_EZPL=true` en `bridge.env`.
+- Activar temporalmente `PRINT_DEBUG_EZPL=true` en `.env.local`.
 - Reiniciar servicio con `nssm restart KioskoGodexBridge`.
 
 ## 10. Comandos utiles

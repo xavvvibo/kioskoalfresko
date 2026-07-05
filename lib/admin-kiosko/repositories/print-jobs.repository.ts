@@ -291,8 +291,39 @@ export async function claimPendingPrintJobs(printerKey: string, limit = 1) {
 }
 
 export async function recoverStalePrintJobs(staleMinutes = 10): Promise<{ ok: true; data: LegacyPrintJob[] } | { ok: false; error: string }> {
-  void staleMinutes;
-  return { ok: true as const, data: [] as LegacyPrintJob[] };
+  const safeMinutes = Math.max(1, Math.min(120, Math.round(staleMinutes || 10)));
+  const retryBefore = new Date(Date.now() - safeMinutes * 60_000).toISOString();
+  const retryableErrorPattern = /ECONNREFUSED|timeout|timed out|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH|ECONNRESET/i;
+
+  const result = await adminSupabaseRequest<SupabasePrintJobRow[]>("print_jobs", {
+    method: "GET",
+    query: `?select=${selectPrintJob}&status=eq.error&updated_at=lte.${encodeURIComponent(retryBefore)}&order=updated_at.asc&limit=20`,
+  });
+
+  if (!result.ok) return result;
+
+  const retryable = result.data.filter((job) => retryableErrorPattern.test(cleanText(job.error)));
+  if (!retryable.length) return { ok: true as const, data: [] };
+
+  const recovered: LegacyPrintJob[] = [];
+  for (const job of retryable) {
+    const patch = await adminSupabaseRequest<SupabasePrintJobRow[]>("print_jobs", {
+      method: "PATCH",
+      query: `?select=${selectPrintJob}&id=eq.${encodeURIComponent(job.id)}&status=eq.error`,
+      body: JSON.stringify({
+        status: "queued",
+        claimed_at: null,
+        updated_at: new Date().toISOString(),
+        error: `Retry auto tras conectividad impresora: ${cleanText(job.error).slice(0, 900)}`,
+      }),
+      headers: { Prefer: "return=representation" },
+    });
+
+    if (!patch.ok) return patch;
+    if (patch.data[0]) recovered.push(toLegacyPrintJob(patch.data[0]));
+  }
+
+  return { ok: true as const, data: recovered };
 }
 
 export async function markPrintJobPrinted(id: string) {
