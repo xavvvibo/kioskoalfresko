@@ -2780,14 +2780,54 @@ const productionBatchSelect = "id,created_at,production_date,production_time,res
 const productionMovementSelect = "id,created_at,batch_id,movement_date,movement_time,movement_type,quantity,unit,from_state,to_state,reason,responsible,observations";
 const recipeSelect = "id,created_at,recipe_name,output_product,expected_yield,output_unit,unit_weight,expected_waste,final_weight,prep_time_minutes,shelf_life_refrigerated_hours,shelf_life_frozen_days,conservation_type,status,instructions,active";
 
-async function getProductionBatchById(id: string): Promise<DbResult<ProductionBatch | null>> {
+export async function getProductionBatchById(id: string): Promise<DbResult<ProductionBatch | null>> {
   if (!hasRequiredText(id)) return { ok: true, data: null };
   const result = await getRows<ProductionBatch>(
     "admin_production_batches",
     `?select=${productionBatchSelect}&id=eq.${encodeURIComponent(id)}&limit=1`,
   );
   if (!result.ok) return result;
-  return { ok: true, data: result.data[0] || null };
+  const batch = result.data[0];
+  if (!batch) return { ok: true, data: null };
+
+  const [movements, labels] = await Promise.all([
+    getRows<ProductionMovement>("admin_production_movements", `?select=${productionMovementSelect}&batch_id=eq.${encodeURIComponent(batch.id)}&order=movement_date.desc,created_at.desc&limit=80`),
+    getLabelRecordsByBatch(batch.batch_code || undefined),
+  ]);
+
+  return {
+    ok: true,
+    data: {
+      ...batch,
+      movements: movements.ok ? movements.data : [],
+      labels: labels.ok ? labels.data : [],
+    },
+  };
+}
+
+export async function getProductionBatchByBatchCode(batchCode: string): Promise<DbResult<ProductionBatch | null>> {
+  if (!hasRequiredText(batchCode)) return { ok: true, data: null };
+  const result = await getRows<ProductionBatch>(
+    "admin_production_batches",
+    `?select=${productionBatchSelect}&batch_code=eq.${encodeURIComponent(batchCode.trim())}&limit=1`,
+  );
+  if (!result.ok) return result;
+  const batch = result.data[0];
+  if (!batch) return { ok: true, data: null };
+
+  const [movements, labels] = await Promise.all([
+    getRows<ProductionMovement>("admin_production_movements", `?select=${productionMovementSelect}&batch_id=eq.${encodeURIComponent(batch.id)}&order=movement_date.desc,created_at.desc&limit=80`),
+    getLabelRecordsByBatch(batch.batch_code || undefined),
+  ]);
+
+  return {
+    ok: true,
+    data: {
+      ...batch,
+      movements: movements.ok ? movements.data : [],
+      labels: labels.ok ? labels.data : [],
+    },
+  };
 }
 
 async function findInventoryProductByProductionName(name?: string | null) {

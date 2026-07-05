@@ -640,6 +640,7 @@ export default async function ProduccionPage({
                       <section className="rounded-[1.3rem] border border-stone-950/10 bg-white p-4">
                         <h4 className="text-sm font-black uppercase tracking-[0.14em] text-stone-950">Acciones rápidas</h4>
                         <div className="mt-3 grid gap-3">
+                          <Link href={`/admin-kiosko/produccion/lotes/${batch.id}`} className="rounded-full border border-stone-950 bg-stone-950 px-5 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-white">Ver ficha</Link>
                           {movementActions.map((action) => (
                             <form key={action.type} action={saveProductionMovementAction} className="grid gap-2 rounded-xl border border-stone-950/10 bg-stone-50 p-3">
                               <input type="hidden" name="batch_id" value={batch.id} />

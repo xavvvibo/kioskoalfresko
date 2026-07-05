@@ -13,6 +13,8 @@ import {
   createProductionBatch,
   createProductionMovement,
   getInternalRecipes,
+  getProductionBatchByBatchCode,
+  getProductionBatchById,
   getProductionBatches,
   getProductionMaterialOptions,
   getProductionMetrics,
@@ -29,6 +31,8 @@ export {
   createProductionMovement,
   getInternalRecipes,
   getProductionBatches,
+  getProductionBatchByBatchCode,
+  getProductionBatchById,
   getProductionMetrics,
   getProductionTraceabilityRows,
 };

@@ -74,9 +74,20 @@ function lineCommand(x1: number, y1: number, x2: number, y2: number, thickness =
   return `Lo,${x1},${y1},${x2},${y2},${thickness}`;
 }
 
+function qrCommand(x: number, y: number, value: string) {
+  return `BQ,${x},${y},2,3,72,0,0,${payloadText(value, 240)}`;
+}
+
+function booleanFromPayload(value: unknown) {
+  return value === true || value === "true" || value === "1" || value === "on";
+}
+
 function generatePrepProfessionalEzpl(payload: LabelCommandPayload) {
   const data = payloadRecord(payload.data);
-  const prepName = payloadText(data.prepName || payload.title || payload.nombre_producto || "PREPARACION", 28);
+  const includeQr = booleanFromPayload(data.includeQr);
+  const qrValue = payloadText(data.qrUrl || data.qrValue || "", 240);
+  const canPrintQr = includeQr && Boolean(qrValue);
+  const prepName = payloadText(data.prepName || payload.title || payload.nombre_producto || "PREPARACION", canPrintQr ? 16 : 28);
   const productionDateTime = parseDateTimeInput(data.productionDateTime) || parseDateTimeInput(data.productionDate) || new Date();
   const shelfLifeDays = payloadNumber(data.shelfLifeDays);
   const expiryDateTime = parseDateTimeInput(data.expiryDateTime)
@@ -88,6 +99,37 @@ function generatePrepProfessionalEzpl(payload: LabelCommandPayload) {
   const brandName = payloadText(data.brandName || "KIOSKO ALFRESKO", 28);
   const elaboration = `ELAB ${formatLabelDateTime(productionDateTime) || payloadText(payload.line1, 24).replace(/^ELAB\s*/i, "")}`;
   const expiry = `CAD  ${expiryDateTime ? formatLabelDateTime(expiryDateTime) : payloadText(payload.line2, 24).replace(/^CAD\s*/i, "")}`;
+
+  if (canPrintQr) {
+    return [
+      "^Q50,3",
+      "^W80",
+      "^H10",
+      "^S4",
+      "^P1",
+      "^C1",
+      "^R0",
+      "~Q+0",
+      "^O0",
+      "^D0",
+      "^L",
+      textCommand(18, 16, prepName, { width: 2, height: 2, max: 16 }),
+      qrCommand(486, 14, qrValue),
+      lineCommand(18, 58, 470, 58, 2),
+      textCommand(18, 78, elaboration, { width: 2, height: 2, max: 24 }),
+      textCommand(18, 124, expiry, { width: 2, height: 2, max: 24 }),
+      lineCommand(18, 170, 620, 170, 2),
+      textCommand(18, 192, "LOTE", { width: 1, height: 1, max: 8 }),
+      textCommand(18, 218, batchCode, { width: 1, height: 2, max: 24 }),
+      textCommand(340, 192, "RESPONSABLE", { width: 1, height: 1, max: 16 }),
+      textCommand(340, 218, responsibleName, { width: 1, height: 1, max: 22 }),
+      lineCommand(18, 264, 620, 264, 2),
+      textCommand(18, 286, "CONSERVACION", { width: 1, height: 1, max: 18 }),
+      textCommand(18, 314, storageCondition, { width: 1, height: 1, max: 30 }),
+      textCommand(18, 360, brandName, { width: 2, height: 1, max: 24 }),
+      "E",
+    ].join("\n");
+  }
 
   return [
     "^Q50,3",

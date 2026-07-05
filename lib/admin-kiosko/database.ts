@@ -19,6 +19,7 @@ export * from "./repositories/inbox.repository";
 export * from "./repositories/labels.repository";
 export * from "./repositories/ocr.repository";
 export * from "./repositories/production.repository";
+export * from "./repositories/print-jobs.repository";
 export * from "./repositories/purchases.repository";
 export * from "./repositories/settings.repository";
 export * from "./repositories/suppliers.repository";

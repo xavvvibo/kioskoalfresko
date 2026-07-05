@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { adminDocuments, getDocumentStats, hasDocumentPdf, prioritizedSanitaryDocuments } from "@/lib/admin-kiosko/documents";
+import { adminDocuments, getDocumentStatsFor, hasDocumentPdf, prioritizedSanitaryDocuments } from "@/lib/admin-kiosko/documents";
+import { getAppccDocumentCatalog } from "@/lib/admin-kiosko/waste-oil-documents";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { AdminHeader } from "../_components/AdminHeader";
 
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 const groups = ["Documentación oficial", "Registros digitales"] as const;
 
 function statusClass(status: string) {
-  if (status === "Disponible") return "border-emerald-300 bg-emerald-100 text-emerald-950";
+  if (status === "Disponible" || status === "Completado") return "border-emerald-300 bg-emerald-100 text-emerald-950";
   if (status === "Pendiente de revisión") return "border-amber-300 bg-amber-100 text-amber-950";
   if (status === "Caducado") return "border-[#d94b2b]/40 bg-[#d94b2b]/12 text-[#f2c6bb]";
   return "border-stone-300 bg-stone-100 text-stone-700";
@@ -20,9 +21,11 @@ function statusClass(status: string) {
 
 export default async function DocumentacionPage() {
   await requireAdminSession();
-  const stats = getDocumentStats();
+  const catalog = await getAppccDocumentCatalog();
+  const documents = catalog.ok ? catalog.data : adminDocuments;
+  const stats = getDocumentStatsFor(documents);
   const prioritizedDocuments = prioritizedSanitaryDocuments
-    .map((slug) => adminDocuments.find((document) => document.slug === slug))
+    .map((slug) => documents.find((document) => document.slug === slug))
     .filter((document): document is NonNullable<typeof document> => Boolean(document));
 
   return (
@@ -77,7 +80,7 @@ export default async function DocumentacionPage() {
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Link href={document.href} className="rounded-full border border-stone-950 bg-stone-950 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Ver ficha</Link>
                     {hasDocumentPdf(document) ? (
-                      <a href={document.fileUrl} download className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Descargar PDF</a>
+                      <a href={document.documentUrl || document.fileUrl} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Abrir documento</a>
                     ) : (
                       <span className="rounded-full border border-amber-300 bg-amber-100 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-amber-950">Documentación pendiente de aportar</span>
                     )}
@@ -91,7 +94,7 @@ export default async function DocumentacionPage() {
             <section key={group} className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">{group}</h2>
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {adminDocuments.filter((document) => document.category === group).map((document) => (
+                {documents.filter((document) => document.category === group).map((document) => (
                   <article key={document.slug} className="rounded-[1.4rem] border border-white/10 bg-[#fffaf4] p-5 text-stone-950 transition hover:border-[#d94b2b]">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#d94b2b]">{document.category}</p>
@@ -109,7 +112,7 @@ export default async function DocumentacionPage() {
                     <div className="mt-5 flex flex-wrap gap-2">
                       <Link href={document.href} className="rounded-full border border-stone-950 bg-stone-950 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Ver</Link>
                       {hasDocumentPdf(document) ? (
-                        <a href={document.fileUrl} download className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Descargar</a>
+                        <a href={document.documentUrl || document.fileUrl} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Abrir</a>
                       ) : (
                         <span className="rounded-full border border-stone-200 bg-stone-100 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-stone-500">Sin PDF</span>
                       )}

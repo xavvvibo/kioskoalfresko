@@ -60,7 +60,7 @@ Templates soportados:
 - `product_label_basic`: `{ productName, internalCode?, lot?, expiryDate? }`
 - `ingredient_label_basic`: `{ ingredientName, supplierName?, internalCode?, lot?, expiryDate? }`
 - `prep_label_basic`: `{ prepName, productionDateTime?, expiryDateTime?, shelfLifeDays?, productionDate?, expiryDate?, batchCode? }`
-- `prep_label_professional`: `{ prepName, productionDateTime?, expiryDateTime?, shelfLifeDays?, batchCode?, responsibleName?, storageCondition?, brandName?, qrUrl? }`
+- `prep_label_professional`: `{ prepName, productionDateTime?, expiryDateTime?, shelfLifeDays?, batchCode?, responsibleName?, storageCondition?, brandName?, qrUrl?, qrValue?, includeQr? }`
 
 `prep_label_basic` imprime siempre:
 
@@ -72,7 +72,7 @@ CAD dd/mm/yy HH:mm
 
 Si falta `productionDateTime`, se usa la hora actual del servidor. Si falta `expiryDateTime`, se calcula con `shelfLifeDays`. Los campos antiguos `productionDate` y `expiryDate` siguen aceptados por compatibilidad.
 
-`prep_label_professional` genera EZPL especifico para GoDEX G500 80x50 mm desde backend cuando el bridge reclama el trabajo por `/api/print-jobs/pending`. La version actual es `professional_compact`: no imprime QR para priorizar legibilidad y evitar cortes. `qrUrl` queda persistido en `payload.data` para una version futura con QR si la validacion fisica lo permite.
+`prep_label_professional` genera EZPL especifico para GoDEX G500 80x50 mm desde backend cuando el bridge reclama el trabajo por `/api/print-jobs/pending`. Por defecto usa `professional_compact` sin QR. Si `includeQr` es `true`, usa una variante QR experimental que codifica `qrUrl` cuando existe y `qrValue` como fallback. La impresion QR queda desactivada por defecto hasta validacion fisica.
 
 El payload final insertado es compatible extendido. El bridge sigue usando solo `payload.title`, `payload.line1` y `payload.line2`; `template`, `data` y `metadata` son trazabilidad ERP.
 
@@ -89,7 +89,9 @@ El payload final insertado es compatible extendido. El bridge sigue usando solo 
     "batchCode": "GM-040726-01",
     "responsibleName": "J. Bocanegra",
     "storageCondition": "Refrigerado 0-4 C",
-    "brandName": "KIOSKO ALFRESKO"
+    "brandName": "KIOSKO ALFRESKO",
+    "qrValue": "ERP:prep_batch:GM-040726-01",
+    "qrUrl": "https://erp.example.com/admin-kiosko/qr/ERP%3Aprep_batch%3AGM-040726-01"
   },
   "metadata": {
     "requestedBy": "test",
@@ -326,6 +328,167 @@ Diferencias:
 - `/admin-kiosko/etiquetas-prep`: impresion manual urgente, no necesariamente vinculada a un lote real.
 - `/admin-kiosko/produccion`: impresion vinculada al lote interno real creado por el registro de elaboracion.
 
+Ficha interna de lote:
+
+```text
+/admin-kiosko/produccion/lotes/[id]
+```
+
+Desde la lista de lotes internos en `/admin-kiosko/produccion` se puede abrir `Ver ficha`. La ficha muestra preparacion, lote, elaboracion, caducidad, responsable, conservacion, estado, notas, materias primas utilizadas, print jobs asociados, APPCC, consumo posterior, documentos y timeline cronologico.
+
+### Estado actual de trazabilidad
+
+- Etiqueta profesional GoDEX 80x50 mm disponible para subelaboraciones.
+- Ficha privada de lote disponible en `/admin-kiosko/produccion/lotes/[id]` con trazabilidad interna.
+- QR interno preparado mediante `ERP:prep_batch:<lote>` y ruta privada `/admin-kiosko/qr/[value]`.
+- QR fisico experimental: se puede probar manualmente, pero no queda activado por defecto.
+- Checklist inspeccion visible en la ficha del lote para comprobar nombre, ELAB, CAD, lote, responsable, conservacion, etiqueta impresa y resolucion del QR.
+- Produccion automatica sin QR por defecto: `includeQr: false` se mantiene en el flujo operativo.
+- Etiqueta manual desde `/admin-kiosko/etiquetas-prep` queda como plan B si hace falta reimprimir o resolver una urgencia.
+
+El valor QR interno queda preparado en el payload de etiquetas profesionales:
+
+```text
+ERP:prep_batch:KA-040726-001
+```
+
+Si existe `NEXT_PUBLIC_APP_BASE_URL`, el backend anade tambien una URL escaneable interna:
+
+```text
+https://erp.example.com/admin-kiosko/qr/ERP%3Aprep_batch%3AKA-040726-001
+```
+
+La ruta `/admin-kiosko/qr/[value]` exige sesion admin. Si el valor empieza por `ERP:prep_batch:`, resuelve el `batchCode` y redirige a `/admin-kiosko/produccion/lotes/[id]`.
+
+Diferencia:
+
+- `qrValue`: identificador interno estable del lote, por ejemplo `ERP:prep_batch:KA-040726-001`.
+- `qrUrl`: URL protegida del ERP construida server-side con `NEXT_PUBLIC_APP_BASE_URL`.
+
+El QR fisico es experimental y queda desactivado por defecto. Se puede activar desde `/admin-kiosko/etiquetas-prep` marcando `Incluir QR interno` o desde el endpoint de prueba con `?qr=1`. En produccion automatica sigue `includeQr: false`.
+
+Si `NEXT_PUBLIC_APP_BASE_URL` no esta configurada, el QR experimental codifica `qrValue`; sirve para identificacion interna, pero no abre la ficha directamente al escanearlo.
+
+### Prueba operativa QR
+
+Configurar URL base del ERP en el entorno del servidor:
+
+```bash
+NEXT_PUBLIC_APP_BASE_URL=https://erp.example.com
+```
+
+No anadir barra final. Con esta variable, `prep_label_professional` prepara:
+
+```text
+qrValue = ERP:prep_batch:KA-040726-001
+qrUrl = https://erp.example.com/admin-kiosko/qr/ERP%3Aprep_batch%3AKA-040726-001
+```
+
+Probar sin imprimir:
+
+1. Abrir la ficha del lote en `/admin-kiosko/produccion/lotes/[id]`.
+2. Revisar el bloque `QR interno preparado`.
+3. Pulsar `Abrir ruta QR`.
+4. Confirmar que redirige a la misma ficha.
+
+Tambien se puede abrir manualmente:
+
+```text
+/admin-kiosko/qr/ERP%3Aprep_batch%3AKA-040726-001
+```
+
+Probar QR impreso:
+
+1. Entrar en `/admin-kiosko/etiquetas-prep`.
+2. Activar `Incluir QR interno`.
+3. Imprimir etiqueta.
+4. Escanear desde movil/tablet.
+5. Iniciar sesion admin si lo pide.
+6. Confirmar redireccion a la ficha del lote.
+
+La ficha no es publica. La ruta QR siempre exige sesion admin.
+
+## Arquitectura trazabilidad subelaboraciones
+
+Fase 1 crea una capa de dominio `ProductionBatch` sobre los datos existentes. No cambia schema Supabase y no modifica el flujo de impresion.
+
+Modelo de dominio:
+
+- `id`
+- `batchCode`
+- `recipeId`
+- `recipeName`
+- `productionDateTime`
+- `expiryDateTime`
+- `status`
+- `responsibleUser`
+- `storageCondition`
+- `notes`
+- `ingredientsUsed[]`
+- `printJobs[]`
+- `documents[]`
+- `appcc[]`
+- `consumptions[]`
+
+Estados soportados:
+
+- `ACTIVE`: lote vigente.
+- `NEAR_EXPIRY`: caduca en menos de 24 horas.
+- `EXPIRED`: caducidad vencida.
+- `BLOCKED`: lote marcado como bloqueado.
+- `CONSUMED`: cantidad restante agotada o estado consumido.
+- `DISCARDED`: lote descartado/mermado.
+
+Calculo automatico en esta fase:
+
+```text
+ACTIVE -> NEAR_EXPIRY -> EXPIRED
+```
+
+Los estados `BLOCKED`, `CONSUMED` y `DISCARDED` se infieren de `storage_state` y cantidad restante cuando esa informacion existe. No hay consumo automatico nuevo en esta fase.
+
+Relaciones actuales:
+
+- `ingredientsUsed[]`: se alimenta de la materia prima origen registrada en el lote.
+- `printJobs[]`: se localiza por `payload.data.batchCode`, `payload.metadata.batchCode` o `payload.metadata.sourceId`.
+- `documents[]`: recoge documento origen y registros de etiqueta cuando existen.
+- `appcc[]`: recoge caducidad, conservacion y registros de etiqueta disponibles.
+- `consumptions[]`: recoge movimientos de consumo, merma, personal, invitacion y degustacion.
+
+Timeline:
+
+La ficha ordena cronologicamente:
+
+- produccion registrada;
+- movimientos del lote;
+- etiqueta GoDEX enviada/impresa/error;
+- controles APPCC disponibles.
+
+Ejemplo:
+
+```text
+04/07 08:30  Produccion registrada
+04/07 08:31  Etiqueta GoDEX impresa
+04/07 13:10  APPCC: Caducidad
+05/07 12:00  consumo parcial
+06/07 09:00  consumo completo
+```
+
+Vida restante:
+
+```text
+Caduca en 2 dias 6 horas 18 minutos
+Caducado hace 3 horas
+```
+
+QR preparado:
+
+```text
+ERP:prep_batch:KA-040726-001
+```
+
+Ese valor queda visible en `/admin-kiosko/produccion/lotes/[id]` y preparado para enlazar el QR fisico en una fase posterior.
+
 Metadata del flujo real:
 
 ```json
@@ -371,6 +534,16 @@ order by created_at desc
 limit 20;
 ```
 
+SQL para localizar print jobs por lote:
+
+```sql
+select id, status, payload, created_at
+from public.print_jobs
+where payload->'data'->>'batchCode' = 'KA-040726-001'
+   or payload->'metadata'->>'batchCode' = 'KA-040726-001'
+order by created_at desc;
+```
+
 ## Ejemplos curl
 
 Test label:
@@ -398,6 +571,13 @@ Elaboracion/prep:
 
 ```bash
 curl -X POST "http://localhost:3000/api/print-jobs/test-prep-label" \
+  -H "Authorization: Bearer PRINT_JOBS_API_TOKEN"
+```
+
+Elaboracion/prep con QR experimental:
+
+```bash
+curl -X POST "http://localhost:3000/api/print-jobs/test-prep-label?qr=1" \
   -H "Authorization: Bearer PRINT_JOBS_API_TOKEN"
 ```
 

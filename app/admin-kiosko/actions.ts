@@ -203,6 +203,8 @@ async function createProductionPrepPrintJob(input: {
       responsibleName: input.responsibleName,
       storageCondition: storageConditionFromState(input.storageState),
       brandName: "KIOSKO ALFRESKO",
+      qrValue: `ERP:prep_batch:${input.batchCode}`,
+      includeQr: false,
     },
     metadata: {
       requestedBy: input.responsibleName || "admin-kiosko",
@@ -1620,6 +1622,8 @@ export async function printPrepLabelAction(_previousState: PrepPrintState, formD
       responsibleName: responsibleName || undefined,
       storageCondition,
       brandName: "KIOSKO ALFRESKO",
+      qrValue: batchCode ? `ERP:prep_batch:${batchCode}` : undefined,
+      includeQr: checkbox(formData, "includeQr"),
     },
     metadata: {
       requestedBy: text(formData, "requestedBy") || "admin-kiosko",

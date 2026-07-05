@@ -1,4 +1,6 @@
-export type AdminDocumentStatus = "Disponible" | "Pendiente de subir" | "Caducado" | "Pendiente de revisión";
+import type { InboxDocumentRecord } from "./inbox/contracts";
+
+export type AdminDocumentStatus = "Disponible" | "Completado" | "Pendiente de subir" | "Caducado" | "Pendiente de revisión";
 
 export type AdminDocument = {
   slug: string;
@@ -11,6 +13,9 @@ export type AdminDocument = {
   description: string;
   href: string;
   fileUrl?: string;
+  uploadedDocumentId?: string;
+  uploadedFilename?: string;
+  documentUrl?: string;
   pendingReason?: string;
   recommendedAction?: string;
   targetDate?: string;
@@ -21,6 +26,36 @@ export type AdminDocument = {
 };
 
 const responsible = "F. Javier Bocanegra Sanjuan";
+const wasteOilContractSlug = "contrato-gestor-aceite-usado";
+const wasteOilJustificationSlug = "justificantes-retirada-aceite";
+
+export const wasteOilContract = {
+  title: "Contrato gestor autorizado aceite usado",
+  contractNumber: "RA2606182033",
+  manager: "Gestión Ecológica de Residuos AVALON S.L. / GERA S.L.",
+  taxId: "B18600049",
+  nima: "1800005451 / 1809000605",
+  managerAddress: "C/ Diseño 38, 18330 Chauchina, Granada",
+  service: "Retirada, transporte y gestión de aceite vegetal usado",
+  waste: "aceites y grasas comestibles",
+  lerCer: "200125",
+  authorization: "GRU 525 Junta de Andalucía",
+  client: "Kiosko Alfresko",
+  clientAddress: "Mártires 3 - Parque San Sebastián, 18151 Ogíjares, Granada",
+  phone: "635988144",
+  email: "info@kioskoalfresko.es",
+  drums: "1",
+  pickupDays: "lunes y martes",
+  pickupSchedule: "llamar",
+  frequency: "mensual",
+  estimatedKg: "50 kg",
+  treatment: "R1301",
+  duration: "2 años",
+  renewal: "Automática por periodos iguales salvo preaviso de 30 días",
+  signedAt: "2026-06-18",
+  status: "firmado / en vigor",
+  exclusivity: "Contrato de gestión de aceite usado exclusivo con GERA/AVALON para este residuo.",
+} as const;
 
 export const adminDocuments: AdminDocument[] = [
   {
@@ -132,7 +167,53 @@ export const adminDocuments: AdminDocument[] = [
   { slug: "plan-alergenos", title: "Plan de alérgenos", category: "Documentación oficial", status: "Pendiente de subir", lastReview: "Sin revisión registrada", responsible, version: "v1", description: "Gestión de alérgenos e información al consumidor.", href: "/admin-kiosko/documentacion/plan-alergenos", pendingReason: "Plan documental pendiente de aportar.", recommendedAction: "Subir matriz de alérgenos y procedimiento de información al cliente.", targetDate: "Prioridad 1" },
   { slug: "fichas-tecnicas", title: "Fichas técnicas", category: "Documentación oficial", status: "Pendiente de subir", lastReview: "Sin revisión registrada", responsible, version: "v1", description: "Fichas técnicas de productos, materias primas y equipos relevantes.", href: "/admin-kiosko/documentacion/fichas-tecnicas", pendingReason: "Fichas técnicas pendientes de aportar.", recommendedAction: "Subir fichas de productos críticos y materias primas principales.", targetDate: "Prioridad 2" },
   { slug: "formacion-manipuladores", title: "Formación manipuladores", category: "Documentación oficial", status: "Pendiente de subir", lastReview: "Sin revisión registrada", responsible, version: "v1", description: "Documentación de formación de manipuladores.", href: "/admin-kiosko/documentacion/formacion-manipuladores", pendingReason: "Certificados de formación pendientes.", recommendedAction: "Subir certificados vigentes del personal manipulador.", targetDate: "Prioridad 2" },
-  { slug: "contrato-gestor-aceite-usado", title: "Contrato gestor aceite usado", category: "Documentación oficial", status: "Pendiente de subir", lastReview: "Sin revisión registrada", responsible, version: "v1", description: "Contrato o datos del proveedor autorizado para retirada de aceite usado.", href: "/admin-kiosko/documentacion/contrato-gestor-aceite-usado", pendingReason: "Contrato/datos del gestor de aceite usado pendientes de aportar.", recommendedAction: "Subir contrato, referencia de cliente, teléfono/email y justificantes de retirada.", targetDate: "Prioridad 1" },
+  {
+    slug: wasteOilContractSlug,
+    title: wasteOilContract.title,
+    category: "Documentación oficial",
+    status: "Pendiente de subir",
+    lastReview: "Contrato firmado el 2026-06-18. Pendiente de localizar PDF subido.",
+    responsible,
+    version: `Contrato ${wasteOilContract.contractNumber}`,
+    description: "Contrato real con gestor autorizado para retirada, transporte y gestión de aceite vegetal usado.",
+    href: "/admin-kiosko/documentacion/contrato-gestor-aceite-usado",
+    pendingReason: "Contrato firmado existente, pendiente de localizar documento asociado en admin_uploaded_documents.",
+    recommendedAction: "Subir o confirmar Contrato_RA2606182033.pdf en la bandeja documental APPCC.",
+    targetDate: "Prioridad 1",
+    sections: [
+      {
+        title: "Gestor autorizado",
+        items: [
+          `Gestor: ${wasteOilContract.manager}.`,
+          `CIF: ${wasteOilContract.taxId}.`,
+          `NIMA: ${wasteOilContract.nima}.`,
+          `Dirección gestor: ${wasteOilContract.managerAddress}.`,
+          `Autorización: ${wasteOilContract.authorization}.`,
+        ],
+      },
+      {
+        title: "Residuo y servicio",
+        items: [
+          `Servicio: ${wasteOilContract.service}.`,
+          `Residuo: ${wasteOilContract.waste}.`,
+          `Código LER/CER: ${wasteOilContract.lerCer}.`,
+          `Tratamiento: ${wasteOilContract.treatment}.`,
+          `Frecuencia: ${wasteOilContract.frequency}; bidones: ${wasteOilContract.drums}; kg estimados: ${wasteOilContract.estimatedKg}.`,
+        ],
+      },
+      {
+        title: "Contrato",
+        items: [
+          `Nº contrato: ${wasteOilContract.contractNumber}.`,
+          `Cliente: ${wasteOilContract.client}.`,
+          `Dirección cliente: ${wasteOilContract.clientAddress}.`,
+          `Teléfono: ${wasteOilContract.phone}; email: ${wasteOilContract.email}.`,
+          `Fecha firma: ${wasteOilContract.signedAt}; estado: ${wasteOilContract.status}.`,
+          `Duración: ${wasteOilContract.duration}. Renovación: ${wasteOilContract.renewal}.`,
+        ],
+      },
+    ],
+  },
   { slug: "justificantes-retirada-aceite", title: "Justificantes retirada aceite usado", category: "Documentación oficial", status: "Pendiente de subir", lastReview: "Sin revisión registrada", responsible, version: "v1", description: "Justificantes/documentos de retirada de aceite usado.", href: "/admin-kiosko/documentacion/justificantes-retirada-aceite", pendingReason: "Justificantes de retirada pendientes de aportar.", recommendedAction: "Subir justificantes emitidos por gestor autorizado.", targetDate: "Antes de inspección" },
   { slug: "fichas-productos-limpieza", title: "Fichas técnicas productos limpieza", category: "Documentación oficial", status: "Pendiente de subir", lastReview: "Sin revisión registrada", responsible, version: "v1", description: "Fichas técnicas y/o de seguridad de productos químicos usados en limpieza.", href: "/admin-kiosko/documentacion/fichas-productos-limpieza", pendingReason: "Fichas de productos químicos pendientes.", recommendedAction: "Subir fichas de seguridad de desengrasante, lavavajillas, desinfectante y productos usados.", targetDate: "Prioridad 1" },
   { slug: "certificados-proveedores", title: "Certificados de proveedores", category: "Documentación oficial", status: "Pendiente de subir", lastReview: "Sin revisión registrada", responsible, version: "v1", description: "Certificados sanitarios y documentación de proveedores.", href: "/admin-kiosko/documentacion/certificados-proveedores", pendingReason: "Certificados sanitarios de proveedores pendientes.", recommendedAction: "Solicitar y subir certificados o registros sanitarios de proveedores habituales.", targetDate: "Prioridad 2" },
@@ -171,15 +252,203 @@ export function getAdminDocument(slug: string) {
 }
 
 export function hasDocumentPdf(document: AdminDocument) {
-  return Boolean(document.fileUrl && document.status === "Disponible");
+  return Boolean((document.fileUrl || document.documentUrl) && (document.status === "Disponible" || document.status === "Completado"));
+}
+
+function documentSearchText(document: InboxDocumentRecord) {
+  return [
+    document.filename,
+    document.detectedType,
+    document.selectedType,
+    document.confirmedType,
+    document.status,
+    document.classificationReason,
+    document.storagePath,
+    JSON.stringify(document.ocrJson || {}),
+    document.ocrWarnings?.join(" "),
+  ].filter(Boolean).join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function isActiveDocument(document: InboxDocumentRecord) {
+  return document.status !== "archived" && document.status !== "failed";
+}
+
+function isWasteOilContractDocument(document: InboxDocumentRecord) {
+  const text = documentSearchText(document);
+  return isActiveDocument(document) && (
+    text.includes("ra2606182033") ||
+    (text.includes("contrato") && (text.includes("avalon") || text.includes("gera") || text.includes("b18600049")) && text.includes("aceite"))
+  );
+}
+
+function isWasteOilPickupDocument(document: InboxDocumentRecord) {
+  const text = documentSearchText(document);
+  return isActiveDocument(document) && !isWasteOilContractDocument(document) && text.includes("aceite") && (
+    text.includes("retirada") ||
+    text.includes("recogida") ||
+    text.includes("justificante") ||
+    text.includes("gestor")
+  );
+}
+
+function isWasteOilCertificateDocument(document: InboxDocumentRecord) {
+  const text = documentSearchText(document);
+  return isActiveDocument(document) && text.includes("aceite") && text.includes("certificado") && (
+    text.includes("recogida") ||
+    text.includes("tratamiento") ||
+    text.includes("valorizacion") ||
+    text.includes("r1301")
+  );
+}
+
+function isSameMonth(value: string | undefined, monthStart: string, nextMonthStart: string) {
+  if (!value) return false;
+  const date = value.slice(0, 10);
+  return date >= monthStart && date < nextMonthStart;
+}
+
+export type WasteOilMonthlyStatus =
+  | "ok"
+  | "pendiente_retirada"
+  | "pendiente_justificante"
+  | "pendiente_certificado"
+  | "pendiente_documentacion";
+
+export type WasteOilMonthlyControl = {
+  month: string;
+  monthStart: string;
+  nextMonthStart: string;
+  status: WasteOilMonthlyStatus;
+  contractDocument?: InboxDocumentRecord;
+  pickupDocument?: InboxDocumentRecord;
+  justificationDocument?: InboxDocumentRecord;
+  certificateDocument?: InboxDocumentRecord;
+  hasContract: boolean;
+  hasMonthlyPickup: boolean;
+  hasMonthlyJustification: boolean;
+  hasMonthlyCertificate: boolean;
+  trace: {
+    source: "admin_uploaded_documents";
+    checkedDocuments: number;
+    matchedContractDocumentId?: string;
+    matchedPickupDocumentId?: string;
+    matchedJustificationDocumentId?: string;
+    matchedCertificateDocumentId?: string;
+  };
+};
+
+export function calculateWasteOilMonthlyControl(documents: InboxDocumentRecord[], currentDate = new Date()): WasteOilMonthlyControl {
+  const monthStartDate = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), 1));
+  const nextMonthStartDate = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth() + 1, 1));
+  const monthStart = monthStartDate.toISOString().slice(0, 10);
+  const nextMonthStart = nextMonthStartDate.toISOString().slice(0, 10);
+  const month = monthStart.slice(0, 7);
+
+  const contractDocument = documents.find(isWasteOilContractDocument);
+  const monthlyPickupDocuments = documents.filter((document) => isWasteOilPickupDocument(document) && isSameMonth(document.uploadedAt, monthStart, nextMonthStart));
+  const pickupDocument = monthlyPickupDocuments[0];
+  const justificationDocument = monthlyPickupDocuments.find((document) => {
+    const text = documentSearchText(document);
+    return text.includes("justificante") || text.includes("retirada") || text.includes("recogida");
+  }) || pickupDocument;
+  const certificateDocument = documents.find((document) => isWasteOilCertificateDocument(document) && isSameMonth(document.uploadedAt, monthStart, nextMonthStart));
+
+  const hasContract = Boolean(contractDocument);
+  const hasMonthlyPickup = Boolean(pickupDocument);
+  const hasMonthlyJustification = Boolean(justificationDocument);
+  const hasMonthlyCertificate = Boolean(certificateDocument);
+  const status: WasteOilMonthlyStatus = !hasContract
+    ? "pendiente_documentacion"
+    : !hasMonthlyPickup
+      ? "pendiente_retirada"
+      : !hasMonthlyJustification
+        ? "pendiente_justificante"
+        : !hasMonthlyCertificate
+          ? "pendiente_certificado"
+          : "ok";
+
+  return {
+    month,
+    monthStart,
+    nextMonthStart,
+    status,
+    contractDocument,
+    pickupDocument,
+    justificationDocument,
+    certificateDocument,
+    hasContract,
+    hasMonthlyPickup,
+    hasMonthlyJustification,
+    hasMonthlyCertificate,
+    trace: {
+      source: "admin_uploaded_documents",
+      checkedDocuments: documents.length,
+      matchedContractDocumentId: contractDocument?.uploadedDocumentId,
+      matchedPickupDocumentId: pickupDocument?.uploadedDocumentId,
+      matchedJustificationDocumentId: justificationDocument?.uploadedDocumentId,
+      matchedCertificateDocumentId: certificateDocument?.uploadedDocumentId,
+    },
+  };
+}
+
+export function withUploadedAppccDocumentStatus(documents: AdminDocument[], wasteOilControl: WasteOilMonthlyControl) {
+  return documents.map((document) => {
+    if (document.slug === wasteOilContractSlug) {
+      return {
+        ...document,
+        status: wasteOilControl.hasContract ? "Completado" as const : "Pendiente de subir" as const,
+        lastReview: wasteOilControl.hasContract
+          ? `Contrato ${wasteOilContract.contractNumber} localizado en admin_uploaded_documents`
+          : document.lastReview,
+        uploadedDocumentId: wasteOilControl.contractDocument?.uploadedDocumentId,
+        uploadedFilename: wasteOilControl.contractDocument?.filename,
+        documentUrl: wasteOilControl.contractDocument ? `${document.href}/original` : undefined,
+        pendingReason: wasteOilControl.hasContract ? undefined : document.pendingReason,
+        recommendedAction: wasteOilControl.hasContract ? "Mantener contrato y aportar justificantes/certificados mensuales de retirada." : document.recommendedAction,
+      };
+    }
+
+    if (document.slug === wasteOilJustificationSlug) {
+      return {
+        ...document,
+        status: wasteOilControl.hasMonthlyJustification ? "Completado" as const : "Pendiente de subir" as const,
+        lastReview: wasteOilControl.hasMonthlyJustification
+          ? `Justificante mensual localizado para ${wasteOilControl.month}`
+          : `Sin justificante localizado para ${wasteOilControl.month}`,
+        uploadedDocumentId: wasteOilControl.justificationDocument?.uploadedDocumentId,
+        uploadedFilename: wasteOilControl.justificationDocument?.filename,
+        pendingReason: wasteOilControl.hasMonthlyJustification ? undefined : `No consta justificante de retirada de aceite usado en ${wasteOilControl.month}.`,
+        recommendedAction: wasteOilControl.hasMonthlyJustification ? "Mantener archivo mensual junto al contrato del gestor." : document.recommendedAction,
+      };
+    }
+
+    return document;
+  });
 }
 
 export function getDocumentStats() {
   const total = adminDocuments.length;
-  const available = adminDocuments.filter((document) => document.status === "Disponible").length;
+  const available = adminDocuments.filter((document) => document.status === "Disponible" || document.status === "Completado").length;
   const pending = adminDocuments.filter((document) => document.status === "Pendiente de subir").length;
   const expired = adminDocuments.filter((document) => document.status === "Caducado").length;
   const review = adminDocuments.filter((document) => document.status === "Pendiente de revisión").length;
+
+  return {
+    total,
+    available,
+    pending,
+    expired,
+    review,
+    percent: total ? Math.round((available / total) * 100) : 0,
+  };
+}
+
+export function getDocumentStatsFor(documents: AdminDocument[]) {
+  const total = documents.length;
+  const available = documents.filter((document) => document.status === "Disponible" || document.status === "Completado").length;
+  const pending = documents.filter((document) => document.status === "Pendiente de subir").length;
+  const expired = documents.filter((document) => document.status === "Caducado").length;
+  const review = documents.filter((document) => document.status === "Pendiente de revisión").length;
 
   return {
     total,

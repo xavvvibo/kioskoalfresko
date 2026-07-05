@@ -37,6 +37,8 @@ export type PrepLabelBasicData = {
   storageCondition?: string;
   brandName?: string;
   qrUrl?: string;
+  qrValue?: string;
+  includeQr?: boolean;
 };
 
 export type PrintJobMetadata = {
@@ -207,6 +209,17 @@ function parseShelfLifeDays(value: unknown) {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
+function booleanFromInput(value: unknown) {
+  return value === true || value === "true" || value === "1" || value === "on";
+}
+
+function buildInternalQrUrl(qrValue?: string) {
+  const baseUrl = sanitizeLabelText(process.env.NEXT_PUBLIC_APP_BASE_URL, 180).replace(/\/+$/, "");
+  const value = sanitizeLabelText(qrValue, 240);
+  if (!baseUrl || !value) return undefined;
+  return `${baseUrl}/admin-kiosko/qr/${encodeURIComponent(value)}`;
+}
+
 function normalizedMetadata(value: unknown): PrintJobMetadata {
   if (!isRecord(value)) return {};
 
@@ -355,7 +368,10 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
   const responsibleName = sanitizeLabelText(input.data.responsibleName) || undefined;
   const storageCondition = sanitizeLabelText(input.data.storageCondition) || "Refrigerado 0-4 C";
   const brandName = sanitizeLabelText(input.data.brandName) || "KIOSKO ALFRESKO";
-  const qrUrl = sanitizeLabelText(input.data.qrUrl, 180) || undefined;
+  const qrValue = sanitizeLabelText(input.data.qrValue, 180)
+    || (batchCode ? `ERP:prep_batch:${batchCode}` : undefined);
+  const qrUrl = sanitizeLabelText(input.data.qrUrl, 240) || buildInternalQrUrl(qrValue);
+  const includeQr = booleanFromInput(input.data.includeQr);
 
   if (!prepName) {
     return { ok: false, error: `${template} necesita prepName.` };
@@ -402,6 +418,8 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
         storageCondition,
         brandName,
         qrUrl,
+        qrValue,
+        includeQr,
       },
       metadata: normalizedMetadata(input.metadata),
     },

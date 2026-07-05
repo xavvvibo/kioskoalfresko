@@ -121,6 +121,18 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
         </div>
       </div>
 
+      <label className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+        <input
+          type="checkbox"
+          name="includeQr"
+          className="mt-1 h-4 w-4 rounded border-amber-300"
+        />
+        <span>
+          <span className="block font-semibold">Incluir QR interno</span>
+          <span className="mt-1 block text-xs">Experimental. Codifica ERP:prep_batch:lote y queda desactivado por defecto hasta validacion fisica.</span>
+        </span>
+      </label>
+
       <button
         type="submit"
         disabled={isPending}

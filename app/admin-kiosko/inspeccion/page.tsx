@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { resolveAppccRecordFilters } from "@/lib/admin-kiosko/appcc-record-filters";
-import { adminDocuments } from "@/lib/admin-kiosko/documents";
+import { adminDocuments, wasteOilContract } from "@/lib/admin-kiosko/documents";
+import { getAppccDocumentCatalog } from "@/lib/admin-kiosko/waste-oil-documents";
 import { getAdminDashboardSummary, getExecutiveDashboardMetrics, getRecentCleaningRecords, getRecentFryerOilRecords, getRecentGoodsReceptionRecords, getRecentIncidentRecords, getRecentMaintenanceRecords, getRecentSupplierRecords, getRecentTemperatureRecords } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../_components/AdminHeader";
 import { RecentRecords } from "../_components/RecentRecords";
@@ -93,7 +94,7 @@ export default async function ModoInspeccionPage({
   const params = await searchParams;
   const recordFilters = resolveAppccRecordFilters(params);
   const inspectionRecordFilters = recordFilters.preset === "all" ? { ...recordFilters, limit: 10 } : { ...recordFilters, limit: 50 };
-  const [dashboard, metricsResult, temperatures, incidents, goods, cleaning, oil, suppliers, maintenance] = await Promise.all([
+  const [dashboard, metricsResult, temperatures, incidents, goods, cleaning, oil, suppliers, maintenance, catalog] = await Promise.all([
     getAdminDashboardSummary(),
     getExecutiveDashboardMetrics(),
     getRecentTemperatureRecords(inspectionRecordFilters),
@@ -103,14 +104,17 @@ export default async function ModoInspeccionPage({
     getRecentFryerOilRecords(inspectionRecordFilters),
     getRecentSupplierRecords(),
     getRecentMaintenanceRecords(),
+    getAppccDocumentCatalog(),
   ]);
+  const documents = catalog.ok ? catalog.data : adminDocuments;
+  const wasteOilControl = catalog.ok ? catalog.wasteOilControl : null;
   const summary = dashboard.ok ? dashboard.data : null;
   const metrics = metricsResult.ok ? metricsResult.data : null;
   const pendingDocs = essentialDocumentSlugs
-    .map((slug) => adminDocuments.find((item) => item.slug === slug))
-    .filter((document): document is NonNullable<typeof document> => Boolean(document && document.status !== "Disponible"));
-  const oilManagerDocument = adminDocuments.find((item) => item.slug === "contrato-gestor-aceite-usado");
-  const oilStatus = oilManagerDocument?.status === "Disponible"
+    .map((slug) => documents.find((item) => item.slug === slug))
+    .filter((document): document is NonNullable<typeof document> => Boolean(document && document.status !== "Disponible" && document.status !== "Completado"));
+  const oilManagerDocument = documents.find((item) => item.slug === "contrato-gestor-aceite-usado");
+  const oilStatus = oilManagerDocument?.status === "Disponible" || oilManagerDocument?.status === "Completado"
     ? "Contrato gestor cargado"
     : "Sin contrato de gestor cargado";
   const status = !summary || summary.pendingAlerts > 0 || summary.openIncidents > 0 || summary.incidentTemperatureRecords > 0
@@ -153,6 +157,46 @@ export default async function ModoInspeccionPage({
                 </article>
               ))}
             </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Gestor autorizado de aceite usado</h2>
+                <p className="mt-2 text-sm leading-6 text-stone-300">Contrato real de retirada, transporte y gestión de aceite vegetal usado.</p>
+              </div>
+              {oilManagerDocument?.documentUrl ? (
+                <a href={oilManagerDocument.documentUrl} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Abrir documento</a>
+              ) : (
+                <Link href="/admin-kiosko/documentacion/contrato-gestor-aceite-usado" className="rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Ver ficha</Link>
+              )}
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {[
+                ["Gestor", wasteOilContract.manager],
+                ["Nº contrato", wasteOilContract.contractNumber],
+                ["CIF", wasteOilContract.taxId],
+                ["NIMA", wasteOilContract.nima],
+                ["LER/CER", wasteOilContract.lerCer],
+                ["Residuo", wasteOilContract.waste],
+                ["Autorización", wasteOilContract.authorization],
+                ["Frecuencia", wasteOilContract.frequency],
+                ["Bidones", wasteOilContract.drums],
+                ["Estado", wasteOilContract.status],
+                ["Fecha firma", wasteOilContract.signedAt],
+                ["Documento", oilManagerDocument?.uploadedFilename || "No localizado en admin_uploaded_documents"],
+              ].map(([label, value]) => (
+                <article key={label} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{label}</p>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-white">{value}</p>
+                </article>
+              ))}
+            </div>
+            {wasteOilControl ? (
+              <p className="mt-4 rounded-2xl border border-white/10 bg-white/6 p-4 text-xs font-semibold leading-6 text-stone-300">
+                Control mensual {wasteOilControl.month}: {wasteOilControl.status}. Fuente: {wasteOilControl.trace.source}; documentos comprobados: {wasteOilControl.trace.checkedDocuments}.
+              </p>
+            ) : null}
           </section>
 
           <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5">
@@ -232,7 +276,7 @@ export default async function ModoInspeccionPage({
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               {[
                 ["Estado contrato", oilStatus],
-                ["Justificantes retirada", adminDocuments.find((item) => item.slug === "justificantes-retirada-aceite")?.status || "Pendiente de aportar"],
+                ["Justificantes retirada", documents.find((item) => item.slug === "justificantes-retirada-aceite")?.status || "Pendiente de aportar"],
                 ["Últimos controles", oil.ok && oil.data.length ? `${oil.data.length} registros recientes` : "Último registro no disponible todavía."],
               ].map(([label, value]) => (
                 <article key={label} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
@@ -277,7 +321,7 @@ export default async function ModoInspeccionPage({
                 </thead>
                 <tbody>
                   {essentialDocumentSlugs.map((slug) => {
-                    const document = adminDocuments.find((item) => item.slug === slug);
+                    const document = documents.find((item) => item.slug === slug);
                     if (!document) return null;
                     return (
                       <tr key={slug} className="bg-[#fffaf4] text-stone-950">

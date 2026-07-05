@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminDocument, hasDocumentPdf } from "@/lib/admin-kiosko/documents";
+import { getAppccDocumentCatalog } from "@/lib/admin-kiosko/waste-oil-documents";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { AdminHeader } from "../../_components/AdminHeader";
 
@@ -16,7 +17,10 @@ export default async function DocumentoPage({
 }) {
   await requireAdminSession();
   const { slug } = await params;
-  const document = getAdminDocument(slug);
+  const catalog = await getAppccDocumentCatalog();
+  const document = catalog.ok
+    ? catalog.data.find((item) => item.slug === slug)
+    : getAdminDocument(slug);
 
   if (!document) {
     return (
@@ -60,14 +64,14 @@ export default async function DocumentoPage({
           <div className="mt-5 flex flex-wrap gap-3">
             <Link href="/admin-kiosko/documentacion" className="rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Volver</Link>
             {hasPdf ? (
-              <a href={document.fileUrl} download className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Descargar</a>
+              <a href={document.documentUrl || document.fileUrl} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Abrir documento</a>
             ) : (
               <span className="rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-stone-300">Sin PDF disponible</span>
             )}
           </div>
           <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0d0d0d]">
             {hasPdf ? (
-              <iframe title={document.title} src={document.fileUrl} className="h-[75vh] w-full bg-white" />
+              <iframe title={document.title} src={document.documentUrl || document.fileUrl} className="h-[75vh] w-full bg-white" />
             ) : (
               <div className="p-8 text-center">
                 <p className="text-xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">{document.status}</p>
