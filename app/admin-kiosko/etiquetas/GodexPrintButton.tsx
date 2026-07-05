@@ -31,14 +31,14 @@ export function GodexPrintButton({ payload, disabled }: { payload: GodexLabelPay
   const [state, formAction, isPending] = useActionState(printGodexLabelAction, null);
 
   return (
-    <form action={formAction} className="grid gap-2">
+    <form action={formAction} className="grid min-w-0 gap-2">
       {Object.entries(payload).map(([key, value]) => (
         <input key={key} type="hidden" name={key} value={String(value ?? "")} />
       ))}
       <button
         type="submit"
         disabled={disabled || isPending}
-        className="rounded-full border border-emerald-300 bg-emerald-100 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-emerald-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-full border border-emerald-300 bg-emerald-100 px-5 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-emerald-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
       >
         {isPending ? "Imprimiendo..." : "Imprimir Godex"}
       </button>

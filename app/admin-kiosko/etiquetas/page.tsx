@@ -242,9 +242,9 @@ export default async function EtiquetasPage({
     <main className="min-h-screen bg-[#0d0d0d] text-white">
       <AdminHeader title="Etiquetas APPCC" description="Generador de etiquetas con historial e impresión A4 o térmica." />
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12">
-        <div className="grid gap-6 lg:grid-cols-[25rem_1fr]">
-          <div className="grid gap-6 print:hidden">
-            <form action={saveLabelRecordAction} className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(20rem,25rem)_minmax(0,1fr)]">
+          <div className="grid min-w-0 gap-6 print:hidden">
+            <form action={saveLabelRecordAction} className="min-w-0 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Etiqueta desde lote</h2>
               <div className="mt-5 grid gap-4">
                 <input type="hidden" name="model" value={current.model} />
@@ -276,7 +276,7 @@ export default async function EtiquetasPage({
                   {current.review_warning ? <p className="mt-2 rounded-xl border border-amber-200/30 bg-amber-100/10 px-3 py-2 text-xs font-black text-amber-100">{current.review_warning}</p> : null}
                 </div>
                 <label className="grid gap-2 text-sm font-semibold text-stone-200">Copias Zebra
-                  <select name="copies" defaultValue={String(copies)} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
+                  <select name="copies" defaultValue={String(copies)} className="w-full min-w-0 rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
                     {[1, 2, 4, 8].map((copy) => <option key={copy} value={copy}>{copy} copia{copy > 1 ? "s" : ""}</option>)}
                   </select>
                 </label>
@@ -284,14 +284,14 @@ export default async function EtiquetasPage({
               </div>
             </form>
 
-            <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+            <section className="min-w-0 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Etiquetas desde inventario</h2>
               <div className="mt-4 grid gap-3">
                 {inventoryLots.slice(0, 18).map((lot) => (
-                  <article key={lot.inventory_lot_id} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
+                  <article key={lot.inventory_lot_id} className="min-w-0 rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
                     <div className="flex flex-col gap-3">
                       <div>
-                        <p className="font-black text-white">{lot.producto || "Producto"}</p>
+                        <p className="break-words font-black text-white">{lot.producto || "Producto"}</p>
                         <p className="mt-1 text-xs text-stone-400">
                           Lote {lot.lote || "sin lote"} · {lot.stock ?? 0} {lot.unidad || "ud"} · caduca {lot.caducidad || "pendiente"} · {lot.proveedor || "proveedor registrado"}
                         </p>
@@ -317,10 +317,10 @@ export default async function EtiquetasPage({
               </div>
             </section>
 
-            <form className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+            <form className="min-w-0 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Seleccionar lote</h2>
               <div className="mt-5 grid gap-4">
-                <select name="source" defaultValue={params.source || ""} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
+                <select name="source" defaultValue={params.source || ""} className="w-full min-w-0 rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
                   <option value="">Lote interno o lote proveedor</option>
                   {sources.map((source) => (
                     <option key={source.key} value={source.key}>
@@ -332,11 +332,11 @@ export default async function EtiquetasPage({
               </div>
             </form>
 
-            <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
+            <section className="min-w-0 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Historial</h2>
               <div className="mt-4 grid gap-3">
                 {history.map((record) => (
-                  <a key={record.id} href={`/admin-kiosko/etiquetas?id=${record.id}`} className="rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200 transition hover:border-[#d94b2b]">
+                  <a key={record.id} href={`/admin-kiosko/etiquetas?id=${record.id}`} className="min-w-0 rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200 transition hover:border-[#d94b2b]">
                     <span className="block font-black text-white">{record.model} · {record.product || "Producto no consignado"}</span>
                     <span className="mt-1 block text-xs text-stone-400">Lote {record.batch || "no consignado"} · {record.created_at.slice(0, 10)}</span>
                   </a>
@@ -346,10 +346,10 @@ export default async function EtiquetasPage({
             </section>
           </div>
 
-          <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6 print:border-0 print:bg-white print:p-0">
-            <div className="flex items-center justify-between gap-4 print:hidden">
+          <section className="min-w-0 overflow-hidden rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6 print:border-0 print:bg-white print:p-0">
+            <div className="flex min-w-0 flex-col gap-4 print:hidden 2xl:flex-row 2xl:items-center 2xl:justify-between">
               <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Vista imprimible</h2>
-              <div className="flex flex-wrap items-start gap-3">
+              <div className="flex min-w-0 flex-wrap items-start gap-3">
                 {currentLotValidation && !currentLotValidation.directPrintAllowed ? (
                   <a href="/admin-kiosko/inventario#lotes-pendientes-revision" className="rounded-full border border-amber-200/40 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-amber-100">Revisar antes de imprimir</a>
                 ) : (
@@ -411,8 +411,10 @@ export default async function EtiquetasPage({
                 <PrintButton />
               </div>
             </div>
-            <div className={current.print_format === "termica" ? "mt-6 grid max-w-[26rem] gap-3 print:mt-0" : "mt-6 grid gap-4 md:grid-cols-2 print:mt-0 print:grid-cols-2"}>
-              {Array.from({ length: copies }).map((_, index) => <LabelCard key={index} label={current} />)}
+            <div className="mt-6 max-h-[75vh] min-w-0 overflow-auto rounded-[1.2rem] bg-white/5 p-2 print:mt-0 print:max-h-none print:overflow-visible print:bg-transparent print:p-0">
+              <div className={current.print_format === "termica" ? "grid w-full max-w-[26rem] gap-3 print:mt-0" : "grid min-w-[34rem] gap-4 md:grid-cols-2 xl:min-w-0 print:mt-0 print:grid-cols-2"}>
+                {Array.from({ length: copies }).map((_, index) => <LabelCard key={index} label={current} />)}
+              </div>
             </div>
           </section>
         </div>

@@ -5,15 +5,22 @@ import { requirePrintApiToken } from "@/lib/admin-kiosko/printing/print-api-auth
 export async function POST(request: Request) {
   const auth = requirePrintApiToken(request);
   if (!auth.ok) return auth.response;
+  const url = new URL(request.url);
+  const includeQr = url.searchParams.get("qr") === "1";
 
   const result = await printService.printLabel({
     printerKey: DEFAULT_GODEX_G500_PRINTER_KEY,
-    template: "prep_label_basic",
+    template: "prep_label_professional",
     data: {
       prepName: "GUACAMOLE",
       productionDateTime: new Date().toISOString(),
       shelfLifeDays: 2,
-      batchCode: "PREP-TEST",
+      batchCode: "GM-TEST",
+      responsibleName: "J. Bocanegra",
+      storageCondition: "Refrigerado 0-4 C",
+      brandName: "KIOSKO ALFRESKO",
+      qrValue: "ERP:prep_batch:GM-TEST",
+      includeQr,
     },
     metadata: {
       requestedBy: "test",

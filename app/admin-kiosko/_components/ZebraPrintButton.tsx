@@ -77,11 +77,11 @@ export function ZebraPrintButton({
   }
 
   return (
-    <div className="grid gap-2">
+    <div className="grid min-w-0 gap-2">
       <button
         type="button"
         onClick={print}
-        className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-stone-950"
+        className="w-full rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-stone-950 sm:w-auto"
       >
         {label}
       </button>

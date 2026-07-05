@@ -1,51 +1,83 @@
-# Godex G500 Print Service
+# Godex G500 Print Bridge
 
-Servicio local para imprimir EZPL nativo Godex desde el ERP interno.
+Servicio local para Windows. Consulta la cola `print_jobs` del ERP y envia comandos RAW/EZPL a la Godex G500 instalada por USB.
 
-## Requisitos
+## Configuracion local
 
-- Windows 10 en el PC conectado por USB a la Godex G500.
-- Node.js instalado en ese PC.
-- La impresora debe estar compartida en Windows, por ejemplo como `GodexG500`.
+Crea `scripts/godex-print-service/.env` en el PC Windows:
 
-## Variables
-
-```powershell
-$env:PRINT_SERVICE_PORT="9105"
-$env:PRINT_SERVICE_HOST="0.0.0.0"
-$env:GODEX_PRINTER_SHARE="\\localhost\GodexG500"
+```env
+ERP_API_URL=https://kioskoalfresko.es
+ERP_API_TOKEN=change-me-internal-print-token
+PRINTER_KEY=godex_g500_kiosko
+WINDOWS_PRINTER_NAME=GoDEX G500
+POLL_INTERVAL_MS=2000
+MAX_JOBS_PER_POLL=1
+GODEX_DRY_RUN=false
+DRY_RUN_MARK_PRINTED=false
 ```
 
-Opcional para preparar autenticacion futura:
-
-```powershell
-$env:PRINT_SERVICE_API_KEY="clave-interna"
-```
+`ERP_API_TOKEN` debe coincidir con `PRINT_JOBS_API_TOKEN` en el servidor ERP.
 
 ## Arranque manual
 
-Desde la raiz del proyecto:
-
 ```powershell
-node scripts/godex-print-service/server.mjs
+npm run godex:bridge
 ```
 
-El ERP debe tener:
+El proceso escribe logs en stdout/stderr con:
 
-```env
-PRINT_SERVICE_URL=http://192.168.1.44:9105
-```
+- arranque del bridge
+- trabajos reclamados
+- trabajos impresos
+- errores de spooler o API
 
-Si se define `PRINT_SERVICE_API_KEY` tambien debe estar en el entorno del ERP.
-
-## Prueba
+## Prueba directa de spooler
 
 ```powershell
+npm run godex:test-label
+```
+
+Simulacion sin imprimir:
+
+```powershell
+$env:GODEX_DRY_RUN="true"
+npm run godex:test-label
+```
+
+## Dry-run del bridge
+
+Con `GODEX_DRY_RUN=true`, el bridge reclama trabajos, muestra el EZPL y no imprime fisicamente. Solo marca `printed` si tambien defines `DRY_RUN_MARK_PRINTED=true`.
+
+## Listar impresoras
+
+```powershell
+npm run godex:list-printers
+```
+
+Copia el campo `Name` exacto a `WINDOWS_PRINTER_NAME`.
+
+## Prueba de cola
+
+```powershell
+$token="change-me-internal-print-token"
+$body = @{
+  printer_key = "godex_g500_kiosko"
+  label_type = "kitchen_inventory"
+  payload_json = @{
+    nombre_producto = "Tortilla prueba"
+    lote = "TEST-001"
+    fecha_elaboracion = "2026-07-03"
+    fecha_caducidad = "2026-07-05"
+    alergenos = @("huevo")
+    cantidad = "1 ud"
+  }
+} | ConvertTo-Json -Depth 5
+
 Invoke-RestMethod `
   -Method Post `
-  -Uri http://127.0.0.1:9105/print `
+  -Uri "https://kioskoalfresko.es/api/print-jobs" `
+  -Headers @{ Authorization = "Bearer $token" } `
   -ContentType "application/json" `
-  -Body '{"ezpl":"^Q40,3\n^W58\n^H10\n^S4\n^P1\n^L\nAA,20,20,1,1,1,0,0,KIOSKO ALFRESKO\nE"}'
+  -Body $body
 ```
-
-El servicio registra fecha, tamano del trabajo, duracion y errores. No guarda el contenido de la etiqueta.
