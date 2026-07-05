@@ -8,6 +8,7 @@ import { processPendingInboxOcr, reprocessInboxOcr } from "@/lib/admin-kiosko/do
 import { DOCUMENT_TYPES } from "@/lib/admin-kiosko/domain/document-types";
 import type { GodexLabelTemplate } from "@/lib/admin-kiosko/printing/godex-ezpl";
 import { DEFAULT_GODEX_G500_PRINTER_KEY, printService } from "@/lib/admin-kiosko/printing/print-service";
+import { generatePrepBatchCode } from "@/lib/admin-kiosko/printing/prep-label-utils";
 import {
   createChecklistRecord,
   createCleaningRecord,
@@ -214,7 +215,7 @@ async function createProductionPrepPrintJob(input: {
       quantity: input.quantity,
       unit: input.unit,
       qrValue: `ERP:prep_batch:${input.batchCode}`,
-      includeQr: false,
+      includeQr: true,
     },
     metadata: {
       requestedBy: input.responsibleName || "admin-kiosko",
@@ -1742,7 +1743,7 @@ export async function printPrepLabelAction(_previousState: PrepPrintState, formD
   const expiryDateTime = text(formData, "expiryDateTime");
   const shelfLifeDays = optionalNumber(formData, "shelfLifeDays");
   const template = text(formData, "template") === "prep_label_basic" ? "prep_label_basic" : "prep_label_professional";
-  const batchCode = text(formData, "batchCode");
+  const batchCode = text(formData, "batchCode") || generatePrepBatchCode(prepName);
   const responsibleName = text(formData, "responsibleName");
   const storageCondition = text(formData, "storageCondition") || "Refrigerado 0-4 C";
 
@@ -1763,7 +1764,7 @@ export async function printPrepLabelAction(_previousState: PrepPrintState, formD
       storageCondition,
       brandName: "KIOSKO ALFRESKO",
       qrValue: batchCode ? `ERP:prep_batch:${batchCode}` : undefined,
-      includeQr: checkbox(formData, "includeQr"),
+      includeQr: batchCode ? formData.get("includeQr") !== "off" : false,
     },
     metadata: {
       requestedBy: text(formData, "requestedBy") || "admin-kiosko",

@@ -1,3 +1,5 @@
+import { cleanLabelText } from "@/lib/admin-kiosko/printing/prep-label-utils";
+
 export const DEFAULT_GODEX_G500_PRINTER_KEY = "kiosko_godex_g500";
 
 export const PRINT_LABEL_TEMPLATES = ["test_label", "product_label_basic", "ingredient_label_basic", "prep_label_basic", "prep_label_professional"] as const;
@@ -105,7 +107,7 @@ function normalizeLabelText(value: unknown) {
 }
 
 export function sanitizeLabelText(value: unknown, maxLength = maxLabelTextLength) {
-  const normalized = normalizeLabelText(value);
+  const normalized = cleanLabelText(normalizeLabelText(value));
   return normalized.slice(0, Math.max(0, maxLength));
 }
 
@@ -377,7 +379,9 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
   const qrValue = sanitizeLabelText(input.data.qrValue, 180)
     || (batchCode ? `ERP:prep_batch:${batchCode}` : undefined);
   const qrUrl = sanitizeLabelText(input.data.qrUrl, 240) || buildInternalQrUrl(qrValue);
-  const includeQr = booleanFromInput(input.data.includeQr);
+  const includeQr = input.template === "prep_label_professional"
+    ? batchCode ? input.data.includeQr !== false && input.data.includeQr !== "false" : false
+    : booleanFromInput(input.data.includeQr);
 
   if (!prepName) {
     return { ok: false, error: `${template} necesita prepName.` };

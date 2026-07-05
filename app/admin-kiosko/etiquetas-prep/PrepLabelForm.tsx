@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { printPrepLabelAction, type PrepPrintState } from "../actions";
+import { generatePrepBatchCode } from "@/lib/admin-kiosko/printing/prep-label-utils";
 
 type PrepLabelFormProps = {
   defaultProductionDateTime: string;
@@ -12,6 +13,10 @@ const initialState: PrepPrintState = null;
 
 export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime }: PrepLabelFormProps) {
   const [state, formAction, isPending] = useActionState(printPrepLabelAction, initialState);
+  const [prepName, setPrepName] = useState("GUACAMOLE");
+  const [batchCode, setBatchCode] = useState("");
+  const automaticBatchCode = useMemo(() => generatePrepBatchCode(prepName), [prepName]);
+  const visibleBatchCode = batchCode || automaticBatchCode;
 
   return (
     <form action={formAction} className="grid gap-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
@@ -26,6 +31,8 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
           required
           maxLength={36}
           placeholder="GUACAMOLE"
+          value={prepName}
+          onChange={(event) => setPrepName(event.target.value)}
           className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
         />
       </div>
@@ -55,9 +62,12 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
             name="batchCode"
             type="text"
             maxLength={36}
-            placeholder="GM-040726-01"
+            value={visibleBatchCode}
+            onChange={(event) => setBatchCode(event.target.value)}
+            placeholder="GM-050726-0017"
             className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
           />
+          <p className="text-xs text-stone-500">Autogenerado si se deja sin editar: {automaticBatchCode}</p>
         </div>
       </div>
 
@@ -121,15 +131,12 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
         </div>
       </div>
 
-      <label className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-        <input
-          type="checkbox"
-          name="includeQr"
-          className="mt-1 h-4 w-4 rounded border-amber-300"
-        />
+      <label className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
+        <input type="hidden" name="includeQr" value="true" />
+        <span className="mt-1 h-4 w-4 rounded-full border border-emerald-300 bg-emerald-100" />
         <span>
           <span className="block font-semibold">Incluir QR interno</span>
-          <span className="mt-1 block text-xs">Experimental. Codifica ERP:prep_batch:lote y queda desactivado por defecto hasta validacion fisica.</span>
+          <span className="mt-1 block text-xs">Activo por defecto. Codifica ERP:prep_batch:{visibleBatchCode || "LOTE"}.</span>
         </span>
       </label>
 

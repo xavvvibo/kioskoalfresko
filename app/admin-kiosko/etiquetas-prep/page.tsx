@@ -53,10 +53,18 @@ export default async function PrepLabelsPage() {
         <div className="rounded-xl border border-stone-200 bg-white p-4 text-sm text-stone-700">
           <p className="font-semibold text-stone-950">Formato impreso</p>
           <pre className="mt-2 overflow-x-auto rounded-lg bg-stone-950 p-3 text-xs text-white">
-{`GUACAMOLE
-ELAB 04/07/26 12:30
-CAD 06/07/26 12:30`}
+{`KIOSKO ALFRESKO                         PREPARACION
+
+GUACAMOLE
+────────────────────────────────
+ELAB: 05/07/26 12:30          [QR interno]
+CAD: 07/07/26 12:30           ERP:prep_batch:GM-050726-0017
+RESPONSABLE: J. Bocanegra
+CONSERVACION: Refrigerado 0-4 C
+────────────────────────────────
+LOTE INTERNO  GM-050726-0017`}
           </pre>
+          <p className="mt-2 text-xs text-stone-500">El lote se autogenera desde el nombre y el QR interno queda activo por defecto si hay lote.</p>
         </div>
       </section>
     </main>

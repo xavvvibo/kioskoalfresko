@@ -15,6 +15,7 @@
     "godex:test-label:tcp": "node scripts/godex-print-service/test-label-tcp.mjs",
     "godex:test-label:tcp:minimal": "node scripts/godex-print-service/test-label-tcp-minimal.mjs",
     "godex:check-production-label:auto": "node scripts/godex-print-service/check-production-label-auto.mjs",
+    "godex:check-prep-label-design": "node scripts/godex-print-service/check-prep-label-design.mjs",
     "godex:list-printers": "node scripts/godex-print-service/list-printers.mjs"
   },
   "dependencies": {

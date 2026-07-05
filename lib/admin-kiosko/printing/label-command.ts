@@ -1,5 +1,6 @@
 import {
   buildGodex80x50LabelEzpl,
+  buildGodex80x50PrepProfessionalEzpl,
   isValidGodex80x50Ezpl,
 } from "./godex-80x50-ezpl.mjs";
 import { sanitizeLabelText } from "./print-payload";
@@ -71,13 +72,15 @@ export function generateLabelCommand(input: LabelCommandInput) {
   return {
     printerLanguage: language,
     command: input.payload.template === "prep_label_professional"
-      ? buildGodex80x50LabelEzpl({
-          template: input.payload.template,
-          title: payloadText(data.prepName) || input.payload.title || "Preparacion",
-          line1: input.payload.line1 || payloadText(data.batchCode),
-          line2: input.payload.line2,
-          line3: payloadText(data.responsibleName) || "KIOSKO ALFRESKO",
-          line4: payloadText(data.storageCondition),
+      ? buildGodex80x50PrepProfessionalEzpl({
+          prepName: payloadText(data.prepName) || input.payload.title || "Preparacion",
+          productionDateTime: data.productionDateTime,
+          expiryDateTime: data.expiryDateTime,
+          batchCode: data.batchCode,
+          responsibleName: data.responsibleName,
+          storageCondition: data.storageCondition,
+          qrValue: data.qrValue,
+          includeQr: data.includeQr,
         })
       : input.payload.template === "prep_label_basic"
         ? buildGodex80x50LabelEzpl({
