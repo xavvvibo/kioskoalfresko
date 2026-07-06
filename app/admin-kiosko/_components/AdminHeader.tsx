@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { canAccessSection, type AdminRole, type AdminSection } from "@/lib/admin-kiosko/roles";
 import { logoutAdminKioskoAction } from "../actions";
+import { AdminNavLink } from "./AdminNavLink";
 
 const navGroups = [
   {
@@ -127,28 +127,30 @@ export function AdminHeader({
             </p>
           </div>
           {!inspectorMode ? <div className="flex flex-wrap gap-3">
-            <Link
+            <AdminNavLink
               href="/admin-kiosko"
+              exact
               className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12"
+              activeClassName="border-[#d94b2b] bg-[#d94b2b] text-white shadow-[0_0_0_1px_rgba(242,198,187,0.18)]"
             >
               Panel
-            </Link>
-            <Link href="/admin-kiosko/owner" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12">
+            </AdminNavLink>
+            <AdminNavLink href="/admin-kiosko/owner" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12" activeClassName="border-[#d94b2b] bg-[#d94b2b] text-white">
               Owner
-            </Link>
-            <Link href="/admin-kiosko/empleado" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12">
+            </AdminNavLink>
+            <AdminNavLink href="/admin-kiosko/empleado" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12" activeClassName="border-[#d94b2b] bg-[#d94b2b] text-white">
               Empleado
-            </Link>
-            <Link href="/admin-kiosko/inspeccion" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12">
+            </AdminNavLink>
+            <AdminNavLink href="/admin-kiosko/inspeccion" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12" activeClassName="border-[#d94b2b] bg-[#d94b2b] text-white">
               Inspector
-            </Link>
-            <Link href="/admin-kiosko/buscar" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12">
+            </AdminNavLink>
+            <AdminNavLink href="/admin-kiosko/buscar" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12" activeClassName="border-[#d94b2b] bg-[#d94b2b] text-white">
               Buscar
-            </Link>
+            </AdminNavLink>
             <form action={logoutAdminKioskoAction}>
               <button
                 type="submit"
-                className="inline-flex items-center justify-center rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-stone-950"
+                className="inline-flex items-center justify-center rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]"
               >
                 Cerrar sesión
               </button>
@@ -156,18 +158,18 @@ export function AdminHeader({
           </div> : null}
         </div>
         {!inspectorMode ? <form action="/admin-kiosko/buscar" className="mt-6 grid gap-3 rounded-[1.2rem] border border-white/10 bg-black/20 p-3 md:grid-cols-[1fr_auto]">
-          <input name="q" placeholder="Buscar producto, lote, proveedor, documento, equipo, incidencia o fecha" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-sm text-stone-950 outline-none focus:border-[#d94b2b]" />
-          <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Buscar APPCC</button>
+          <input name="q" placeholder="Buscar producto, lote, proveedor, documento, equipo, incidencia o fecha" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-sm text-stone-950 outline-none focus:border-[#d94b2b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]" />
+          <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">Buscar APPCC</button>
         </form> : null}
         <nav className="mt-6 grid gap-3 rounded-[1.2rem] border border-white/10 bg-black/20 p-3 lg:grid-cols-5" aria-label="Navegación interna APPCC">
           {groups.map((group) => (
-            <details key={group.label} className="rounded-2xl border border-white/10 bg-white/6 p-3" open={group.label === "Operativa"}>
-              <summary className="cursor-pointer text-[11px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">{group.label}</summary>
+            <details key={group.label} className="rounded-2xl border border-white/10 bg-white/6 p-3" open>
+              <summary className="cursor-pointer text-[11px] font-black uppercase tracking-[0.14em] text-[#f2c6bb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">{group.label}</summary>
               <div className="mt-3 grid gap-2">
                 {group.links.map(([label, href]) => (
-                  <Link key={href} href={href} className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] font-black uppercase tracking-[0.1em] text-white transition hover:border-[#d94b2b] hover:bg-[#d94b2b]">
+                  <AdminNavLink key={href} href={href} className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] font-black uppercase tracking-[0.1em] text-white transition hover:border-[#d94b2b] hover:bg-[#d94b2b]" activeClassName="border-[#d94b2b] bg-[#d94b2b] text-white shadow-[0_0_0_1px_rgba(242,198,187,0.22)]">
                     {label}
-                  </Link>
+                  </AdminNavLink>
                 ))}
               </div>
             </details>

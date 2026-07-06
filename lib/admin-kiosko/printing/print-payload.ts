@@ -10,6 +10,7 @@ export type TestLabelData = {
   title: string;
   line1: string;
   line2: string;
+  copies?: number;
 };
 
 export type ProductLabelBasicData = {
@@ -17,6 +18,7 @@ export type ProductLabelBasicData = {
   internalCode?: string;
   lot?: string;
   expiryDate?: string;
+  copies?: number;
 };
 
 export type IngredientLabelBasicData = {
@@ -25,6 +27,7 @@ export type IngredientLabelBasicData = {
   internalCode?: string;
   lot?: string;
   expiryDate?: string;
+  copies?: number;
 };
 
 export type PrepLabelBasicData = {
@@ -43,6 +46,7 @@ export type PrepLabelBasicData = {
   qrUrl?: string;
   qrValue?: string;
   includeQr?: boolean;
+  copies?: number;
 };
 
 export type PrintJobMetadata = {
@@ -53,6 +57,8 @@ export type PrintJobMetadata = {
   createdFrom?: string;
   reason?: string;
   batchCode?: string;
+  idempotencyKey?: string;
+  requestedCopies?: string;
 };
 
 export type PrintLabelData = TestLabelData | ProductLabelBasicData | IngredientLabelBasicData | PrepLabelBasicData;
@@ -75,6 +81,7 @@ export type BridgePrintPayload = {
   title: string;
   line1: string;
   line2: string;
+  copies?: number;
   template: PrintLabelTemplate;
   data: PrintLabelData;
   metadata: PrintJobMetadata;
@@ -217,6 +224,12 @@ function booleanFromInput(value: unknown) {
   return value === true || value === "true" || value === "1" || value === "on";
 }
 
+function parseCopies(value: unknown) {
+  if (value === undefined || value === null || value === "") return undefined;
+  const parsed = typeof value === "number" ? value : Number(String(value).replace(",", "."));
+  return Number.isFinite(parsed) ? Math.max(1, Math.min(99, Math.round(parsed))) : undefined;
+}
+
 function buildInternalQrUrl(qrValue?: string) {
   const baseUrl = sanitizeLabelText(process.env.NEXT_PUBLIC_APP_BASE_URL, 180).replace(/\/+$/, "");
   const value = sanitizeLabelText(qrValue, 240);
@@ -235,6 +248,8 @@ function normalizedMetadata(value: unknown): PrintJobMetadata {
     createdFrom: sanitizeLabelText(value.createdFrom, 80),
     reason: sanitizeLabelText(value.reason, 120),
     batchCode: sanitizeLabelText(value.batchCode, 120),
+    idempotencyKey: sanitizeLabelText(value.idempotencyKey, 160),
+    requestedCopies: sanitizeLabelText(value.requestedCopies, 12),
   };
 }
 
@@ -277,6 +292,7 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
     const title = sanitizeLabelText(input.data.title);
     const line1 = sanitizeLabelText(input.data.line1);
     const line2 = sanitizeLabelText(input.data.line2);
+    const copies = parseCopies(input.data.copies);
 
     if (!title || !line1 || !line2) {
       return { ok: false, error: "test_label necesita title, line1 y line2." };
@@ -287,7 +303,7 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
       input: {
         printerKey,
         template,
-        data: { title, line1, line2 },
+        data: { title, line1, line2, copies },
         metadata: normalizedMetadata(input.metadata),
       },
     };
@@ -306,6 +322,7 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
     const internalCode = sanitizeLabelText(input.data.internalCode);
     const lot = sanitizeLabelText(input.data.lot);
     const expiryDate = sanitizeLabelText(input.data.expiryDate);
+    const copies = parseCopies(input.data.copies);
 
     if (!productName) {
       return { ok: false, error: "product_label_basic necesita productName." };
@@ -316,7 +333,7 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
       input: {
         printerKey,
         template,
-        data: { productName, internalCode, lot, expiryDate },
+        data: { productName, internalCode, lot, expiryDate, copies },
         metadata: normalizedMetadata(input.metadata),
       },
     };
@@ -337,6 +354,7 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
     const internalCode = sanitizeLabelText(input.data.internalCode);
     const lot = sanitizeLabelText(input.data.lot);
     const expiryDate = sanitizeLabelText(input.data.expiryDate);
+    const copies = parseCopies(input.data.copies);
 
     if (!ingredientName) {
       return { ok: false, error: "ingredient_label_basic necesita ingredientName." };
@@ -347,7 +365,7 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
       input: {
         printerKey,
         template,
-        data: { ingredientName, supplierName, internalCode, lot, expiryDate },
+        data: { ingredientName, supplierName, internalCode, lot, expiryDate, copies },
         metadata: normalizedMetadata(input.metadata),
       },
     };
@@ -382,6 +400,7 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
   const includeQr = input.template === "prep_label_professional"
     ? batchCode ? input.data.includeQr !== false && input.data.includeQr !== "false" : false
     : booleanFromInput(input.data.includeQr);
+  const copies = parseCopies(input.data.copies);
 
   if (!prepName) {
     return { ok: false, error: `${template} necesita prepName.` };
@@ -432,6 +451,7 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
         qrUrl,
         qrValue,
         includeQr,
+        copies,
       },
       metadata: normalizedMetadata(input.metadata),
     },
@@ -475,6 +495,7 @@ export function buildPrintPayload(input: ValidatedPrintLabelInput): BridgePrintP
 
   return {
     ...lines,
+    copies: (input.data as { copies?: number }).copies,
     template: input.template,
     data: input.data,
     metadata: input.metadata,

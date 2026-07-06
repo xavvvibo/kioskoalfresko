@@ -5,9 +5,10 @@ export function PrintButton() {
     <button
       type="button"
       onClick={() => window.print()}
-      className="w-full rounded-full border border-white/20 px-5 py-3 text-center text-sm font-black uppercase tracking-[0.14em] text-white print:hidden sm:w-auto"
+      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/8 px-4 py-3 text-center text-xs font-black uppercase tracking-[0.12em] text-white transition duration-150 hover:border-[#d94b2b] hover:bg-white/12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb] print:hidden sm:w-auto"
     >
-      Imprimir / PDF A4
+      <span className="grid h-5 min-w-8 place-items-center rounded-md border border-white/20 bg-black/20 text-[9px] text-white">PDF</span>
+      PDF
     </button>
   );
 }

@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import { printPrepLabelAction, type PrepPrintState } from "../actions";
 import { generatePrepBatchCode } from "@/lib/admin-kiosko/printing/prep-label-utils";
+import { Label80x50Preview } from "../_components/Label80x50Preview";
 
 type PrepLabelFormProps = {
   defaultProductionDateTime: string;
@@ -33,7 +34,7 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
           placeholder="GUACAMOLE"
           value={prepName}
           onChange={(event) => setPrepName(event.target.value)}
-          className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
+          className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]"
         />
       </div>
 
@@ -46,7 +47,7 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
             id="template"
             name="template"
             defaultValue="prep_label_professional"
-            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
+            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]"
           >
             <option value="prep_label_professional">Profesional compacta</option>
             <option value="prep_label_basic">Basica compatible</option>
@@ -65,7 +66,7 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
             value={visibleBatchCode}
             onChange={(event) => setBatchCode(event.target.value)}
             placeholder="GM-050726-0017"
-            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
+            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]"
           />
           <p className="text-xs text-stone-500">Autogenerado si se deja sin editar: {automaticBatchCode}</p>
         </div>
@@ -82,7 +83,7 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
             type="datetime-local"
             required
             defaultValue={defaultProductionDateTime}
-            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
+            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]"
           />
         </div>
 
@@ -96,7 +97,7 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
             type="datetime-local"
             required
             defaultValue={defaultExpiryDateTime}
-            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
+            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]"
           />
         </div>
       </div>
@@ -112,7 +113,7 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
             type="text"
             maxLength={36}
             defaultValue="J. Bocanegra"
-            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
+            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]"
           />
         </div>
 
@@ -126,7 +127,7 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
             type="text"
             maxLength={36}
             defaultValue="Refrigerado 0-4 C"
-            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950"
+            className="rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]"
           />
         </div>
       </div>
@@ -140,10 +141,24 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
         </span>
       </label>
 
+      <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
+        <Label80x50Preview
+          title={prepName}
+          kind="PREPARACION"
+          batch={visibleBatchCode}
+          productionDate="fecha/hora elaboracion"
+          expiryDate="fecha/hora caducidad"
+          responsible="responsable"
+          storage="conservacion"
+          trace={visibleBatchCode ? `ERP:prep_batch:${visibleBatchCode}` : ""}
+          observations="conservacion"
+        />
+      </div>
+
       <button
         type="submit"
         disabled={isPending}
-        className="inline-flex w-fit items-center justify-center rounded-lg bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex w-fit items-center justify-center rounded-lg bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isPending ? "Enviando..." : "Imprimir etiqueta"}
       </button>

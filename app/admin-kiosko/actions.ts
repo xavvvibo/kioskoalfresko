@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { clearAdminSession, createAdminSession, isCorrectAdminPassword, requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { createDomainEvent, emitDomainEventSafe } from "@/lib/admin-kiosko/domain";
+import { labelEventService, type LabelEventResult } from "@/lib/admin-kiosko/domain/label-event.service";
 import { processPendingInboxOcr, reprocessInboxOcr } from "@/lib/admin-kiosko/domain/inbox-ocr/processor";
 import { DOCUMENT_TYPES } from "@/lib/admin-kiosko/domain/document-types";
 import type { GodexLabelTemplate } from "@/lib/admin-kiosko/printing/godex-ezpl";
@@ -53,10 +54,8 @@ import {
   confirmInboxDocument,
   createInboxUploadGroupId,
   queueInboxDocument,
-  createPrintJob,
   enqueuePrintJob,
   getPrintJobById,
-  getPrintJobsByProductionBatch,
   getProductionBatchById,
 } from "@/lib/admin-kiosko/database";
 import type { InboxDocumentType } from "@/lib/admin-kiosko/inbox";
@@ -172,61 +171,13 @@ function godexTemplateFromModel(model: string): GodexLabelTemplate {
   return "produccion";
 }
 
-function storageConditionFromState(value: string) {
-  if (value === "congelado") return "Congelado -18 C";
-  if (value === "descongelado") return "Descongelado 0-4 C";
-  return "Refrigerado 0-4 C";
-}
+type ProductionLabelQueueResult = LabelEventResult | { ok: false; error: string };
 
-function dateTimeFromDateAndTime(date: string, time: string) {
-  return `${date}T${(time || "00:00").slice(0, 5)}`;
-}
-
-async function createProductionPrepPrintJob(input: {
-  prepName: string;
-  productionDate: string;
-  productionTime: string;
-  expiryDate: string;
-  batchCode: string;
-  productionBatchId: string;
-  responsibleName: string;
-  storageState: string;
-  quantity?: number;
-  unit?: string;
-  sourceType?: string;
-  createdFrom: string;
-  reason: string;
-}) {
-  if (!input.expiryDate) {
-    return { ok: false as const, error: "No se puede imprimir etiqueta sin fecha de caducidad." };
-  }
-
-  return printService.printLabel({
-    printerKey: DEFAULT_GODEX_G500_PRINTER_KEY,
-    template: "prep_label_professional",
-    data: {
-      prepName: input.prepName,
-      productionDateTime: dateTimeFromDateAndTime(input.productionDate, input.productionTime),
-      expiryDateTime: dateTimeFromDateAndTime(input.expiryDate, input.productionTime),
-      batchCode: input.batchCode,
-      responsibleName: input.responsibleName,
-      storageCondition: storageConditionFromState(input.storageState),
-      brandName: "KIOSKO ALFRESKO",
-      quantity: input.quantity,
-      unit: input.unit,
-      qrValue: `ERP:prep_batch:${input.batchCode}`,
-      includeQr: true,
-    },
-    metadata: {
-      requestedBy: input.responsibleName || "admin-kiosko",
-      module: "production",
-      sourceType: input.sourceType || "production_batch",
-      sourceId: input.productionBatchId,
-      createdFrom: input.createdFrom,
-      reason: input.reason,
-      batchCode: input.batchCode,
-    },
-  });
+function isLabelEventResult(value: unknown): value is LabelEventResult {
+  return value !== null
+    && typeof value === "object"
+    && "ok" in value
+    && "decision" in value;
 }
 
 async function queueProductionCloseLabel(input: {
@@ -240,23 +191,12 @@ async function queueProductionCloseLabel(input: {
   storageState: string;
   quantity?: number;
   unit?: string;
-}) {
-  const existing = await getPrintJobsByProductionBatch({
-    batchId: input.productionBatchId,
-    batchCode: input.batchCode,
-    template: "prep_label_professional",
-    reason: "auto_print_on_batch_close",
-  });
-
-  if (existing.ok && existing.data.length) {
-    return { ok: true as const, skipped: true as const, data: existing.data[0] };
-  }
-
-  const printResult = await createProductionPrepPrintJob({
+}): Promise<ProductionLabelQueueResult> {
+  const printResult = await emitProductionBatchClosedEvent({
     ...input,
-    sourceType: "production_batch",
     createdFrom: "production_close",
     reason: "auto_print_on_batch_close",
+    correlationId: input.productionBatchId,
   });
 
   if (printResult.ok) {
@@ -269,9 +209,7 @@ async function queueProductionCloseLabel(input: {
     });
   }
 
-  return printResult.ok
-    ? { ok: true as const, skipped: false as const, data: printResult.data }
-    : printResult;
+  return printResult;
 }
 
 async function queueProductionBatchManualReprint(input: {
@@ -286,9 +224,8 @@ async function queueProductionBatchManualReprint(input: {
   quantity?: number;
   unit?: string;
 }) {
-  const printResult = await createProductionPrepPrintJob({
+  const printResult = await labelEventService.requestProductionBatchManualLabel({
     ...input,
-    sourceType: "production_batch",
     createdFrom: "production_batch_detail",
     reason: "manual_reprint_batch_label",
   });
@@ -304,6 +241,69 @@ async function queueProductionBatchManualReprint(input: {
   }
 
   return printResult;
+}
+
+async function emitPrintJobCreatedEvent(input: {
+  printJobId: string;
+  printerKey: string;
+  template?: string;
+  sourceType?: string;
+  sourceId?: string;
+  reason?: string;
+  correlationId?: string;
+}) {
+  await emitDomainEventSafe(createDomainEvent("PrintJobCreated", {
+    source: "labels",
+    correlationId: input.correlationId || input.printJobId,
+    trace: { labelId: input.printJobId },
+    payload: {
+      printJobId: input.printJobId,
+      printerKey: input.printerKey,
+      template: input.template,
+      sourceType: input.sourceType,
+      sourceId: input.sourceId,
+      reason: input.reason,
+    },
+  }));
+}
+
+async function emitProductionBatchClosedEvent(input: {
+  prepName: string;
+  productionDate: string;
+  productionTime: string;
+  expiryDate: string;
+  batchCode: string;
+  productionBatchId: string;
+  responsibleName: string;
+  storageState: string;
+  quantity?: number;
+  unit?: string;
+  createdFrom: string;
+  reason: string;
+  correlationId?: string;
+}): Promise<ProductionLabelQueueResult> {
+  const result = await emitDomainEventSafe(createDomainEvent("ProductionBatchClosed", {
+    source: "production",
+    correlationId: input.correlationId || input.productionBatchId,
+    trace: { productionBatchId: input.productionBatchId },
+    payload: {
+      prepName: input.prepName,
+      productionDate: input.productionDate,
+      productionTime: input.productionTime,
+      expiryDate: input.expiryDate,
+      batchCode: input.batchCode,
+      productionBatchId: input.productionBatchId,
+      responsibleName: input.responsibleName,
+      storageState: input.storageState,
+      quantity: input.quantity,
+      unit: input.unit,
+      createdFrom: input.createdFrom,
+      reason: input.reason,
+    },
+  }));
+  const labelResult = result?.handlerResults.find((entry) => entry.handlerName === "LabelHandler")?.result;
+  if (isLabelEventResult(labelResult)) return labelResult;
+  return { ok: false, error: "No se pudo confirmar la creación de la etiqueta del lote." };
 }
 
 async function resolveSupplierFromForm(formData: FormData, fieldPrefix = "supplier") {
@@ -1248,6 +1248,15 @@ export async function saveProductionBatchAction(formData: FormData) {
     });
     if (printResult.ok) {
       params.set(printResult.skipped ? "print_existing" : "print_job", printResult.data.id);
+      await emitPrintJobCreatedEvent({
+        printJobId: printResult.data.id,
+        printerKey: printResult.data.printer_key,
+        template: typeof printResult.data.payload.template === "string" ? printResult.data.payload.template : undefined,
+        sourceType: "production_batch",
+        sourceId: executed.data.productionBatchId,
+        reason: printResult.skipped ? "auto_print_on_batch_close_existing" : "auto_print_on_batch_close",
+        correlationId,
+      });
     } else {
       params.set("print_error", printResult.error.slice(0, 240));
     }
@@ -1312,6 +1321,15 @@ export async function saveProductionBatchAction(formData: FormData) {
     });
     if (printResult.ok) {
       params.set(printResult.skipped ? "print_existing" : "print_job", printResult.data.id);
+      await emitPrintJobCreatedEvent({
+        printJobId: printResult.data.id,
+        printerKey: printResult.data.printer_key,
+        template: typeof printResult.data.payload.template === "string" ? printResult.data.payload.template : undefined,
+        sourceType: "production_batch",
+        sourceId: result.data.id,
+        reason: printResult.skipped ? "auto_print_on_batch_close_existing" : "auto_print_on_batch_close",
+        correlationId: result.data.id,
+      });
     } else {
       params.set("print_error", printResult.error.slice(0, 240));
     }
@@ -1421,6 +1439,16 @@ export async function reprintProductionBatchLabelAction(formData: FormData) {
   if (!printResult.ok) {
     redirect(`/admin-kiosko/produccion/lotes/${batchId}?print_error=${encodeURIComponent(printResult.error.slice(0, 240))}`);
   }
+
+  await emitPrintJobCreatedEvent({
+    printJobId: printResult.data.id,
+    printerKey: printResult.data.printer_key,
+    template: typeof printResult.data.payload.template === "string" ? printResult.data.payload.template : undefined,
+    sourceType: "production_batch",
+    sourceId: batchId,
+    reason: "manual_reprint_batch_label",
+    correlationId: batchId,
+  });
 
   redirect(`/admin-kiosko/produccion/lotes/${batchId}?print_job=${encodeURIComponent(printResult.data.id)}`);
 }
@@ -1751,34 +1779,32 @@ export async function printPrepLabelAction(_previousState: PrepPrintState, formD
     return { ok: false, message: "Indica el nombre de la preparacion." };
   }
 
-  const printResult = await printService.printLabel({
-    printerKey: DEFAULT_GODEX_G500_PRINTER_KEY,
+  const printResult = await labelEventService.requestPrepManualLabel({
     template,
-    data: {
-      prepName,
-      productionDateTime: productionDateTime || undefined,
-      expiryDateTime: expiryDateTime || undefined,
-      shelfLifeDays,
-      batchCode: batchCode || undefined,
-      responsibleName: responsibleName || undefined,
-      storageCondition,
-      brandName: "KIOSKO ALFRESKO",
-      qrValue: batchCode ? `ERP:prep_batch:${batchCode}` : undefined,
-      includeQr: batchCode ? formData.get("includeQr") !== "off" : false,
-    },
-    metadata: {
-      requestedBy: text(formData, "requestedBy") || "admin-kiosko",
-      module: "prep",
-      sourceType: "prep_batch",
-      sourceId: batchCode || undefined,
-      createdFrom: "erp_ui",
-      reason: "print_prep_label",
-    },
+    prepName,
+    productionDateTime: productionDateTime || undefined,
+    expiryDateTime: expiryDateTime || undefined,
+    shelfLifeDays,
+    batchCode,
+    responsibleName: responsibleName || undefined,
+    storageCondition,
+    requestedBy: text(formData, "requestedBy") || "admin-kiosko",
+    reason: template === "prep_label_basic" ? "print_prep_label_basic" : "print_prep_label",
   });
 
   if (!printResult.ok) {
     return { ok: false, message: printPrepErrorMessage(printResult.error) };
   }
+
+  await emitPrintJobCreatedEvent({
+    printJobId: printResult.data.id,
+    printerKey: printResult.data.printer_key,
+    template: typeof printResult.data.payload.template === "string" ? printResult.data.payload.template : undefined,
+    sourceType: "prep_batch",
+    sourceId: batchCode,
+    reason: "print_prep_label",
+    correlationId: batchCode,
+  });
 
   revalidatePath("/admin-kiosko/etiquetas-prep");
   return {
@@ -1991,43 +2017,48 @@ export async function printGodexLabelAction(_previousState: { ok: boolean; messa
   const batch = text(formData, "batch");
   const supplier = text(formData, "supplier_name") || text(formData, "supplier");
   const responsible = text(formData, "responsible") || "F. Javier Bocanegra Sanjuan";
+  const productionDateTime = text(formData, "elaboration_date")
+    || text(formData, "opening_date")
+    || text(formData, "freezing_date")
+    || text(formData, "defrosting_date");
+  const expiryDateTime = text(formData, "best_before_date");
+  const sourceId = text(formData, "inventory_lot_id") || text(formData, "product_id") || batch;
+  const sourceType = text(formData, "label_type") || "godex_appcc";
 
   if (!product || !batch) {
     return { ok: false, message: "La etiqueta necesita producto y lote antes de imprimir en Godex." };
   }
 
-  const printResult = await createPrintJob({
-    printerKey: "godex_g500_kiosko",
-    labelType: text(formData, "label_type") || "godex_appcc",
-    payload: {
-      nombre_producto: product,
-      lote: batch,
-      fecha_elaboracion: text(formData, "elaboration_date") || text(formData, "opening_date"),
-      fecha_caducidad: text(formData, "best_before_date"),
-      alergenos: text(formData, "allergens"),
-      codigo_barras: text(formData, "inventory_lot_id") || batch,
-      cantidad: text(formData, "quantity"),
-      responsable: responsible,
-      proveedor: supplier,
-      tipo: godexTemplateFromModel(model),
-      copies,
-      freezing_date: text(formData, "freezing_date"),
-      defrosting_date: text(formData, "defrosting_date"),
-      qr_payload: parseJson<Record<string, unknown>>(text(formData, "qr_payload"), {
-        type: "appcc-label",
-        product,
-        batch,
-        supplier,
-        expiry_date: text(formData, "best_before_date"),
-        inventory_lot_id: text(formData, "inventory_lot_id"),
-      }),
-    },
+  const printResult = await labelEventService.requestManualGodexLabel({
+    product,
+    batch,
+    model,
+    supplier: supplier || text(formData, "storage_temperature") || undefined,
+    responsible,
+    productionDateTime: productionDateTime || undefined,
+    expiryDateTime: expiryDateTime || undefined,
+    sourceId,
+    sourceType,
+    copies,
   });
 
   if (!printResult.ok) {
     return { ok: false, message: printResult.error };
   }
 
+  await emitPrintJobCreatedEvent({
+    printJobId: printResult.data.id,
+    printerKey: printResult.data.printer_key,
+    template: typeof printResult.data.payload.template === "string" ? printResult.data.payload.template : undefined,
+    sourceType,
+    sourceId,
+    reason: printResult.decision.reason,
+    correlationId: sourceId,
+  });
+
+  const queuedTemplate = typeof printResult.data.payload.template === "string"
+    ? printResult.data.payload.template
+    : godexTemplateFromModel(model);
   const labelResult = await createLabelRecord({
     model,
     product,
@@ -2042,7 +2073,7 @@ export async function printGodexLabelAction(_previousState: { ok: boolean; messa
     print_format: "termica",
     copies,
     printer: "Godex G500",
-    template: godexTemplateFromModel(model),
+    template: queuedTemplate,
     zpl_version: "EZPL",
     inventory_lot_id: text(formData, "inventory_lot_id"),
     product_id: text(formData, "product_id"),

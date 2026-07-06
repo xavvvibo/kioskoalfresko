@@ -40,6 +40,11 @@ function payloadText(value: unknown, maxLength = 48) {
   return sanitizeLabelText(value, maxLength);
 }
 
+function payloadCopies(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(1, Math.min(99, Math.round(parsed))) : undefined;
+}
+
 export function generateGodexLabel(payload: LabelCommandPayload) {
   return buildGodex80x50LabelEzpl({
     template: payload.template || payload.tipo || "test_label",
@@ -49,6 +54,7 @@ export function generateGodexLabel(payload: LabelCommandPayload) {
     line2: payload.line2 || payload.fecha_caducidad || payload.fecha_elaboracion,
     line3: payload.responsable || payload.cantidad || "KIOSKO ALFRESKO",
     line4: payload.proveedor,
+    copies: payloadCopies(payload.copies),
   });
 }
 
@@ -81,6 +87,7 @@ export function generateLabelCommand(input: LabelCommandInput) {
           storageCondition: data.storageCondition,
           qrValue: data.qrValue,
           includeQr: data.includeQr,
+          copies: payloadCopies(input.payload.copies),
         })
       : input.payload.template === "prep_label_basic"
         ? buildGodex80x50LabelEzpl({
@@ -89,6 +96,7 @@ export function generateLabelCommand(input: LabelCommandInput) {
             line1: input.payload.line1 || payloadText(data.batchCode),
             line2: input.payload.line2,
             line3: "KIOSKO ALFRESKO",
+            copies: payloadCopies(input.payload.copies),
           })
       : generateGodexLabel(input.payload),
   };

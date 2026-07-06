@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { AdminHeader } from "../_components/AdminHeader";
+import { Label80x50Preview } from "../_components/Label80x50Preview";
 import { PrepLabelForm } from "./PrepLabelForm";
 
 export const metadata: Metadata = {
@@ -52,7 +53,20 @@ export default async function PrepLabelsPage() {
 
         <div className="rounded-xl border border-stone-200 bg-white p-4 text-sm text-stone-700">
           <p className="font-semibold text-stone-950">Formato impreso</p>
-          <pre className="mt-2 overflow-x-auto rounded-lg bg-stone-950 p-3 text-xs text-white">
+          <div className="mt-3">
+            <Label80x50Preview
+              title="GUACAMOLE"
+              kind="PREPARACION"
+              batch="GM-050726-0017"
+              productionDate="05/07/26 12:30"
+              expiryDate="07/07/26 12:30"
+              responsible="J. Bocanegra"
+              storage="Refrigerado 0-4 C"
+              trace="ERP:prep_batch:GM-050726-0017"
+              observations="Refrigerado 0-4 C"
+            />
+          </div>
+          <pre className="mt-4 overflow-x-auto rounded-lg bg-stone-950 p-3 text-xs text-white">
 {`KIOSKO ALFRESKO                         PREPARACION
 
 GUACAMOLE

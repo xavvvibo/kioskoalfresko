@@ -38,9 +38,10 @@ export function GodexPrintButton({ payload, disabled }: { payload: GodexLabelPay
       <button
         type="submit"
         disabled={disabled || isPending}
-        className="w-full rounded-full border border-emerald-300 bg-emerald-100 px-5 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-emerald-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#d94b2b] bg-[#d94b2b] px-4 py-3 text-center text-xs font-black uppercase tracking-[0.12em] text-white transition duration-150 hover:bg-[#b83d22] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
       >
-        {isPending ? "Imprimiendo..." : "Imprimir Godex"}
+        <span className="grid h-5 w-5 place-items-center rounded-md bg-white text-[10px] text-[#d94b2b]">G</span>
+        {isPending ? "Imprimiendo..." : "Godex"}
       </button>
       {state?.message ? (
         <p className={state.ok ? "text-xs font-semibold text-emerald-200" : "text-xs font-semibold text-[#f2c6bb]"}>

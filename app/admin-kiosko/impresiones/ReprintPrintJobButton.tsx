@@ -8,12 +8,12 @@ export function ReprintPrintJobButton({ jobId, disabled }: { jobId: string; disa
   const [state, formAction, isPending] = useActionState(reprintPrintJobAction, initialState);
 
   return (
-    <form action={formAction} className="grid min-w-[8rem] gap-1">
+    <form action={formAction} className="grid min-w-[7rem] gap-1">
       <input type="hidden" name="job_id" value={jobId} />
       <button
         type="submit"
         disabled={disabled || isPending}
-        className="whitespace-nowrap rounded-full border border-stone-950 bg-stone-950 px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-white transition hover:bg-[#d94b2b] disabled:cursor-not-allowed disabled:opacity-50"
+        className="whitespace-nowrap rounded-lg border border-stone-300 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-stone-800 transition duration-150 hover:border-[#d94b2b] hover:text-[#9f2d18] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isPending ? "Enviando..." : "Reimprimir"}
       </button>

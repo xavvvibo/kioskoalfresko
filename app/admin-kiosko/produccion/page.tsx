@@ -4,6 +4,7 @@ import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { getInternalRecipes, getProductionBatches, getProductionMaterialOptions, getProductionMetrics, getInventoryProducts, previewProductionBatch, type InternalRecipe, type ProductionMaterialOption, type InventoryProduct } from "@/lib/admin-kiosko/database";
 import type { ProductionPreview } from "@/lib/admin-kiosko/production/contracts";
 import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
+import { AdminEmptyState } from "../_components/AdminEmptyState";
 import { AdminHeader } from "../_components/AdminHeader";
 import { ZebraPrintButton } from "../_components/ZebraPrintButton";
 import { saveInternalRecipeAction, saveProductionBatchAction, saveProductionMovementAction } from "../actions";
@@ -348,7 +349,7 @@ export default async function ProduccionPage({
               ["Inventario", "/admin-kiosko/inventario"],
               ["Trazabilidad", "/admin-kiosko/trazabilidad"],
             ].map(([label, href]) => (
-              <a key={label} href={href} className="rounded-full border border-white/10 bg-white/6 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white transition hover:border-[#d94b2b]">{label}</a>
+              <a key={label} href={href} className="rounded-full border border-white/10 bg-white/6 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white transition hover:border-[#d94b2b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">{label}</a>
             ))}
           </nav>
 
@@ -427,7 +428,7 @@ export default async function ProduccionPage({
                   <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Nuevo lote interno</p>
                   <h2 className="mt-2 text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Registrar elaboración</h2>
                 </div>
-                <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Registrar producción</button>
+                <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">Registrar producción</button>
               </div>
 
               <div className="mt-5 grid min-w-0 gap-6 xl:grid-cols-2">
@@ -502,7 +503,7 @@ export default async function ProduccionPage({
                 <SelectField name="conservation_type" label="Tipo conservación" value="refrigerado" options={["refrigerado", "congelado"]} />
                 <SelectField name="status" label="Estado" value="activa" options={["activa", "revision", "inactiva"]} />
                 <TextArea name="instructions" label="Instrucciones" />
-                <button className="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Guardar receta</button>
+                <button className="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">Guardar receta</button>
               </form>
 
               <div className="mt-5 grid gap-3">
@@ -512,7 +513,7 @@ export default async function ProduccionPage({
                     <p className="mt-1 break-words">{recipe.inputs?.map((input) => `${input.input_product} ${input.quantity || ""} ${input.unit || ""}`.trim()).join(", ") || "Materia prima por definir"} → {recipe.output_product}</p>
                     <p className="mt-1 break-words text-xs text-stone-400">Rendimiento: {recipe.expected_yield || "por definir"} {recipe.output_unit || "ud"} · peso {recipe.unit_weight || "por definir"} g · vida útil {recipe.shelf_life_refrigerated_hours || 0} h / {recipe.shelf_life_frozen_days || 0} días.</p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Link href={`/admin-kiosko/produccion?recipe=${recipe.id}`} className="rounded-full border border-white/20 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Repetir elaboración</Link>
+                      <Link href={`/admin-kiosko/produccion?recipe=${recipe.id}`} className="rounded-full border border-white/20 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">Repetir elaboración</Link>
                     </div>
                     <details className="mt-3 rounded-xl border border-white/10 bg-[#0d0d0d] p-3">
                       <summary className="cursor-pointer text-[11px] font-black uppercase tracking-[0.12em] text-[#f2c6bb]">Editar receta</summary>
@@ -536,7 +537,7 @@ export default async function ProduccionPage({
                         <SelectField name="conservation_type" label="Tipo conservación" value={recipe.conservation_type || "refrigerado"} options={["refrigerado", "congelado"]} />
                         <SelectField name="status" label="Estado" value={recipe.status || "activa"} options={["activa", "revision", "inactiva"]} />
                         <TextArea name="instructions" label="Instrucciones" value={recipe.instructions || ""} />
-                        <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Guardar cambios</button>
+                        <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">Guardar cambios</button>
                       </form>
                     </details>
                   </article>
@@ -552,7 +553,7 @@ export default async function ProduccionPage({
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Trazabilidad</p>
                 <h2 className="mt-2 text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Lotes internos</h2>
               </div>
-              <Link href="/admin-kiosko/trazabilidad" className="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Abrir trazabilidad</Link>
+              <Link href="/admin-kiosko/trazabilidad" className="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">Abrir trazabilidad</Link>
             </div>
 
             <div className="mt-5 grid gap-4">
@@ -635,7 +636,7 @@ export default async function ProduccionPage({
                       <section className="rounded-[1.3rem] border border-stone-950/10 bg-white p-4">
                         <h4 className="text-sm font-black uppercase tracking-[0.14em] text-stone-950">Acciones rápidas</h4>
                         <div className="mt-3 grid gap-3">
-                          <Link href={`/admin-kiosko/produccion/lotes/${batch.id}`} className="rounded-full border border-stone-950 bg-stone-950 px-5 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-white">Ver ficha</Link>
+                          <Link href={`/admin-kiosko/produccion/lotes/${batch.id}`} className="rounded-full border border-stone-950 bg-stone-950 px-5 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]">Ver ficha</Link>
                           {movementActions.map((action) => (
                             <form key={action.type} action={saveProductionMovementAction} className="grid gap-2 rounded-xl border border-stone-950/10 bg-stone-50 p-3">
                               <input type="hidden" name="batch_id" value={batch.id} />
@@ -647,14 +648,14 @@ export default async function ProduccionPage({
                               <input type="hidden" name="movement_date" value={todayValue} />
                               <input type="hidden" name="responsible" value={batch.responsible || "F. Javier Bocanegra Sanjuan"} />
                               <div className="grid grid-cols-[1fr_auto] gap-2">
-                                <input name="quantity" inputMode="decimal" defaultValue={action.type === "regularizacion" ? batch.output_quantity || 0 : ""} aria-label={`Cantidad ${action.label}`} className="rounded-xl border border-stone-950/10 bg-white px-3 py-2 text-sm text-stone-950" />
-                                <button className="rounded-full border border-stone-950 bg-stone-950 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">{action.label}</button>
+                                <input name="quantity" inputMode="decimal" defaultValue={action.type === "regularizacion" ? batch.output_quantity || 0 : ""} aria-label={`Cantidad ${action.label}`} className="rounded-xl border border-stone-950/10 bg-white px-3 py-2 text-sm text-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]" />
+                                <button className="rounded-full border border-stone-950 bg-stone-950 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]">{action.label}</button>
                               </div>
-                              {action.type === "descongelacion" ? <input name="expiry_date" type="date" aria-label="Consumir antes de" className="rounded-xl border border-stone-950/10 bg-white px-3 py-2 text-sm text-stone-950" /> : null}
-                              <input name="observations" aria-label={`Observaciones ${action.label}`} className="rounded-xl border border-stone-950/10 bg-white px-3 py-2 text-sm text-stone-950" />
+                              {action.type === "descongelacion" ? <input name="expiry_date" type="date" aria-label="Consumir antes de" className="rounded-xl border border-stone-950/10 bg-white px-3 py-2 text-sm text-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]" /> : null}
+                              <input name="observations" aria-label={`Observaciones ${action.label}`} className="rounded-xl border border-stone-950/10 bg-white px-3 py-2 text-sm text-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]" />
                             </form>
                           ))}
-                          <Link href={`/admin-kiosko/etiquetas?${labelParams.toString()}`} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-white">Generar etiqueta</Link>
+                          <Link href={`/admin-kiosko/etiquetas?${labelParams.toString()}`} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]">Generar etiqueta</Link>
                           <ZebraPrintButton
                             zpl={zpl}
                             filename={`${batch.batch_code || "lote-interno"}.zpl`}
@@ -679,7 +680,14 @@ export default async function ProduccionPage({
                   </article>
                 );
               })}
-              {!batches.length ? <p className="rounded-[1.5rem] border border-white/10 bg-white/6 p-5 text-sm text-stone-300">Producción interna preparada para el primer lote elaborado.</p> : null}
+              {!batches.length ? (
+                <AdminEmptyState
+                  title="Sin lotes internos registrados"
+                  description="Registra la primera produccion para crear lote interno, ficha privada, etiqueta automatica y trazabilidad."
+                  href="/admin-kiosko/produccion#nueva-produccion"
+                  cta="Registrar produccion"
+                />
+              ) : null}
             </div>
           </section>
         </div>

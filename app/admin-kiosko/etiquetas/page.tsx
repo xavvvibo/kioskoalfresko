@@ -3,7 +3,9 @@ import Image from "next/image";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { getLabelRecords, getLabelSourceOptions, listLabelEligibleInventoryLots } from "@/lib/admin-kiosko/database";
 import { buildZebraLabelZpl, type ZebraTemplate } from "@/lib/admin-kiosko/zebra";
+import { AdminEmptyState } from "../_components/AdminEmptyState";
 import { AdminHeader } from "../_components/AdminHeader";
+import { Label80x50Preview } from "../_components/Label80x50Preview";
 import { ZebraPrintButton } from "../_components/ZebraPrintButton";
 import { saveLabelRecordAction } from "../actions";
 import { GodexPrintButton } from "./GodexPrintButton";
@@ -242,11 +244,17 @@ export default async function EtiquetasPage({
     <main className="min-h-screen bg-[#0d0d0d] text-white">
       <AdminHeader title="Etiquetas APPCC" description="Generador de etiquetas con historial e impresión A4 o térmica." />
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12">
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(20rem,25rem)_minmax(0,1fr)]">
-          <div className="grid min-w-0 gap-6 print:hidden">
-            <form action={saveLabelRecordAction} className="min-w-0 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
-              <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Etiqueta desde lote</h2>
-              <div className="mt-5 grid gap-4">
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(19rem,23rem)_minmax(0,1fr)]">
+          <div className="grid min-w-0 content-start gap-4 print:hidden">
+            <form action={saveLabelRecordAction} className="min-w-0 rounded-[1.5rem] border border-white/10 bg-[#151515] p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">Etiqueta APPCC</p>
+                  <h2 className="mt-1 text-xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Desde lote</h2>
+                </div>
+                <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-stone-300">80x50</span>
+              </div>
+              <div className="mt-4 grid gap-3">
                 <input type="hidden" name="model" value={current.model} />
                 <input type="hidden" name="product" value={current.product} />
                 <input type="hidden" name="batch" value={current.batch} />
@@ -267,26 +275,35 @@ export default async function EtiquetasPage({
                 <input type="hidden" name="expiry_source" value={current.expiry_source} />
                 <input type="hidden" name="appcc_review_status" value={current.appcc_review_status} />
                 <input type="hidden" name="review_warning" value={current.review_warning} />
-                <div className="rounded-[1.3rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
-                  <p className="font-black text-white">{current.model} · {current.product || "Selecciona un lote"}</p>
-                  <p className="mt-2">Lote {current.batch || "pendiente"} · proveedor {current.supplier || "pendiente"} · caducidad {current.best_before_date || "vida útil no consignada"}</p>
+                <div className="rounded-[1rem] border border-white/10 bg-white/6 p-3 text-sm text-stone-200">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Lote</p>
+                  <p className="mt-1 font-black text-white">{current.product || "Selecciona un lote"}</p>
+                  <p className="mt-1 text-xs text-stone-300">{current.batch || "lote pendiente"}</p>
+                </div>
+                <div className="rounded-[1rem] border border-white/10 bg-white/6 p-3 text-sm text-stone-200">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Información</p>
+                  <p className="mt-1 text-xs leading-5 text-stone-300">{current.model} · proveedor {current.supplier || "pendiente"} · caducidad {current.best_before_date || "vida util no consignada"}</p>
                   {current.inventory_lot_id ? (
                     <p className="mt-2 text-xs text-stone-300">{sourceLabel(current.expiry_source)} · {appccLabel(current.appcc_review_status)} · factura {current.factura || "origen enlazado"}</p>
                   ) : null}
                   {current.review_warning ? <p className="mt-2 rounded-xl border border-amber-200/30 bg-amber-100/10 px-3 py-2 text-xs font-black text-amber-100">{current.review_warning}</p> : null}
                 </div>
-                <label className="grid gap-2 text-sm font-semibold text-stone-200">Copias Zebra
-                  <select name="copies" defaultValue={String(copies)} className="w-full min-w-0 rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
+                <label className="grid gap-2 rounded-[1rem] border border-white/10 bg-white/6 p-3 text-sm font-semibold text-stone-200">
+                  <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Copias Zebra</span>
+                  <select name="copies" defaultValue={String(copies)} className="w-full min-w-0 rounded-xl border border-white/12 bg-white px-3 py-2 text-sm text-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">
                     {[1, 2, 4, 8].map((copy) => <option key={copy} value={copy}>{copy} copia{copy > 1 ? "s" : ""}</option>)}
                   </select>
                 </label>
-                <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Guardar etiqueta</button>
+                <div className="rounded-[1rem] border border-white/10 bg-white/6 p-3">
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">Acción</p>
+                  <button className="w-full rounded-xl border border-[#d94b2b] bg-[#d94b2b] px-4 py-3 text-sm font-black uppercase tracking-[0.12em] text-white transition duration-150 hover:bg-[#b83d22] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">Guardar etiqueta</button>
+                </div>
               </div>
             </form>
 
-            <section className="min-w-0 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
-              <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Etiquetas desde inventario</h2>
-              <div className="mt-4 grid gap-3">
+            <section className="min-w-0 rounded-[1.5rem] border border-white/10 bg-[#151515] p-4 sm:p-5">
+              <h2 className="text-xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Inventario</h2>
+              <div className="mt-3 grid gap-3">
                 {inventoryLots.slice(0, 18).map((lot) => (
                   <article key={lot.inventory_lot_id} className="min-w-0 rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200">
                     <div className="flex flex-col gap-3">
@@ -303,24 +320,31 @@ export default async function EtiquetasPage({
                         {lot.labelValidation.message}
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        <a href={`/admin-kiosko/etiquetas?inventory_lot=${lot.inventory_lot_id}`} className="rounded-full border border-white/20 px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white">Preview</a>
+                        <a href={`/admin-kiosko/etiquetas?inventory_lot=${lot.inventory_lot_id}`} className="rounded-full border border-white/20 px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">Preview</a>
                         {lot.labelValidation.directPrintAllowed ? (
-                          <a href={`/admin-kiosko/etiquetas?inventory_lot=${lot.inventory_lot_id}`} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white">Preparar impresión</a>
+                          <a href={`/admin-kiosko/etiquetas?inventory_lot=${lot.inventory_lot_id}`} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">Preparar impresión</a>
                         ) : (
-                          <a href="/admin-kiosko/inventario#lotes-pendientes-revision" className="rounded-full border border-amber-200/40 px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-amber-100">Revisar lote</a>
+                          <a href="/admin-kiosko/inventario#lotes-pendientes-revision" className="rounded-full border border-amber-200/40 px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">Revisar lote</a>
                         )}
                       </div>
                     </div>
                   </article>
                 ))}
-                {!inventoryLots.length ? <p className="text-sm text-stone-400">No constan lotes de inventario listos para preparar etiqueta.</p> : null}
+                {!inventoryLots.length ? (
+                  <AdminEmptyState
+                    title="Sin lotes listos para etiqueta"
+                    description="Registra una recepcion o revisa lotes pendientes antes de preparar etiquetas APPCC."
+                    href="/admin-kiosko/recepcion-mercancia"
+                    cta="Registrar recepcion"
+                  />
+                ) : null}
               </div>
             </section>
 
-            <form className="min-w-0 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
-              <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Seleccionar lote</h2>
-              <div className="mt-5 grid gap-4">
-                <select name="source" defaultValue={params.source || ""} className="w-full min-w-0 rounded-2xl border border-white/12 bg-white px-4 py-3 text-stone-950">
+            <form className="min-w-0 rounded-[1.5rem] border border-white/10 bg-[#151515] p-4 sm:p-5">
+              <h2 className="text-xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Seleccionar lote</h2>
+              <div className="mt-3 grid gap-3">
+                <select name="source" defaultValue={params.source || ""} className="w-full min-w-0 rounded-xl border border-white/12 bg-white px-3 py-2 text-sm text-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">
                   <option value="">Lote interno o lote proveedor</option>
                   {sources.map((source) => (
                     <option key={source.key} value={source.key}>
@@ -328,28 +352,40 @@ export default async function EtiquetasPage({
                     </option>
                   ))}
                 </select>
-                <button className="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white">Cargar lote</button>
+                <button className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-black uppercase tracking-[0.12em] text-white transition duration-150 hover:border-[#d94b2b] hover:bg-white/12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">Cargar lote</button>
               </div>
             </form>
 
-            <section className="min-w-0 rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">
-              <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Historial</h2>
-              <div className="mt-4 grid gap-3">
+            <section className="min-w-0 rounded-[1.5rem] border border-white/10 bg-[#151515] p-4 sm:p-5">
+              <h2 className="text-xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Historial</h2>
+              <div className="mt-3 grid gap-3">
                 {history.map((record) => (
-                  <a key={record.id} href={`/admin-kiosko/etiquetas?id=${record.id}`} className="min-w-0 rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200 transition hover:border-[#d94b2b]">
+                  <a key={record.id} href={`/admin-kiosko/etiquetas?id=${record.id}`} className="min-w-0 rounded-[1.2rem] border border-white/10 bg-white/6 p-4 text-sm text-stone-200 transition hover:border-[#d94b2b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">
                     <span className="block font-black text-white">{record.model} · {record.product || "Producto no consignado"}</span>
                     <span className="mt-1 block text-xs text-stone-400">Lote {record.batch || "no consignado"} · {record.created_at.slice(0, 10)}</span>
                   </a>
                 ))}
-                {!history.length ? <p className="text-sm text-stone-400">Historial preparado para próximas etiquetas.</p> : null}
+                {!history.length ? (
+                  <AdminEmptyState
+                    title="Historial preparado"
+                    description="Cuando guardes o imprimas etiquetas, apareceran aqui para repetir la operacion o revisar trazabilidad."
+                    href="/admin-kiosko/etiquetas-prep"
+                    cta="Crear etiqueta prep"
+                  />
+                ) : null}
               </div>
             </section>
           </div>
 
-          <section className="min-w-0 overflow-hidden rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6 print:border-0 print:bg-white print:p-0">
-            <div className="flex min-w-0 flex-col gap-4 print:hidden 2xl:flex-row 2xl:items-center 2xl:justify-between">
-              <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Vista imprimible</h2>
-              <div className="flex min-w-0 flex-wrap items-start gap-3">
+          <section className="min-w-0 overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#151515] p-4 sm:p-5 print:border-0 print:bg-white print:p-0">
+            <div className="flex min-w-0 flex-col gap-4 print:hidden lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">Salida</p>
+                <h2 className="mt-1 text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Vista imprimible</h2>
+              </div>
+              <div className="grid min-w-0 gap-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-stone-400">Formato</p>
+                <div className="grid min-w-0 gap-2 rounded-[1rem] border border-white/10 bg-black/25 p-1 sm:inline-grid sm:grid-flow-col">
                 {currentLotValidation && !currentLotValidation.directPrintAllowed ? (
                   <a href="/admin-kiosko/inventario#lotes-pendientes-revision" className="rounded-full border border-amber-200/40 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-amber-100">Revisar antes de imprimir</a>
                 ) : (
@@ -409,9 +445,24 @@ export default async function EtiquetasPage({
                   </>
                 )}
                 <PrintButton />
+                </div>
               </div>
             </div>
-            <div className="mt-6 max-h-[75vh] min-w-0 overflow-auto rounded-[1.2rem] bg-white/5 p-2 print:mt-0 print:max-h-none print:overflow-visible print:bg-transparent print:p-0">
+            <div className="mt-5 rounded-[1.2rem] border border-white/10 bg-white/5 p-4 print:hidden">
+              <Label80x50Preview
+                title={current.product}
+                kind={current.model.toUpperCase()}
+                batch={current.batch}
+                productionDate={current.elaboration_date || current.opening_date || current.freezing_date || current.defrosting_date}
+                expiryDate={current.best_before_date}
+                quantity=""
+                responsible={current.responsible}
+                storage={current.storage_temperature || current.supplier}
+                trace={current.qr_payload}
+                observations={current.review_warning}
+              />
+            </div>
+            <div className="mt-5 max-h-[75vh] min-w-0 overflow-auto rounded-[1.2rem] bg-white/5 p-2 print:mt-0 print:max-h-none print:overflow-visible print:bg-transparent print:p-0">
               <div className={current.print_format === "termica" ? "grid w-full max-w-[26rem] gap-3 print:mt-0" : "grid min-w-[34rem] gap-4 md:grid-cols-2 xl:min-w-0 print:mt-0 print:grid-cols-2"}>
                 {Array.from({ length: copies }).map((_, index) => <LabelCard key={index} label={current} />)}
               </div>

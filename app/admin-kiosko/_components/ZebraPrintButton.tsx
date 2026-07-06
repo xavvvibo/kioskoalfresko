@@ -81,9 +81,10 @@ export function ZebraPrintButton({
       <button
         type="button"
         onClick={print}
-        className="w-full rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-stone-950 sm:w-auto"
+        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/8 px-4 py-3 text-center text-xs font-black uppercase tracking-[0.12em] text-white transition duration-150 hover:border-[#d94b2b] hover:bg-white/12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb] sm:w-auto"
       >
-        {label}
+        <span className="grid h-5 w-5 place-items-center rounded-md border border-white/20 bg-black/20 text-[10px] text-white">Z</span>
+        {label.replace(/^Imprimir\s+/i, "")}
       </button>
       {status ? <p className="text-xs font-semibold text-stone-300">{status}</p> : null}
     </div>

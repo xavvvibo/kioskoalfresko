@@ -20,11 +20,13 @@ export class DomainEventDispatcher {
   async dispatch(event: AdminKioskoDomainEvent): Promise<DomainDispatchResult> {
     const matchingHandlers = this.handlers.filter((handler) => handler.handles.includes(event.name));
     const handledBy: string[] = [];
+    const handlerResults: DomainDispatchResult["handlerResults"] = [];
 
     for (const handler of matchingHandlers) {
       try {
-        await handler.handle(event);
+        const result = await handler.handle(event);
         handledBy.push(handler.name);
+        handlerResults.push({ handlerName: handler.name, result });
       } catch (error) {
         this.logger.error(`Handler ${handler.name} failed for ${event.name}`, {
           eventId: event.id,
@@ -40,6 +42,7 @@ export class DomainEventDispatcher {
       eventId: event.id,
       eventName: event.name,
       handledBy,
+      handlerResults,
     };
   }
 }

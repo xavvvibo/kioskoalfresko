@@ -1,3 +1,4 @@
+import type { PrintJobMetadata, PrintLabelData, PrintLabelTemplate } from "@/lib/admin-kiosko/printing/print-payload";
 import type { DomainActor, DomainEventEnvelope, DomainSource, TraceRef } from "./contracts";
 
 type EventFactoryInput<TPayload> = {
@@ -165,6 +166,21 @@ export type ProductionBatchCreatedPayload = {
   sourceInventoryLotId?: string;
 };
 
+export type ProductionBatchClosedPayload = {
+  prepName: string;
+  productionDate: string;
+  productionTime: string;
+  expiryDate: string;
+  batchCode: string;
+  productionBatchId: string;
+  responsibleName: string;
+  storageState: string;
+  quantity?: number;
+  unit?: string;
+  createdFrom: string;
+  reason: string;
+};
+
 export type ProductionBatchConsumedPayload = {
   batchId: string;
   batchCode: string;
@@ -184,6 +200,34 @@ export type FinishedProductLotCreatedPayload = {
   quantity?: number;
   unit?: string;
   expiryDate?: string;
+};
+
+export type PrepCreatedPayload = {
+  prepName: string;
+  productionDateTime?: string;
+  expiryDateTime?: string;
+  shelfLifeDays?: number;
+  batchCode: string;
+  responsibleName?: string;
+  storageCondition?: string;
+  requestedBy?: string;
+  reason: string;
+};
+
+export type LabelRequestedPayload = {
+  printerKey?: string;
+  template: PrintLabelTemplate;
+  data: PrintLabelData;
+  metadata: PrintJobMetadata;
+};
+
+export type PrintJobCreatedPayload = {
+  printJobId: string;
+  printerKey: string;
+  template?: string;
+  sourceType?: string;
+  sourceId?: string;
+  reason?: string;
 };
 
 export type LabelPreparedPayload = {
@@ -269,8 +313,12 @@ export type AdminKioskoDomainEvent =
   | DomainEventEnvelope<"InventoryLotCreated", InventoryLotCreatedPayload>
   | DomainEventEnvelope<"InventoryLotConsumed", InventoryLotConsumedPayload>
   | DomainEventEnvelope<"ProductionBatchCreated", ProductionBatchCreatedPayload>
+  | DomainEventEnvelope<"ProductionBatchClosed", ProductionBatchClosedPayload>
   | DomainEventEnvelope<"ProductionBatchConsumed", ProductionBatchConsumedPayload>
   | DomainEventEnvelope<"FinishedProductLotCreated", FinishedProductLotCreatedPayload>
+  | DomainEventEnvelope<"PrepCreated", PrepCreatedPayload>
+  | DomainEventEnvelope<"LabelRequested", LabelRequestedPayload>
+  | DomainEventEnvelope<"PrintJobCreated", PrintJobCreatedPayload>
   | DomainEventEnvelope<"LabelPrepared", LabelPreparedPayload>
   | DomainEventEnvelope<"LabelPrinted", LabelPrintedPayload>
   | DomainEventEnvelope<"AccountingDocumentCreated", AccountingDocumentCreatedPayload>

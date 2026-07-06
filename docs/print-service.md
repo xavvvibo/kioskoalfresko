@@ -1131,6 +1131,75 @@ Contrato del job:
 
 No se crean columnas nuevas. La relacion lote -> print_job se resuelve por `payload.metadata.sourceId` y `payload.metadata.reason`.
 
+## Etiquetas 80x50mm
+
+La etiqueta operativa para GoDEX G500 se genera en el backend como EZPL 80x50mm y se guarda en `print_jobs.payload.raw_command`. El bridge solo envia ese contenido a la impresora; no remaqueta ni interpreta datos.
+
+Datos priorizados en la etiqueta:
+
+- nombre de producto o preparacion;
+- lote interno o lote proveedor;
+- fecha/hora de elaboracion o produccion;
+- caducidad/consumo preferente si existe;
+- cantidad/unidad si existe;
+- responsable si existe;
+- conservacion/proveedor si existe;
+- QR interno cuando el flujo ya aporta un valor trazable.
+
+La preview de `/admin-kiosko/etiquetas` y `/admin-kiosko/etiquetas-prep` representa la proporcion real `80x50` antes de imprimir. Es una ayuda visual de operacion; el QR fisico real sigue generandose como bitmap EZPL server-side desde el generador GoDEX comun.
+
+Tipos cubiertos:
+
+- etiqueta de lote/produccion desde `/admin-kiosko/produccion` y `/admin-kiosko/etiquetas`;
+- etiqueta prep desde `/admin-kiosko/etiquetas-prep`;
+- etiqueta de prueba 80x50mm desde los scripts `godex:test-label:*`.
+
+Pendiente operativo: validar fisicamente cualquier ajuste fino de margenes tras cambios visuales desde la red del kiosco. Si la preview se ve correcta pero el papel corta contenido, ajustar el generador EZPL o la calibracion de medio/gap, no el bridge.
+
+## Etiquetas dirigidas por eventos
+
+La decision de imprimir etiquetas queda centralizada en:
+
+```text
+lib/admin-kiosko/domain/label-events.ts
+lib/admin-kiosko/domain/label-event.service.ts
+```
+
+Las paginas/actions no deben decidir plantilla, impresora, copias ni `raw_command`. El flujo objetivo es:
+
+```text
+Evento dominio
+  -> labelEventService
+  -> printService
+  -> print_jobs.payload.raw_command
+  -> bridge
+  -> GoDEX
+```
+
+Eventos activos:
+
+- `ProductionBatchClosed`: etiqueta automatica al cerrar lote.
+- `PrepCreated`: preparado para preparaciones con lote real; no se emite desde recetas activas sin lote.
+- `PrintJobCreated`: auditoria de job creado o reutilizado. Es audit-only.
+
+Eventos preparados:
+
+- `GoodsReceived`
+- `InventoryAdjusted`
+- `RecipeProduced`
+- `RecipeConsumed`
+- `TransferCreated`
+- `WasteCreated`
+- `CustomerOrderPacked`
+- `BatchSplit`
+- `BatchRepacked`
+- `BatchReturned`
+- `BatchChanged`
+
+La idempotencia usa `payload.metadata.idempotencyKey` sin cambiar schema. Una garantia fuerte requerira indice unico futuro si se permite migracion.
+
+Las acciones manuales de impresion no usan la deduplicacion automatica: cada solicitud manual valida crea un `print_job` nuevo. En esos casos `metadata.idempotencyKey` es una clave unica de auditoria, no una garantia de deduplicacion.
+
 ### Evitar duplicados
 
 Antes de crear la etiqueta automatica, el ERP busca jobs existentes del mismo lote con:

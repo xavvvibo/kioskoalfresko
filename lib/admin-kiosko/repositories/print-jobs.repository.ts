@@ -73,6 +73,7 @@ export type PrintJobListFilters = {
   sourceType?: string;
   sourceId?: string;
   reason?: string;
+  idempotencyKey?: string;
   printerKey?: string;
   search?: string;
 };
@@ -180,12 +181,14 @@ function matchesPrintJobFilters(job: PrintJob, filters: PrintJobListFilters) {
   const sourceType = cleanText(filters.sourceType);
   const sourceId = cleanText(filters.sourceId);
   const reason = cleanText(filters.reason);
+  const idempotencyKey = cleanText(filters.idempotencyKey);
   const search = cleanText(filters.search).toLowerCase();
 
   if (template && payloadText(job.payload, "template") !== template) return false;
   if (sourceType && metadataText(job.payload, "sourceType") !== sourceType) return false;
   if (sourceId && metadataText(job.payload, "sourceId") !== sourceId) return false;
   if (reason && metadataText(job.payload, "reason") !== reason) return false;
+  if (idempotencyKey && metadataText(job.payload, "idempotencyKey") !== idempotencyKey) return false;
 
   if (search) {
     const haystack = [
@@ -209,9 +212,19 @@ export async function getRecentPrintJobs(filtersOrLimit: PrintJobListFilters | n
   });
   const status = cleanText(filters.status);
   const printerKey = cleanText(filters.printerKey);
+  const template = cleanText(filters.template);
+  const sourceType = cleanText(filters.sourceType);
+  const sourceId = cleanText(filters.sourceId);
+  const reason = cleanText(filters.reason);
+  const idempotencyKey = cleanText(filters.idempotencyKey);
 
   if (status) query.set("status", `eq.${status}`);
   if (printerKey) query.set("printer_key", `eq.${printerKey}`);
+  if (template) query.set("payload->>template", `eq.${template}`);
+  if (sourceType) query.set("payload->metadata->>sourceType", `eq.${sourceType}`);
+  if (sourceId) query.set("payload->metadata->>sourceId", `eq.${sourceId}`);
+  if (reason) query.set("payload->metadata->>reason", `eq.${reason}`);
+  if (idempotencyKey) query.set("payload->metadata->>idempotencyKey", `eq.${idempotencyKey}`);
 
   const result = await adminSupabaseRequest<SupabasePrintJobRow[]>("print_jobs", {
     method: "GET",
@@ -232,19 +245,21 @@ export async function getPrintJobsByProductionBatch(input: {
   batchCode?: string;
   template?: string;
   reason?: string;
+  idempotencyKey?: string;
   limit?: number;
 }) {
   const batchId = cleanText(input.batchId);
   const batchCode = cleanText(input.batchCode);
   const template = cleanText(input.template);
   const reason = cleanText(input.reason);
+  const idempotencyKey = cleanText(input.idempotencyKey);
   const safeLimit = Math.max(1, Math.min(200, Math.round(input.limit || 100)));
 
   if (!batchId && !batchCode) {
     return { ok: false as const, error: "batchId o batchCode es obligatorio." };
   }
 
-  const result = await getRecentPrintJobs({ limit: safeLimit, template, reason });
+  const result = await getRecentPrintJobs({ limit: safeLimit, template, reason, sourceId: batchId, idempotencyKey });
   if (!result.ok) return result;
 
   return {

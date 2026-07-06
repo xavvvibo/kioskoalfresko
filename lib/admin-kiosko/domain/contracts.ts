@@ -18,8 +18,12 @@ export type DomainEventName =
   | "InventoryLotCreated"
   | "InventoryLotConsumed"
   | "ProductionBatchCreated"
+  | "ProductionBatchClosed"
   | "ProductionBatchConsumed"
   | "FinishedProductLotCreated"
+  | "PrepCreated"
+  | "LabelRequested"
+  | "PrintJobCreated"
   | "LabelPrepared"
   | "LabelPrinted"
   | "AccountingDocumentCreated"
@@ -85,7 +89,7 @@ export type DomainEventEnvelope<TName extends DomainEventName = DomainEventName,
 export type DomainEventHandler<TEvent extends DomainEventEnvelope = DomainEventEnvelope> = {
   name: string;
   handles: readonly TEvent["name"][];
-  handle(event: TEvent): Promise<void> | void;
+  handle(event: TEvent): Promise<unknown> | unknown;
 };
 
 export type DomainEventLogger = {
@@ -97,4 +101,8 @@ export type DomainDispatchResult = {
   eventId: string;
   eventName: DomainEventName;
   handledBy: string[];
+  handlerResults: Array<{
+    handlerName: string;
+    result: unknown;
+  }>;
 };
