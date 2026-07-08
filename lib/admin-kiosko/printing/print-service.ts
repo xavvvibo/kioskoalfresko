@@ -30,7 +30,7 @@ export type { PrintJob, PrintJobStatus } from "@/lib/admin-kiosko/repositories/p
 export const GODEX_G500_PRINTER_KEY = DEFAULT_GODEX_G500_PRINTER_KEY;
 
 type PrintServiceResult =
-  | { ok: true; data: PrintJob }
+  | { ok: true; data: PrintJob; idempotent?: boolean }
   | { ok: false; error: string; status: 400 | 500 };
 
 export const printService = {
@@ -40,7 +40,18 @@ export const printService = {
       return { ok: false, error: validated.error, status: 400 };
     }
 
-    const payload = buildPrintPayload(validated.input);
+    const requestId = validated.input.metadata.requestId || crypto.randomUUID();
+    const sourceType = validated.input.metadata.sourceType || validated.input.template;
+    const sourceId = validated.input.metadata.sourceId || requestId;
+    const metadata = {
+      ...validated.input.metadata,
+      requestId,
+      idempotencyKey: validated.input.metadata.idempotencyKey || `print:${sourceType}:${sourceId}:${requestId}`,
+    };
+    const payload = buildPrintPayload({
+      ...validated.input,
+      metadata,
+    });
     const generated = generateLabelCommand({
       printerLanguage: "ezpl",
       labelType: validated.input.template,
@@ -83,6 +94,6 @@ export const printService = {
       metadata: validated.input.metadata,
     });
 
-    return result;
+    return { ok: true, data: result.data, idempotent: "idempotent" in result ? result.idempotent : undefined };
   },
 };

@@ -56,6 +56,10 @@ export type PrintJobMetadata = {
   sourceId?: string;
   createdFrom?: string;
   reason?: string;
+  reprintReason?: string;
+  copiedFromJobId?: string;
+  requestId?: string;
+  reprintRequestId?: string;
   batchCode?: string;
   idempotencyKey?: string;
   requestedCopies?: string;
@@ -227,7 +231,7 @@ function booleanFromInput(value: unknown) {
 function parseCopies(value: unknown) {
   if (value === undefined || value === null || value === "") return undefined;
   const parsed = typeof value === "number" ? value : Number(String(value).replace(",", "."));
-  return Number.isFinite(parsed) ? Math.max(1, Math.min(99, Math.round(parsed))) : undefined;
+  return Number.isFinite(parsed) ? Math.max(1, Math.min(8, Math.round(parsed))) : undefined;
 }
 
 function buildInternalQrUrl(qrValue?: string) {
@@ -247,6 +251,10 @@ function normalizedMetadata(value: unknown): PrintJobMetadata {
     sourceId: sanitizeLabelText(value.sourceId, 120),
     createdFrom: sanitizeLabelText(value.createdFrom, 80),
     reason: sanitizeLabelText(value.reason, 120),
+    reprintReason: sanitizeLabelText(value.reprintReason, 160),
+    copiedFromJobId: sanitizeLabelText(value.copiedFromJobId, 80),
+    requestId: sanitizeLabelText(value.requestId, 80),
+    reprintRequestId: sanitizeLabelText(value.reprintRequestId, 80),
     batchCode: sanitizeLabelText(value.batchCode, 120),
     idempotencyKey: sanitizeLabelText(value.idempotencyKey, 160),
     requestedCopies: sanitizeLabelText(value.requestedCopies, 12),

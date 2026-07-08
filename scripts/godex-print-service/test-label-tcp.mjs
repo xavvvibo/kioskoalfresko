@@ -12,7 +12,7 @@ function logError(message, meta = {}) {
 
 await loadGodexEnv();
 
-const host = process.env.GODEX_PRINTER_HOST || "192.168.1.38";
+const host = process.env.GODEX_PRINTER_HOST || "192.168.1.37";
 const port = Number(process.env.GODEX_PRINTER_PORT || 9100);
 const timeoutMs = Number(process.env.GODEX_TCP_TIMEOUT_MS || 5000);
 const ezpl = buildGodex80x50TestEzpl();

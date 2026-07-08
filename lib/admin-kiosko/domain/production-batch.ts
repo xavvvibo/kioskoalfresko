@@ -299,7 +299,7 @@ function buildTimeline(batch: LegacyProductionBatch, printJobs: ProductionBatchP
     events.push({
       id: `print-${job.id}`,
       occurredAt: job.printedAt || job.createdAt,
-      label: job.status === "printed" ? "Etiqueta GoDEX impresa" : job.status === "error" ? "Error impresion GoDEX" : "Etiqueta GoDEX enviada",
+      label: job.status === "printed" ? "Etiqueta GoDEX enviada a impresora" : job.status === "error" ? "Error impresion GoDEX" : "Etiqueta GoDEX enviada",
       detail: `${job.template || "template"} · ${job.id.slice(0, 8)}`,
       tone: job.status === "printed" ? "success" : job.status === "error" ? "danger" : "neutral",
     });

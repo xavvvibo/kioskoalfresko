@@ -55,13 +55,18 @@ function formatDate(value: string | null) {
 function statusClass(status: string) {
   if (status === "printed") return "border-emerald-300/70 bg-emerald-50 text-emerald-950";
   if (status === "error") return "border-[#d94b2b]/50 bg-[#fff1ed] text-[#9f2d18]";
-  if (status === "claimed") return "border-amber-300/80 bg-amber-50 text-amber-950";
+  if (status === "claimed" || status === "sent_unconfirmed") return "border-amber-300/80 bg-amber-50 text-amber-950";
+  if (status === "cancelled") return "border-stone-300 bg-stone-100 text-stone-700";
   return "border-stone-300 bg-stone-100 text-stone-800";
 }
 
 function statusLabel(status: string) {
-  if (status === "queued") return "pending";
-  if (status === "error") return "failed";
+  if (status === "queued") return "encolado";
+  if (status === "claimed") return "enviando";
+  if (status === "sent_unconfirmed") return "enviado sin confirmar";
+  if (status === "printed") return "enviado a impresora";
+  if (status === "error") return "error";
+  if (status === "cancelled") return "cancelado";
   return status;
 }
 
@@ -101,6 +106,7 @@ export default async function ImpresionesPage({
   const statusCounts = {
     pending: jobs.filter((job) => job.status === "queued").length,
     claimed: jobs.filter((job) => job.status === "claimed").length,
+    uncertain: jobs.filter((job) => job.status === "sent_unconfirmed").length,
     printed: jobs.filter((job) => job.status === "printed").length,
     failed: jobs.filter((job) => job.status === "error").length,
   };
@@ -122,7 +128,7 @@ export default async function ImpresionesPage({
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Cola de impresión</p>
                 <h2 className="mt-2 text-3xl font-black uppercase tracking-[-0.04em] text-[#fff8ef]">Últimos trabajos</h2>
                 <p className="mt-2 max-w-3xl text-sm text-stone-300">
-                  Vista interna de estado y trazabilidad del payload extendido. El bridge consume raw_command cuando existe; title/line1/line2 quedan como resumen compatible.
+                  Vista interna de estado y trazabilidad del payload extendido. Enviado a impresora significa que el bridge aceptó el envío TCP, no verificación visual del papel.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -147,10 +153,12 @@ export default async function ImpresionesPage({
               <input name="q" defaultValue={filters.search} placeholder="Buscar trabajo, lote o sourceId" className="rounded-xl border border-white/12 bg-white px-4 py-3 text-sm text-stone-950 outline-none transition duration-150 focus:border-[#d94b2b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]" />
               <select name="status" defaultValue={filters.status} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-sm text-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">
                 <option value="">Status</option>
-                <option value="queued">pending</option>
-                <option value="claimed">claimed</option>
-                <option value="printed">printed</option>
-                <option value="error">failed</option>
+                <option value="queued">encolado</option>
+                <option value="claimed">enviando</option>
+                <option value="sent_unconfirmed">enviado sin confirmar</option>
+                <option value="printed">enviado a impresora</option>
+                <option value="error">error</option>
+                <option value="cancelled">cancelado</option>
               </select>
               <select name="template" defaultValue={filters.template} className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-sm text-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">
                 <option value="">Template</option>

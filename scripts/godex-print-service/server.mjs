@@ -1,7 +1,10 @@
 import http from "node:http";
 import net from "node:net";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { loadGodexEnv, packageVersion } from "./env.mjs";
 import { GODEX_PRINT_TRANSPORTS, printRawEzpl } from "./raw-printer.mjs";
+import { processBridgeJob, startupQueueDecision } from "./bridge-core.mjs";
 
 const loadedEnvFiles = await loadGodexEnv();
 
@@ -20,10 +23,19 @@ const config = {
   maxJobsPerPoll: Math.max(1, Math.min(5, Number(process.env.MAX_JOBS_PER_POLL || 1))),
   dryRun: process.env.GODEX_DRY_RUN === "true",
   dryRunMarkPrinted: process.env.DRY_RUN_MARK_PRINTED === "true",
+  processHistoricalJobs: process.env.BRIDGE_PROCESS_HISTORICAL_JOBS === "true",
   bridgeVersion,
   healthHost: process.env.BRIDGE_HEALTH_HOST || "127.0.0.1",
   healthPort: Number(process.env.BRIDGE_HEALTH_PORT || 8787),
+  maxJobBytes: Math.max(512, Math.min(64 * 1024, Number(process.env.GODEX_MAX_JOB_BYTES || 24576))),
+  maxCopies: Math.max(1, Math.min(8, Number(process.env.GODEX_MAX_COPIES || 8))),
+  journalDir: process.env.GODEX_PRINT_JOURNAL_DIR || path.join(process.cwd(), "var/godex-print-journal"),
+  allowedOrigins: (process.env.LOCAL_PRINT_BRIDGE_ALLOWED_ORIGINS || "http://localhost:3000,https://kioskoalfresko.es")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
 };
+const bridgeStartedAt = new Date();
 
 function logInfo(message, meta = {}) {
   process.stdout.write(`${new Date().toISOString()} ${message} ${JSON.stringify(meta)}\n`);
@@ -81,9 +93,15 @@ function ezplSummary(rawCommand) {
 
 function isValidGodexEzpl(rawCommand) {
   if (typeof rawCommand !== "string" || !rawCommand.trim()) return false;
+  if (Buffer.byteLength(rawCommand, "utf8") > config.maxJobBytes) return false;
   const lines = ezplLines(rawCommand);
   if (!lines.length) return false;
-  return lines[0].startsWith("^Q")
+  const copiesLine = lines.find((line) => line.startsWith("^P"));
+  const copies = copiesLine ? Number(copiesLine.slice(2).trim()) : 1;
+  return Number.isFinite(copies)
+    && copies >= 1
+    && copies <= config.maxCopies
+    && lines[0].startsWith("^Q")
     && lines.some((line) => line.startsWith("^W"))
     && lines.some((line) => line === "^L")
     && lines[lines.length - 1] === "E";
@@ -199,6 +217,8 @@ async function healthPayload() {
     polling: true,
     pollIntervalMs: config.pollIntervalMs,
     maxJobsPerPoll: config.maxJobsPerPoll,
+    maxJobBytes: config.maxJobBytes,
+    maxCopies: config.maxCopies,
     details: {
       api,
       printerTcp,
@@ -213,14 +233,31 @@ function startHealthServer() {
   }
 
   const server = http.createServer(async (request, response) => {
+    const origin = request.headers.origin || "";
+    const corsHeaders = {
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Vary": "Origin",
+    };
+    if (origin && config.allowedOrigins.includes(origin)) {
+      corsHeaders["Access-Control-Allow-Origin"] = origin;
+    }
+
+    if (request.method === "OPTIONS") {
+      response.writeHead(origin && !config.allowedOrigins.includes(origin) ? 403 : 204, corsHeaders);
+      response.end();
+      return;
+    }
+
     if (request.method !== "GET" || request.url?.split("?")[0] !== "/health") {
-      response.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+      response.writeHead(404, { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" });
       response.end(JSON.stringify({ error: "Not found" }));
       return;
     }
 
     const payload = await healthPayload();
     response.writeHead(payload.status === "OK" ? 200 : 503, {
+      ...corsHeaders,
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
     });
@@ -240,11 +277,51 @@ async function markPrinted(jobId) {
   await apiFetch(`/api/print-jobs/${encodeURIComponent(jobId)}/printed`, { method: "PATCH" });
 }
 
+async function markSending(jobId) {
+  await apiFetch(`/api/print-jobs/${encodeURIComponent(jobId)}/sending`, { method: "PATCH" });
+}
+
+async function markSentUnconfirmed(jobId, meta) {
+  await apiFetch(`/api/print-jobs/${encodeURIComponent(jobId)}/sent-unconfirmed`, {
+    method: "PATCH",
+    body: JSON.stringify(meta),
+  });
+}
+
+function safeJournalPart(value) {
+  return String(value || "")
+    .replace(/[^a-zA-Z0-9_.-]/g, "_")
+    .slice(0, 120);
+}
+
+async function writeJournal(receipt) {
+  await fs.mkdir(config.journalDir, { recursive: true });
+  const timestamp = safeJournalPart(receipt.timestamp || new Date().toISOString());
+  const jobId = safeJournalPart(receipt.jobId);
+  const filePath = path.join(config.journalDir, `${timestamp}-${jobId}.json`);
+  const tmpPath = path.join(config.journalDir, `.${timestamp}-${jobId}-${process.pid}.tmp`);
+  const body = JSON.stringify({
+    jobId: receipt.jobId,
+    printerKey: receipt.printerKey,
+    timestamp: receipt.timestamp,
+    bytes: receipt.bytes,
+    tcpResult: receipt.tcpResult,
+  }, null, 2);
+  await fs.writeFile(tmpPath, `${body}\n`, { mode: 0o600 });
+  await fs.rename(tmpPath, filePath);
+  return filePath;
+}
+
 async function markError(jobId, errorMessage) {
   await apiFetch(`/api/print-jobs/${encodeURIComponent(jobId)}/error`, {
     method: "PATCH",
     body: JSON.stringify({ error_message: errorMessage }),
   });
+}
+
+async function queueSummary() {
+  const body = await apiFetch(`/api/print-jobs/summary?printer_key=${encodeURIComponent(config.printerKey)}`);
+  return body.summary || null;
 }
 
 let polling = false;
@@ -254,6 +331,16 @@ async function pollOnce() {
   polling = true;
 
   try {
+    const summary = await queueSummary();
+    const decision = startupQueueDecision(summary, { bridgeStartedAt, processHistoricalJobs: config.processHistoricalJobs });
+    if (!decision.shouldPoll) {
+      logError("[PRINT BRIDGE HOLD HISTORICAL QUEUE]", {
+        bridgeStartedAt: bridgeStartedAt.toISOString(),
+        ...decision,
+      });
+      return;
+    }
+
     const pathName = `/api/print-jobs/pending?printer_key=${encodeURIComponent(config.printerKey)}&limit=${config.maxJobsPerPoll}`;
     const body = await apiFetch(pathName);
     const jobs = Array.isArray(body.jobs) ? body.jobs : [];
@@ -263,10 +350,6 @@ async function pollOnce() {
     for (const job of jobs) {
       const started = Date.now();
       try {
-        if (job.command_language !== "ezpl") {
-          throw new Error(`Lenguaje no soportado por este bridge: ${job.command_language}`);
-        }
-
         const ezplBytes = typeof job.raw_command === "string" ? Buffer.byteLength(job.raw_command, "utf8") : 0;
         const ezplMeta = {
           id: job.id,
@@ -275,6 +358,8 @@ async function pollOnce() {
           attempts: job.attempts,
           ...jobPayloadKeys(job),
           ezplBytes,
+          maxJobBytes: config.maxJobBytes,
+          maxCopies: config.maxCopies,
           ...ezplSummary(job.raw_command),
         };
 
@@ -289,10 +374,6 @@ async function pollOnce() {
           });
         }
 
-        if (!isValidGodexEzpl(job.raw_command)) {
-          throw new Error("Invalid or empty EZPL payload");
-        }
-
         logInfo("[PRINT JOB START]", {
           id: job.id,
           template: jobTemplate(job),
@@ -300,12 +381,13 @@ async function pollOnce() {
           attempts: job.attempts,
           ...transportMeta(),
           ezplBytes,
-          statusPrevious: job.claimed_from_status || "pending/error",
-          statusNew: "printing",
+          statusPrevious: job.claimed_from_status || "queued/error",
+          statusNew: "claimed",
           dryRun: config.dryRun,
         });
 
-        if (config.dryRun) {
+        const printRaw = async (rawCommand) => {
+          if (config.dryRun) {
           logInfo("[PRINT JOB DRY RUN EZPL]", {
             id: job.id,
             template: jobTemplate(job),
@@ -318,16 +400,33 @@ async function pollOnce() {
           if (!config.dryRunMarkPrinted) {
             throw new Error("Dry-run completado. No se marca printed porque DRY_RUN_MARK_PRINTED no es true.");
           }
-        } else {
-          await printRawEzpl(job.raw_command, {
+            return;
+          }
+          await printRawEzpl(rawCommand, {
             transport: config.transport,
             host: config.printerHost,
             port: config.printerPort,
             timeoutMs: config.tcpTimeoutMs,
           });
-        }
+        };
 
-        await markPrinted(job.id);
+        const result = await processBridgeJob(job, {
+          printRaw,
+          markSending,
+          markSentUnconfirmed,
+          markPrinted,
+          markError,
+          writeJournal,
+        }, {
+          transport: config.transport,
+          host: config.printerHost,
+          port: config.printerPort,
+          timeoutMs: config.tcpTimeoutMs,
+          isValidEzpl: isValidGodexEzpl,
+        });
+        if (!result.ok) {
+          throw new Error(`${result.phase}: ${result.error || result.status}`);
+        }
         logInfo("[PRINT JOB PRINTED]", {
           id: job.id,
           template: jobTemplate(job),
@@ -335,23 +434,13 @@ async function pollOnce() {
           attempts: job.attempts,
           ...transportMeta(),
           ezplBytes,
-          statusPrevious: "printing",
+          statusPrevious: "claimed",
           statusNew: "printed",
           durationMs: Date.now() - started,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Error desconocido imprimiendo.";
-        await markError(job.id, message).catch((reportError) => {
-          logError("[PRINT JOB REPORT ERROR]", {
-            id: job.id,
-            template: jobTemplate(job),
-            printer_key: job.printer_key,
-            attempts: job.attempts,
-            ...transportMeta(),
-            originalError: message,
-            reportError: reportError instanceof Error ? reportError.message : String(reportError),
-          });
-        });
+        const statusNew = /tcp_accepted|sent_unconfirmed/.test(message) ? "sent_unconfirmed" : "error";
         logError("[PRINT JOB ERROR]", {
           id: job.id,
           template: jobTemplate(job),
@@ -359,8 +448,8 @@ async function pollOnce() {
           attempts: job.attempts,
           ...transportMeta(),
           ezplBytes: typeof job.raw_command === "string" ? Buffer.byteLength(job.raw_command, "utf8") : 0,
-          statusPrevious: "printing",
-          statusNew: "error",
+          statusPrevious: "claimed",
+          statusNew,
           error: message,
           stack: error instanceof Error ? error.stack : undefined,
           durationMs: Date.now() - started,
@@ -386,6 +475,12 @@ logInfo("[PRINT BRIDGE START]", {
   dryRun: config.dryRun,
   dryRunMarkPrinted: config.dryRunMarkPrinted,
   printDebugEzpl: config.printDebugEzpl,
+  maxJobBytes: config.maxJobBytes,
+  maxCopies: config.maxCopies,
+  journalDir: config.journalDir,
+  processHistoricalJobs: config.processHistoricalJobs,
+  bridgeStartedAt: bridgeStartedAt.toISOString(),
+  allowedOrigins: config.allowedOrigins,
 });
 
 await pollOnce();

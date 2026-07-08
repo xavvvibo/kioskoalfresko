@@ -54,6 +54,7 @@ import {
   confirmInboxDocument,
   createInboxUploadGroupId,
   queueInboxDocument,
+  buildReprintPayload,
   enqueuePrintJob,
   getPrintJobById,
   getProductionBatchById,
@@ -220,14 +221,16 @@ async function queueProductionBatchManualReprint(input: {
   batchCode: string;
   productionBatchId: string;
   responsibleName: string;
-  storageState: string;
-  quantity?: number;
-  unit?: string;
+    storageState: string;
+    quantity?: number;
+    unit?: string;
+    reprintReason?: string;
 }) {
   const printResult = await labelEventService.requestProductionBatchManualLabel({
     ...input,
     createdFrom: "production_batch_detail",
     reason: "manual_reprint_batch_label",
+    reprintReason: input.reprintReason,
   });
 
   if (printResult.ok) {
@@ -1406,8 +1409,12 @@ export async function reprintProductionBatchLabelAction(formData: FormData) {
   await requireAdminSession();
 
   const batchId = text(formData, "batch_id");
+  const reprintReason = text(formData, "reprint_reason");
   if (!batchId) {
     redirect("/admin-kiosko/produccion?error=Falta%20lote");
+  }
+  if (reprintReason.length < 6) {
+    redirect(`/admin-kiosko/produccion/lotes/${batchId}?print_error=${encodeURIComponent("Indica un motivo de reimpresion.")}`);
   }
 
   const batchResult = await getProductionBatchById(batchId);
@@ -1431,6 +1438,7 @@ export async function reprintProductionBatchLabelAction(formData: FormData) {
     storageState: batch.storage_state || "refrigerado",
     quantity: batch.output_quantity || undefined,
     unit: batch.output_unit || undefined,
+    reprintReason,
   });
 
   revalidatePath(`/admin-kiosko/produccion/lotes/${batchId}`);
@@ -1774,6 +1782,7 @@ export async function printPrepLabelAction(_previousState: PrepPrintState, formD
   const batchCode = text(formData, "batchCode") || generatePrepBatchCode(prepName);
   const responsibleName = text(formData, "responsibleName");
   const storageCondition = text(formData, "storageCondition") || "Refrigerado 0-4 C";
+  const copies = Math.max(1, Math.min(8, Math.round(requiredNumber(formData, "copies") || 1)));
 
   if (!prepName) {
     return { ok: false, message: "Indica el nombre de la preparacion." };
@@ -1790,6 +1799,7 @@ export async function printPrepLabelAction(_previousState: PrepPrintState, formD
     storageCondition,
     requestedBy: text(formData, "requestedBy") || "admin-kiosko",
     reason: template === "prep_label_basic" ? "print_prep_label_basic" : "print_prep_label",
+    copies,
   });
 
   if (!printResult.ok) {
@@ -1850,8 +1860,12 @@ export async function reprintPrintJobAction(_previousState: ReprintPrintJobState
   await requireAdminSession();
 
   const jobId = text(formData, "job_id");
+  const reprintReason = text(formData, "reprint_reason");
   if (!jobId) {
     return { ok: false, message: "Falta el job original." };
+  }
+  if (reprintReason.length < 6) {
+    return { ok: false, message: "Indica un motivo de reimpresión claro." };
   }
 
   const original = await getPrintJobById(jobId);
@@ -1869,19 +1883,15 @@ export async function reprintPrintJobAction(_previousState: ReprintPrintJobState
     return { ok: false, message: "Este job no tiene payload compatible para reimprimir." };
   }
 
-  const metadata = printJobPayloadRecord(payload.metadata);
+  const reprintRequestId = text(formData, "reprint_request_id") || crypto.randomUUID();
+  const reprintPayload = buildReprintPayload(payload, original.data.id, reprintReason, reprintRequestId);
+  if (!reprintPayload) {
+    return { ok: false, message: "Indica un motivo de reimpresión claro." };
+  }
+
   const result = await enqueuePrintJob({
     printerKey: original.data.printer_key,
-    payload: {
-      ...payload,
-      metadata: {
-        ...metadata,
-        copiedFromJobId: original.data.id,
-        reason: "reprint",
-        createdFrom: "erp_ui",
-        module: "printing",
-      },
-    },
+    payload: reprintPayload,
   });
 
   if (!result.ok) {
@@ -1892,7 +1902,7 @@ export async function reprintPrintJobAction(_previousState: ReprintPrintJobState
   revalidatePath("/admin-kiosko/impresiones");
   return {
     ok: true,
-    message: "Reimpresión enviada.",
+    message: "Reimpresión encolada. El bridge la enviará a la impresora local.",
     jobId: result.data.id,
     status: result.data.status,
   };
@@ -2040,6 +2050,7 @@ export async function printGodexLabelAction(_previousState: { ok: boolean; messa
     sourceId,
     sourceType,
     copies,
+    requestId: text(formData, "request_id") || crypto.randomUUID(),
   });
 
   if (!printResult.ok) {
@@ -2106,7 +2117,7 @@ export async function printGodexLabelAction(_previousState: { ok: boolean; messa
   revalidatePath("/admin-kiosko/etiquetas");
   return {
     ok: true,
-    message: `Etiqueta encolada para Godex G500 · trabajo ${printResult.data.id}.`,
+    message: `Etiqueta encolada para GoDEX · trabajo ${printResult.data.id}. No confirma salida física del papel.`,
   };
 }
 

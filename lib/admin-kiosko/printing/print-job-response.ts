@@ -8,6 +8,7 @@ export function printJobCreatedResponse(job: PrintJob) {
       id: job.id,
       printer_key: job.printer_key,
       status: job.status,
+      idempotency_key: job.idempotency_key,
       payload: job.payload,
       created_at: job.created_at,
     },

@@ -16,7 +16,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     id,
     printer_key: result.data.printer_key,
     attempts: result.data.attempts,
-    statusPrevious: "printing",
+    statusPrevious: "sent_unconfirmed",
     statusNew: result.data.status,
   });
   return Response.json({ job: result.data });

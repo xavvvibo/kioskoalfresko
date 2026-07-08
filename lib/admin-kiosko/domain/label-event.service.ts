@@ -9,7 +9,6 @@ import {
 import { getPrintJobsByProductionBatch, getRecentPrintJobs } from "@/lib/admin-kiosko/repositories/print-jobs.repository";
 import type { AdminKioskoDomainEvent } from "./events";
 import {
-  manualLabelIdempotencyKey,
   prepLabelIdempotencyKey,
   productionLabelIdempotencyKey,
   type LabelDecision,
@@ -32,6 +31,7 @@ type ProductionBatchLabelInput = {
   unit?: string;
   createdFrom: string;
   reason: string;
+  reprintReason?: string;
 };
 
 type PrepLabelInput = {
@@ -59,7 +59,9 @@ type ManualGodexLabelInput = {
   sourceId: string;
   sourceType: string;
   copies?: number;
+  requestId?: string;
 };
+
 
 function dateTimeFromDateAndTime(date: string, time: string) {
   return `${date}T${(time || "00:00").slice(0, 5)}`;
@@ -71,8 +73,13 @@ function storageConditionFromState(value: string) {
   return "Refrigerado 0-4 C";
 }
 
-function manualRequestKey(prefix: string) {
-  return `${prefix}:${Date.now()}:${Math.random().toString(16).slice(2, 10)}`;
+function manualRequestKey(...parts: Array<string | number | undefined>) {
+  return parts
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join(":")
+    .replace(/\s+/g, "_")
+    .slice(0, 160);
 }
 
 async function findExistingByIdempotencyKey(idempotencyKey: string) {
@@ -153,8 +160,15 @@ export const labelEventService = {
   async requestProductionBatchManualLabel(input: ProductionBatchLabelInput): Promise<LabelEventResult> {
     const decision = this.decideProductionBatchClosed(input);
     if (decision.shouldPrint) {
-      decision.input.metadata.idempotencyKey = manualRequestKey(`production_manual_label:${input.productionBatchId}`);
+      decision.input.metadata.idempotencyKey = manualRequestKey(
+        "production_manual_label",
+        input.productionBatchId,
+        input.reason,
+        input.reprintReason,
+        decision.input.template,
+      );
       decision.input.metadata.createdFrom = input.createdFrom || "production_batch_detail";
+      decision.input.metadata.reprintReason = input.reprintReason;
     }
 
     return executeLabelDecision(decision);
@@ -216,7 +230,13 @@ export const labelEventService = {
       reason: input.reason || "print_prep_label",
     });
     if (decision.shouldPrint) {
-      decision.input.metadata.idempotencyKey = manualRequestKey(`prep_manual_label:${input.batchCode}`);
+      decision.input.metadata.idempotencyKey = manualRequestKey(
+        "prep_manual_label",
+        input.batchCode,
+        input.reason,
+        input.template || "prep_label_professional",
+        input.copies || 1,
+      );
       decision.input.metadata.createdFrom = "erp_manual";
       decision.input.metadata.requestedCopies = input.copies ? String(input.copies) : undefined;
     }
@@ -225,7 +245,12 @@ export const labelEventService = {
   },
 
   async requestManualGodexLabel(input: ManualGodexLabelInput): Promise<LabelEventResult> {
-    const idempotencyKey = manualRequestKey(manualLabelIdempotencyKey(input.sourceId || input.batch, "manual_godex_label_print"));
+    const idempotencyKey = manualRequestKey(
+      "print",
+      input.sourceType || "godex_appcc",
+      input.sourceId || input.batch,
+      input.requestId || crypto.randomUUID(),
+    );
     const baseMetadata = {
       requestedBy: input.responsible || "admin-kiosko",
       module: "labels",
@@ -235,6 +260,7 @@ export const labelEventService = {
       reason: "manual_godex_label_print",
       batchCode: input.batch,
       idempotencyKey,
+      requestId: input.requestId,
     };
     const decision: LabelDecision = {
       shouldPrint: true,

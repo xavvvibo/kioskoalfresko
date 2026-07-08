@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { AdminHeader } from "../_components/AdminHeader";
 import { Label80x50Preview } from "../_components/Label80x50Preview";
+import { LocalBridgeStatus } from "../_components/LocalBridgeStatus";
 import { PrepLabelForm } from "./PrepLabelForm";
 
 export const metadata: Metadata = {
@@ -45,6 +46,8 @@ export default async function PrepLabelsPage() {
             Impresion directa a GoDEX G500 para subelaboraciones. La etiqueta imprime nombre, elaboracion y caducidad.
           </p>
         </div>
+
+        <LocalBridgeStatus />
 
         <PrepLabelForm
           defaultProductionDateTime={madridDateTimeInput()}

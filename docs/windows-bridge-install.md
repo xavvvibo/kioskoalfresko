@@ -7,7 +7,7 @@ Este documento deja el bridge GoDEX funcionando en un PC Windows 10/11 sin levan
 - PC bridge Windows: ejecuta Node.js y el servicio `KioskoGodexBridge`.
 - ERP: URL publica configurada en `ERP_API_URL`.
 - Cola de impresion: el bridge reclama trabajos por la API del ERP.
-- Impresora: GoDEX G500 en red, RAW TCP `192.168.1.38:9100`.
+- Impresora: GoDEX G500 en red, RAW TCP `192.168.1.37:9100`.
 - Healthcheck local: `http://127.0.0.1:8787/health`.
 
 El PC del kiosko no debe usar `localhost` como ERP. Debe apuntar a la URL real, por ejemplo `https://kioskoalfresko.es`.
@@ -58,7 +58,7 @@ ERP_API_URL=https://kioskoalfresko.es
 ERP_API_TOKEN=<token_api_impresion>
 PRINTER_KEY=kiosko_godex_g500
 GODEX_PRINT_TRANSPORT=tcp_9100
-GODEX_PRINTER_HOST=192.168.1.38
+GODEX_PRINTER_HOST=192.168.1.37
 GODEX_PRINTER_PORT=9100
 GODEX_TCP_TIMEOUT_MS=5000
 PRINT_DEBUG_TCP=false
@@ -125,7 +125,7 @@ Ese unico comando:
 
 - ejecuta `npm install`;
 - copia `.env.example` a `.env.local` si falta;
-- verifica conectividad TCP con `192.168.1.38:9100`;
+- verifica conectividad TCP con `192.168.1.37:9100`;
 - registra el bridge como servicio NSSM;
 - configura reinicio automatico;
 - arranca el servicio;
@@ -183,7 +183,7 @@ Si el healthcheck falla:
 ```powershell
 Get-Content C:\kioskoalfresko\logs\godex-bridge.log -Tail 80
 Get-Content C:\kioskoalfresko\logs\godex-bridge-error.log -Tail 80
-Test-NetConnection 192.168.1.38 -Port 9100
+Test-NetConnection 192.168.1.37 -Port 9100
 ```
 
 ## 9. Recuperacion rapida
@@ -197,7 +197,7 @@ API no accesible:
 Impresora no accesible:
 
 - Confirmar que la GoDEX esta encendida.
-- Ejecutar `Test-NetConnection 192.168.1.38 -Port 9100`.
+- Ejecutar `Test-NetConnection 192.168.1.37 -Port 9100`.
 - Confirmar IP fija o reserva DHCP.
 - Revisar firewall o aislamiento de red.
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { printGodexLabelAction } from "../actions";
 
 type GodexLabelPayload = {
@@ -29,9 +29,20 @@ type GodexLabelPayload = {
 
 export function GodexPrintButton({ payload, disabled }: { payload: GodexLabelPayload; disabled?: boolean }) {
   const [state, formAction, isPending] = useActionState(printGodexLabelAction, null);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <form action={formAction} className="grid min-w-0 gap-2">
+    <form
+      action={formAction}
+      className="grid min-w-0 gap-2"
+      onSubmit={() => {
+        const nextRequestId = crypto.randomUUID();
+        if (inputRef.current) inputRef.current.value = nextRequestId;
+        setRequestId(nextRequestId);
+      }}
+    >
+      <input ref={inputRef} type="hidden" name="request_id" value={requestId} readOnly />
       {Object.entries(payload).map(([key, value]) => (
         <input key={key} type="hidden" name={key} value={String(value ?? "")} />
       ))}
@@ -41,7 +52,7 @@ export function GodexPrintButton({ payload, disabled }: { payload: GodexLabelPay
         className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#d94b2b] bg-[#d94b2b] px-4 py-3 text-center text-xs font-black uppercase tracking-[0.12em] text-white transition duration-150 hover:bg-[#b83d22] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
       >
         <span className="grid h-5 w-5 place-items-center rounded-md bg-white text-[10px] text-[#d94b2b]">G</span>
-        {isPending ? "Imprimiendo..." : "Godex"}
+        {isPending ? "Encolando..." : "GoDEX"}
       </button>
       {state?.message ? (
         <p className={state.ok ? "text-xs font-semibold text-emerald-200" : "text-xs font-semibold text-[#f2c6bb]"}>

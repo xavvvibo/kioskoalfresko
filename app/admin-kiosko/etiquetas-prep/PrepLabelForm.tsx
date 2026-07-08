@@ -132,6 +132,23 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
         </div>
       </div>
 
+      <div className="grid gap-1">
+        <label className="text-sm font-semibold text-stone-700" htmlFor="copies">
+          Copias
+        </label>
+        <input
+          id="copies"
+          name="copies"
+          type="number"
+          min={1}
+          max={8}
+          step={1}
+          defaultValue={1}
+          required
+          className="w-32 rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-950 outline-none focus:border-stone-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b]"
+        />
+      </div>
+
       <label className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
         <input type="hidden" name="includeQr" value="true" />
         <span className="mt-1 h-4 w-4 rounded-full border border-emerald-300 bg-emerald-100" />
@@ -160,7 +177,7 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
         disabled={isPending}
         className="inline-flex w-fit items-center justify-center rounded-lg bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d94b2b] disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isPending ? "Enviando..." : "Imprimir etiqueta"}
+        {isPending ? "Encolando..." : "Enviar a impresora"}
       </button>
 
       {state ? (
@@ -173,7 +190,7 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
         >
           <p className="font-semibold">{state.message}</p>
           {state.jobId ? <p className="mt-1 font-mono text-xs">Job: {state.jobId}</p> : null}
-          {state.status ? <p className="mt-1 text-xs">Estado inicial: {state.status}</p> : null}
+          {state.status ? <p className="mt-1 text-xs">Estado inicial del trabajo: {state.status}</p> : null}
         </div>
       ) : null}
     </form>

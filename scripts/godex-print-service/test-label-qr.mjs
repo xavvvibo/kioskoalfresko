@@ -1,4 +1,4 @@
-import { buildGodex80x50QrTestEzpl } from "../../lib/admin-kiosko/printing/godex-80x50-ezpl.mjs";
+import { buildGodex80x50QrTestEzpl, decodeGodexGwQr } from "../../lib/admin-kiosko/printing/godex-80x50-ezpl.mjs";
 import { loadGodexEnv } from "./env.mjs";
 import { GODEX_PRINT_TRANSPORTS, printRawEzpl } from "./raw-printer.mjs";
 
@@ -12,11 +12,19 @@ function logError(message, meta = {}) {
 
 await loadGodexEnv();
 
-const host = process.env.GODEX_PRINTER_HOST || "192.168.1.38";
+const host = process.env.GODEX_PRINTER_HOST || "192.168.1.37";
 const port = Number(process.env.GODEX_PRINTER_PORT || 9100);
 const timeoutMs = Number(process.env.GODEX_TCP_TIMEOUT_MS || 5000);
 const ezpl = buildGodex80x50QrTestEzpl();
+const qrValue = "ERP:QR-TEST:LOCAL";
+const qrLine = ezpl.split(/\r?\n/).find((line) => line.startsWith("GW,"));
+const decoded = decodeGodexGwQr(qrLine, qrValue);
 const started = Date.now();
+
+if (!decoded.ok) {
+  logError("[GODEX QR VALIDATION ERROR]", decoded);
+  process.exit(1);
+}
 
 try {
   logInfo("[GODEX TCP QR TEST START]", {
@@ -24,6 +32,8 @@ try {
     host,
     port,
     timeoutMs,
+    qrValue,
+    qrPreviewPath: decoded.previewPath,
     ezplBytes: Buffer.byteLength(ezpl, "utf8"),
   });
   logInfo("[GODEX TCP QR TEST EZPL]", { rawCommand: ezpl });

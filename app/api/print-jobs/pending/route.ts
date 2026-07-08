@@ -9,8 +9,9 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const printerKey = url.searchParams.get("printer_key") || "";
   const limit = Number(url.searchParams.get("limit") || 1);
+  const shouldRecoverStale = url.searchParams.get("recover_stale") === "true";
   const staleMinutes = Number(url.searchParams.get("stale_minutes") || process.env.PRINT_JOBS_STALE_MINUTES || 10);
-  const recovered = await recoverStalePrintJobs(staleMinutes);
+  const recovered = shouldRecoverStale ? await recoverStalePrintJobs(staleMinutes) : { ok: true as const, data: [] };
   if (!recovered.ok) {
     return Response.json({ error: recovered.error }, { status: 400 });
   }

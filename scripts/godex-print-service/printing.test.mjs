@@ -1,0 +1,279 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import test from "node:test";
+import {
+  buildGodex80x50LabelEzpl,
+  buildGodex80x50PrepProfessionalEzpl,
+  buildGodex80x50SafeErpTestEzpl,
+  cleanLabelText,
+  decodeGodexGwQr,
+  isStructurallyValidQrBitmapEzpl,
+  isValidGodex80x50Ezpl,
+  parseGodexGwBitmap,
+} from "../../lib/admin-kiosko/printing/godex-80x50-ezpl.mjs";
+import { processBridgeJob, startupQueueDecision } from "./bridge-core.mjs";
+
+test("renders valid EZPL with escaped spanish characters", () => {
+  const ezpl = buildGodex80x50LabelEzpl({
+    template: "ingredient_label_basic",
+    title: "Ñora, aliño y piñón",
+    line1: "Lote A^1~2",
+    line2: "Cad 07/07/26",
+    copies: 2,
+  });
+
+  assert.equal(isValidGodex80x50Ezpl(ezpl), true);
+  assert.match(ezpl, /\^P2/);
+  assert.match(ezpl, /Nora alino y pinon/);
+  assert.doesNotMatch(ezpl, /Ñ|ñ|\^bad|~cmd/);
+  assert.match(ezpl, /Lote A 1 2/);
+});
+
+test("clamps copies to the operational maximum", () => {
+  const ezpl = buildGodex80x50LabelEzpl({ title: "TEST", line1: "A", line2: "B", copies: 99 });
+  assert.match(ezpl, /\^P8/);
+});
+
+test("safe ERP physical test is one copy and clearly non-food", () => {
+  const ezpl = buildGodex80x50SafeErpTestEzpl({ host: "192.168.1.37", timestamp: "07/07/26 16:30:00" });
+
+  assert.equal(isValidGodex80x50Ezpl(ezpl), true);
+  assert.match(ezpl, /\^P1/);
+  assert.match(ezpl, /PRUEBA ERP/);
+  assert.match(ezpl, /NO USAR/);
+  assert.match(ezpl, /GODEX 192.168.1.37/);
+});
+
+test("prep professional label omits empty fields and keeps traceability", () => {
+  const ezpl = buildGodex80x50PrepProfessionalEzpl({
+    prepName: "Guacamole",
+    productionDateTime: "2026-07-07T10:00:00.000Z",
+    expiryDateTime: "2026-07-09T10:00:00.000Z",
+    batchCode: "GM-070726-001",
+    responsibleName: "",
+    storageCondition: "Refrigerado 0-4 C",
+    includeQr: false,
+    copies: 1,
+  });
+
+  assert.equal(isValidGodex80x50Ezpl(ezpl), true);
+  assert.match(ezpl, /GM-070726-001/);
+  assert.doesNotMatch(ezpl, /RESPONSABLE:/);
+});
+
+test("prep professional QR is a decodable GW bitmap without fallback text", () => {
+  const qrValue = "ERP:prep_batch:GM-070726-001";
+  const ezpl = buildGodex80x50PrepProfessionalEzpl({
+    prepName: "Guacamole",
+    productionDateTime: "2026-07-07T10:00:00.000Z",
+    expiryDateTime: "2026-07-09T10:00:00.000Z",
+    batchCode: "GM-070726-001",
+    responsibleName: "J. Bocanegra",
+    storageCondition: "Refrigerado 0-4 C",
+    qrValue,
+    includeQr: true,
+    copies: 1,
+  });
+  const qrLine = ezpl.split(/\r?\n/).find((line) => line.startsWith("GW,"));
+
+  assert.ok(qrLine);
+  assert.equal(isStructurallyValidQrBitmapEzpl(qrLine), true);
+  const parsed = parseGodexGwBitmap(qrLine);
+  assert.ok(parsed);
+  const decoded = decodeGodexGwQr(qrLine, qrValue);
+  assert.equal(decoded.ok, true, decoded.error);
+  assert.equal(decoded.decoded, qrValue);
+  assert.equal(parsed.widthBytes * 8, 168);
+  assert.equal(parsed.rows, 165);
+  assert.equal(parsed.x, 438);
+  assert.equal(parsed.y, 124);
+  assert.ok(parsed.x + parsed.widthBytes * 8 <= 640);
+  assert.ok(parsed.y + parsed.rows <= 400);
+  assert.ok(parsed.x > 390);
+  assert.ok(parsed.y > 112);
+  assert.ok(parsed.x + parsed.widthBytes * 8 <= 640);
+  assert.ok(parsed.y + parsed.rows <= 400);
+  assert.doesNotMatch(ezpl, /QR INTERNO/);
+});
+
+test("cleanLabelText removes control characters and command delimiters", () => {
+  assert.equal(cleanLabelText("Línea\t^bad~cmd, ñ"), "Linea bad cmd n");
+});
+
+test("server actions do not connect directly to the private printer IP", () => {
+  const actions = fs.readFileSync(new URL("../../app/admin-kiosko/actions.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(actions, /192\.168\.1\.37|net\.Socket|createConnection|fetch\([^)]*192\.168\./);
+});
+
+test("reprint policy requires reason and links the original job", () => {
+  const actions = fs.readFileSync(new URL("../../app/admin-kiosko/actions.ts", import.meta.url), "utf8");
+  const repository = fs.readFileSync(new URL("../../lib/admin-kiosko/repositories/print-jobs.repository.ts", import.meta.url), "utf8");
+
+  assert.match(actions, /reprintReason\.length < 6/);
+  assert.match(actions, /buildReprintPayload\(payload, original\.data\.id, reprintReason, reprintRequestId\)/);
+  assert.match(repository, /copiedFromJobId: originalId/);
+  assert.match(repository, /reason: "reprint"/);
+  assert.match(repository, /reprintReason: cleanReason/);
+});
+
+test("preview component does not create print jobs", () => {
+  const preview = fs.readFileSync(new URL("../../app/admin-kiosko/_components/Label80x50Preview.tsx", import.meta.url), "utf8");
+
+  assert.doesNotMatch(preview, /print_jobs|print-jobs|enqueuePrintJob|printService|fetch\(/);
+});
+
+test("enqueue path checks idempotency before insert", () => {
+  const repository = fs.readFileSync(new URL("../../lib/admin-kiosko/repositories/print-jobs.repository.ts", import.meta.url), "utf8");
+  const idempotencyCheck = repository.indexOf("const idempotencyKey = metadataText(payload, \"idempotencyKey\")");
+  const insert = repository.indexOf('method: "POST"');
+
+  assert.ok(idempotencyCheck > -1);
+  assert.ok(insert > -1);
+  assert.ok(idempotencyCheck < insert);
+  assert.match(repository, /return \{ ok: true as const, data: existing\.data\[0\], idempotent: true as const \}/);
+});
+
+function mockJob(overrides = {}) {
+  return {
+    id: "job-1",
+    command_language: "ezpl",
+    raw_command: "^Q50,3\r\n^W80\r\n^P1\r\n^L\r\nAA,1,1,1,1,1,0,TEST\r\nE\r\n",
+    ...overrides,
+  };
+}
+
+test("bridge marks printed after TCP accepted and ERP ACK succeeds", async () => {
+  const calls = [];
+  const result = await processBridgeJob(mockJob(), {
+    markSending: async () => calls.push("sending"),
+    printRaw: async () => calls.push("tcp"),
+    writeJournal: async () => calls.push("journal"),
+    markSentUnconfirmed: async () => calls.push("sent_unconfirmed"),
+    markPrinted: async () => calls.push("printed"),
+    markError: async () => calls.push("error"),
+  }, {
+    transport: "tcp_9100",
+    host: "192.168.1.37",
+    port: 9100,
+    isValidEzpl: () => true,
+  });
+
+  assert.equal(result.status, "printed");
+  assert.deepEqual(calls, ["sending", "tcp", "journal", "sent_unconfirmed", "printed"]);
+});
+
+test("bridge leaves sent_unconfirmed after TCP accepted and printed ACK fails", async () => {
+  const calls = [];
+  const result = await processBridgeJob(mockJob(), {
+    markSending: async () => calls.push("sending"),
+    printRaw: async () => calls.push("tcp"),
+    writeJournal: async () => calls.push("journal"),
+    markSentUnconfirmed: async () => calls.push("sent_unconfirmed"),
+    markPrinted: async () => {
+      calls.push("printed");
+      throw new Error("PGRST204 missing column");
+    },
+    markError: async () => calls.push("error"),
+  }, {
+    transport: "tcp_9100",
+    host: "192.168.1.37",
+    port: 9100,
+    isValidEzpl: () => true,
+  });
+
+  assert.equal(result.status, "sent_unconfirmed");
+  assert.equal(result.phase, "tcp_accepted_printed_ack_failed");
+  assert.deepEqual(calls, ["sending", "tcp", "journal", "sent_unconfirmed", "printed"]);
+});
+
+test("bridge marks error only when TCP fails before acceptance", async () => {
+  const calls = [];
+  const result = await processBridgeJob(mockJob(), {
+    markSending: async () => calls.push("sending"),
+    printRaw: async () => {
+      calls.push("tcp");
+      throw new Error("ECONNREFUSED");
+    },
+    markSentUnconfirmed: async () => calls.push("sent_unconfirmed"),
+    markPrinted: async () => calls.push("printed"),
+    markError: async () => calls.push("error"),
+  }, {
+    transport: "tcp_9100",
+    host: "192.168.1.37",
+    port: 9100,
+    isValidEzpl: () => true,
+  });
+
+  assert.equal(result.status, "error");
+  assert.deepEqual(calls, ["sending", "tcp", "error"]);
+});
+
+test("bridge does not open TCP if sending transition fails", async () => {
+  const calls = [];
+  const result = await processBridgeJob(mockJob(), {
+    markSending: async () => {
+      calls.push("sending");
+      throw new Error("PGRST transition failed");
+    },
+    printRaw: async () => calls.push("tcp"),
+    writeJournal: async () => calls.push("journal"),
+    markSentUnconfirmed: async () => calls.push("sent_unconfirmed"),
+    markPrinted: async () => calls.push("printed"),
+    markError: async () => calls.push("error"),
+  }, {
+    transport: "tcp_9100",
+    host: "192.168.1.37",
+    port: 9100,
+    isValidEzpl: () => true,
+  });
+
+  assert.equal(result.status, "claimed");
+  assert.equal(result.phase, "sending_transition_failed_no_tcp");
+  assert.deepEqual(calls, ["sending"]);
+});
+
+test("historical queue is held unless explicitly enabled", () => {
+  const started = new Date("2026-07-07T12:00:00.000Z");
+  const summary = {
+    counts: { queued: 2, claimed: 5, sending: 1, sent_unconfirmed: 1 },
+    pendingCopies: 2,
+    oldestJob: { id: "old", status: "queued", created_at: "2026-07-07T11:59:00.000Z", attempts: 0 },
+  };
+
+  assert.equal(startupQueueDecision(summary, { bridgeStartedAt: started }).shouldPoll, false);
+  assert.equal(startupQueueDecision(summary, { bridgeStartedAt: started, processHistoricalJobs: true }).shouldPoll, true);
+});
+
+test("schema protects idempotency and excludes uncertain states from automatic claim", () => {
+  const sql = fs.readFileSync(new URL("../../supabase/admin_kiosko_print_jobs.sql", import.meta.url), "utf8");
+
+  assert.match(sql, /print_jobs_printer_idempotency_uidx/);
+  assert.match(sql, /pj\.status = 'queued'/);
+  assert.doesNotMatch(sql, /pj\.status in \('queued', 'error'\)/);
+  assert.match(sql, /idempotency_key text/);
+});
+
+test("manual cancellation and manual regularization are modeled without TCP", () => {
+  const sql = fs.readFileSync(new URL("../../supabase/admin_kiosko_print_jobs.sql", import.meta.url), "utf8");
+  const server = fs.readFileSync(new URL("./server.mjs", import.meta.url), "utf8");
+
+  assert.match(sql, /cancelled_at/);
+  assert.match(sql, /transport_confirmation_source/);
+  assert.doesNotMatch(server, /sent_unconfirmed.*markError/s);
+});
+
+test("reprint idempotency uses request id, not reason identity", () => {
+  const repository = fs.readFileSync(new URL("../../lib/admin-kiosko/repositories/print-jobs.repository.ts", import.meta.url), "utf8");
+  const service = fs.readFileSync(new URL("../../lib/admin-kiosko/domain/label-event.service.ts", import.meta.url), "utf8");
+
+  assert.match(repository, /idempotencyKey: `reprint:\$\{originalId\}:\$\{requestId\}`/);
+  assert.doesNotMatch(repository, /reprint:\$\{originalId\}:\$\{simpleHash\(cleanReason\)\}/);
+  assert.doesNotMatch(service, /Math\.random\(\)|Date\.now\(\)/);
+});
+
+test("unit suite does not perform physical printing", () => {
+  const testSource = fs.readFileSync(new URL("./printing.test.mjs", import.meta.url), "utf8");
+
+  assert.doesNotMatch(testSource, /printRawEzpl\(/);
+  assert.doesNotMatch(testSource, /^import\s+net\s+from/m);
+});

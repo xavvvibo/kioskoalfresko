@@ -36,7 +36,7 @@ function statusClass(status: ProductionBatchStatus) {
 function printStatusClass(status: string) {
   if (status === "printed") return "border-emerald-300 bg-emerald-100 text-emerald-950";
   if (status === "error") return "border-[#d94b2b]/40 bg-[#d94b2b]/12 text-[#f2c6bb]";
-  if (status === "claimed" || status === "printing") return "border-amber-300 bg-amber-100 text-amber-950";
+  if (status === "claimed" || status === "printing" || status === "sent_unconfirmed") return "border-amber-300 bg-amber-100 text-amber-950";
   if (status === "queued") return "border-sky-300 bg-sky-100 text-sky-950";
   return "border-white/15 bg-white/8 text-stone-100";
 }
@@ -83,9 +83,10 @@ function minutesSince(value?: string | null) {
 }
 
 function printFeedback(job?: { status: string; createdAt: string; printedAt: string | null; error: string | null } | null) {
-  if (!job) return "Sin etiquetas impresas asociadas.";
-  if (job.status === "printed") return "Última impresión correcta.";
-  if (job.status === "error") return "Error en última impresión.";
+  if (!job) return "Sin trabajos de etiqueta asociados.";
+  if (job.status === "printed") return "Último trabajo aceptado por el transporte local.";
+  if (job.status === "sent_unconfirmed") return "Trabajo enviado por TCP con confirmación final pendiente.";
+  if (job.status === "error") return "Error en último trabajo de impresión.";
   if (job.status === "queued" && minutesSince(job.createdAt) >= 10) return "Bridge offline o pendiente de impresión.";
   if (job.status === "queued") return "Etiqueta enviada a cola.";
   if (job.status === "claimed" || job.status === "printing") return "Bridge procesando etiqueta.";
@@ -146,8 +147,8 @@ export default async function ProductionBatchDetailPage({
     { label: "Responsable visible", value: productionBatch.responsibleUser || "-", ok: Boolean(productionBatch.responsibleUser) },
     { label: "Conservacion visible", value: productionBatch.storageCondition || "-", ok: Boolean(productionBatch.storageCondition) },
     {
-      label: "Etiqueta impresa",
-      value: productionBatch.printJobs.some((job) => job.status === "printed") ? "Si" : "No consta impresa",
+      label: "Etiqueta enviada",
+      value: productionBatch.printJobs.some((job) => job.status === "printed") ? "Enviado a impresora" : "No consta envio",
       ok: productionBatch.printJobs.some((job) => job.status === "printed"),
     },
     { label: "QR resuelve a esta ficha", value: qrRoute || "-", ok: Boolean(qrRoute) },
@@ -162,6 +163,7 @@ export default async function ProductionBatchDetailPage({
           <Link href="/admin-kiosko/etiquetas-prep" className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Imprimir etiqueta manual</Link>
           <form action={reprintProductionBatchLabelAction}>
             <input type="hidden" name="batch_id" value={productionBatch.id} />
+            <input name="reprint_reason" required minLength={6} maxLength={160} placeholder="Motivo reimpresión" className="mr-2 rounded-full border border-white/15 bg-white px-4 py-2 text-[11px] font-semibold text-stone-950" />
             <button className="rounded-full border border-emerald-300 bg-emerald-100 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-950">Reimprimir etiqueta</button>
           </form>
         </div>
@@ -310,6 +312,7 @@ export default async function ProductionBatchDetailPage({
                 </div>
                 <form action={reprintProductionBatchLabelAction}>
                   <input type="hidden" name="batch_id" value={productionBatch.id} />
+                  <input name="reprint_reason" required minLength={6} maxLength={160} placeholder="Motivo reimpresión" className="mb-2 w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs font-semibold text-stone-950" />
                   <button className="w-fit rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Reimprimir etiqueta</button>
                 </form>
               </div>
@@ -333,7 +336,7 @@ export default async function ProductionBatchDetailPage({
                   </div>
                 </div>
               ) : (
-                <EmptyState>Sin etiquetas impresas asociadas.</EmptyState>
+                <EmptyState>Sin trabajos de etiqueta asociados.</EmptyState>
               )}
               <div className="mt-4 grid gap-3">
                 {productionBatch.printJobs.map((job) => (
@@ -344,7 +347,7 @@ export default async function ProductionBatchDetailPage({
                     </div>
                     <p className="mt-2 font-black text-white">{job.title || productionBatch.recipeName}</p>
                     <p className="mt-1 text-xs text-stone-400">{job.line1} · {job.line2}</p>
-                    <p className="mt-1 text-xs text-stone-500">Creado {shortDateTime(job.createdAt)} · Impreso {shortDateTime(job.printedAt)} · Intentos {job.attempts}</p>
+                    <p className="mt-1 text-xs text-stone-500">Creado {shortDateTime(job.createdAt)} · Transporte {shortDateTime(job.printedAt)} · Intentos {job.attempts}</p>
                     {job.error ? <p className="mt-2 text-xs text-[#f2c6bb]">{job.error}</p> : null}
                   </article>
                 ))}

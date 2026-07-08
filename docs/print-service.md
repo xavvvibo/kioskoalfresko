@@ -11,7 +11,7 @@ ERP backend -> public.print_jobs -> API publica ERP -> bridge kiosco -> TCP RAW 
 Datos finales validados:
 
 - `printer_key`: `kiosko_godex_g500`
-- IP GoDEX G500: `192.168.1.38`
+- IP GoDEX G500: `192.168.1.37`
 - Puerto RAW: `9100`
 - Transporte: `tcp_9100`
 - Etiqueta fisica: `80x50 mm`
@@ -27,7 +27,7 @@ ERP_API_URL=https://kioskoalfresko.es
 ERP_API_TOKEN=...
 PRINTER_KEY=kiosko_godex_g500
 GODEX_PRINT_TRANSPORT=tcp_9100
-GODEX_PRINTER_HOST=192.168.1.38
+GODEX_PRINTER_HOST=192.168.1.37
 GODEX_PRINTER_PORT=9100
 ```
 
@@ -80,7 +80,7 @@ El instalador:
 
 - ejecuta `npm install`;
 - copia `.env.example` a `.env.local` si no existe;
-- verifica conectividad TCP con `192.168.1.38:9100`;
+- verifica conectividad TCP con `192.168.1.37:9100`;
 - registra `KioskoGodexBridge` con NSSM;
 - configura reinicio automatico;
 - arranca el servicio;
@@ -141,8 +141,8 @@ ERP crea print_job con raw_command EZPL
   -> bridge llama GET /api/print-jobs/pending?printer_key=kiosko_godex_g500
   -> API reclama job
   -> bridge valida EZPL
-  -> bridge envia por TCP 192.168.1.38:9100
-  -> bridge marca printed o error
+  -> bridge envia por TCP 192.168.1.37:9100
+  -> bridge marca transporte aceptado (`printed`) o error
 ```
 
 ## API interna
@@ -253,7 +253,7 @@ Para revisar estado de etiquetas desde UI:
 
 1. Entrar en `/admin-kiosko/impresiones`.
 2. Localizar el job por id corto, template o sourceId.
-3. Confirmar transición `queued -> claimed -> printed` o revisar `error`.
+3. Confirmar transición `queued -> claimed -> printed` (transporte aceptado) o revisar `error`.
 
 Filtros disponibles:
 
@@ -332,7 +332,7 @@ Flujo:
 4. `PrintService` crea un job con template `ingredient_label_basic`.
 5. El payload queda con `title`, `line1`, `line2`, `template`, `data` y `metadata`.
 6. La UI muestra feedback con job id y estado inicial.
-7. El bridge Windows reclama el job y Supabase debe pasar `queued -> claimed -> printed`.
+7. El bridge Windows reclama el job y Supabase debe pasar `queued -> claimed -> printed` (transporte aceptado).
 
 Metadata del flujo real:
 
@@ -455,7 +455,7 @@ Desde la lista de lotes internos en `/admin-kiosko/produccion` se puede abrir `V
 - Ficha privada de lote disponible en `/admin-kiosko/produccion/lotes/[id]` con trazabilidad interna.
 - QR interno preparado mediante `ERP:prep_batch:<lote>` y ruta privada `/admin-kiosko/qr/[value]`.
 - QR fisico experimental: se puede probar manualmente, pero no queda activado por defecto.
-- Checklist inspeccion visible en la ficha del lote para comprobar nombre, ELAB, CAD, lote, responsable, conservacion, etiqueta impresa y resolucion del QR.
+- Checklist inspeccion visible en la ficha del lote para comprobar nombre, ELAB, CAD, lote, responsable, conservacion, etiqueta enviada y resolucion del QR.
 - Consumo logico de lotes preparado en ficha privada sin descuento real de stock.
 - Produccion automatica sin QR por defecto: `includeQr: false` se mantiene en el flujo operativo.
 - Etiqueta manual desde `/admin-kiosko/etiquetas-prep` queda como plan B si hace falta reimprimir o resolver una urgencia.
@@ -515,7 +515,7 @@ Timeline previsto:
 
 ```text
 Produccion registrada
-Etiqueta GoDEX enviada/impresa/error
+Etiqueta GoDEX enviada/transporte-ok/error
 APPCC disponible
 Consumo registrado
 Consumo completo
@@ -638,14 +638,14 @@ La ficha ordena cronologicamente:
 
 - produccion registrada;
 - movimientos del lote;
-- etiqueta GoDEX enviada/impresa/error;
+- etiqueta GoDEX enviada/transporte-ok/error;
 - controles APPCC disponibles.
 
 Ejemplo:
 
 ```text
 04/07 08:30  Produccion registrada
-04/07 08:31  Etiqueta GoDEX impresa
+04/07 08:31  Etiqueta GoDEX enviada
 04/07 13:10  APPCC: Caducidad
 05/07 12:00  consumo parcial
 06/07 09:00  consumo completo
@@ -684,7 +684,7 @@ Metadata del flujo real:
 
 - [ ] Registrar elaboracion real en `/admin-kiosko/produccion`.
 - [ ] Confirmar lote creado en la pantalla de produccion.
-- [ ] Confirmar etiqueta impresa en GoDEX.
+- [ ] Confirmar etiqueta enviada en GoDEX.
 - [ ] Verificar nombre de preparacion.
 - [ ] Verificar `ELAB` con fecha/hora correcta.
 - [ ] Verificar `CAD` con fecha/hora correcta.
@@ -769,7 +769,7 @@ El modo historico por spooler Windows ya no forma parte de la configuracion de p
 Configuracion validada en red:
 
 ```text
-IP impresora: 192.168.1.38
+IP impresora: 192.168.1.37
 Puerto RAW: 9100
 PC bridge Windows: 192.168.1.39
 Etiqueta fisica: 80x50 mm
@@ -779,7 +779,7 @@ Variables `.env.local` para TCP/IP:
 
 ```env
 GODEX_PRINT_TRANSPORT=tcp_9100
-GODEX_PRINTER_HOST=192.168.1.38
+GODEX_PRINTER_HOST=192.168.1.37
 GODEX_PRINTER_PORT=9100
 GODEX_TCP_TIMEOUT_MS=5000
 PRINT_DEBUG_EZPL=true
@@ -841,7 +841,7 @@ Este endpoint crea un `print_job` real con:
 
 Diferencia de diagnostico:
 
-- TCP directo: `npm run godex:test-label:tcp` envia EZPL directo a `192.168.1.38:9100`, sin Supabase ni cola.
+- TCP directo: `npm run godex:test-label:tcp` envia EZPL directo a `192.168.1.37:9100`, sin Supabase ni cola.
 - Test real por cola: `POST /api/print-jobs/test-godex-real-path` crea un job en Supabase, el bridge lo reclama y envia el mismo EZPL.
 - Templates reales: `prep_label_basic`, `prep_label_professional`, `ingredient_label_basic`, `product_label_basic` y `test_label` pasan por el generador comun GoDEX 80x50.
 
@@ -903,8 +903,8 @@ Invalid or empty EZPL payload
 Troubleshooting TCP/IP:
 
 ```powershell
-ping 192.168.1.38
-Test-NetConnection 192.168.1.38 -Port 9100
+ping 192.168.1.37
+Test-NetConnection 192.168.1.37 -Port 9100
 ```
 
 Si `TcpTestSucceeded = False`:
@@ -1060,7 +1060,7 @@ Estados:
 
 - `queued`: el ERP ha creado el trabajo y esta pendiente del bridge.
 - `claimed`: el bridge ha reclamado el trabajo.
-- `printed`: el bridge ha confirmado la impresion fisica.
+- `printed`: el bridge confirmo escritura TCP aceptada; no es verificacion visual del papel.
 - `error`: el bridge ha reportado un fallo.
 
 Transiciones esperadas:

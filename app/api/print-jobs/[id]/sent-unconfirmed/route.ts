@@ -1,4 +1,4 @@
-import { markPrintJobError } from "@/lib/admin-kiosko/database";
+import { markPrintJobSentUnconfirmed } from "@/lib/admin-kiosko/database";
 import { requirePrintApiToken } from "@/lib/admin-kiosko/printing/print-api-auth";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -6,20 +6,25 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
-  const body = await request.json().catch(() => ({})) as { error_message?: string; error?: string };
-  const result = await markPrintJobError(id, body.error_message || body.error || "Error de impresión no especificado.");
+  const body = await request.json().catch(() => ({})) as {
+    bytes?: number;
+    transport?: string;
+    host?: string;
+    port?: number;
+    note?: string;
+  };
+  const result = await markPrintJobSentUnconfirmed(id, body);
 
   if (!result.ok) {
     return Response.json({ error: result.error }, { status: 400 });
   }
 
-  console.error("[PRINT JOB ERROR]", {
+  console.warn("[PRINT JOB SENT UNCONFIRMED]", {
     id,
     printer_key: result.data.printer_key,
     attempts: result.data.attempts,
-    statusPrevious: "claimed",
+    statusPrevious: "sending",
     statusNew: result.data.status,
-    error: result.data.error_message,
   });
   return Response.json({ job: result.data });
 }

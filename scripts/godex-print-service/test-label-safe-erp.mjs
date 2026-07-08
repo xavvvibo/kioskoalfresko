@@ -1,4 +1,4 @@
-import { buildGodex80x50MinimalTestEzpl } from "../../lib/admin-kiosko/printing/godex-80x50-ezpl.mjs";
+import { buildGodex80x50SafeErpTestEzpl } from "../../lib/admin-kiosko/printing/godex-80x50-ezpl.mjs";
 import { loadGodexEnv } from "./env.mjs";
 import { GODEX_PRINT_TRANSPORTS, printRawEzpl } from "./raw-printer.mjs";
 
@@ -15,18 +15,24 @@ await loadGodexEnv();
 const host = process.env.GODEX_PRINTER_HOST || "192.168.1.37";
 const port = Number(process.env.GODEX_PRINTER_PORT || 9100);
 const timeoutMs = Number(process.env.GODEX_TCP_TIMEOUT_MS || 5000);
-const ezpl = buildGodex80x50MinimalTestEzpl();
+const timestamp = new Intl.DateTimeFormat("es-ES", {
+  timeZone: "Europe/Madrid",
+  dateStyle: "short",
+  timeStyle: "medium",
+}).format(new Date());
+const ezpl = buildGodex80x50SafeErpTestEzpl({ host, timestamp });
 const started = Date.now();
 
 try {
-  logInfo("[GODEX TCP MINIMAL TEST START]", {
+  logInfo("[GODEX SAFE ERP TEST START]", {
     transport: GODEX_PRINT_TRANSPORTS.TCP_9100,
     host,
     port,
     timeoutMs,
+    copies: 1,
     ezplBytes: Buffer.byteLength(ezpl, "utf8"),
   });
-  logInfo("[GODEX TCP MINIMAL TEST EZPL]", { rawCommand: ezpl });
+  logInfo("[GODEX SAFE ERP TEST EZPL]", { rawCommand: ezpl });
 
   await printRawEzpl(ezpl, {
     transport: GODEX_PRINT_TRANSPORTS.TCP_9100,
@@ -35,14 +41,17 @@ try {
     timeoutMs,
   });
 
-  logInfo("[GODEX TCP MINIMAL TEST OK]", {
+  logInfo("[GODEX SAFE ERP TEST SENT]", {
     transport: GODEX_PRINT_TRANSPORTS.TCP_9100,
     host,
     port,
+    copies: 1,
+    bytesSent: Buffer.byteLength(ezpl, "utf8"),
     durationMs: Date.now() - started,
+    verification: "TCP write accepted; physical paper output is not observable from this process.",
   });
 } catch (error) {
-  logError("[GODEX TCP MINIMAL TEST ERROR]", {
+  logError("[GODEX SAFE ERP TEST ERROR]", {
     transport: GODEX_PRINT_TRANSPORTS.TCP_9100,
     host,
     port,
