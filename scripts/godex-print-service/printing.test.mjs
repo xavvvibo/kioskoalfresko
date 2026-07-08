@@ -6,10 +6,8 @@ import {
   buildGodex80x50PrepProfessionalEzpl,
   buildGodex80x50SafeErpTestEzpl,
   cleanLabelText,
-  decodeGodexGwQr,
-  isStructurallyValidQrBitmapEzpl,
   isValidGodex80x50Ezpl,
-  parseGodexGwBitmap,
+  parseNativeQrCommand,
 } from "../../lib/admin-kiosko/printing/godex-80x50-ezpl.mjs";
 import { processBridgeJob, startupQueueDecision } from "./bridge-core.mjs";
 
@@ -61,7 +59,7 @@ test("prep professional label omits empty fields and keeps traceability", () => 
   assert.doesNotMatch(ezpl, /RESPONSABLE:/);
 });
 
-test("prep professional QR is a decodable GW bitmap without fallback text", () => {
+test("prep professional QR uses native EZPL W command without GW bitmap", () => {
   const qrValue = "ERP:prep_batch:GM-070726-001";
   const ezpl = buildGodex80x50PrepProfessionalEzpl({
     prepName: "Guacamole",
@@ -74,26 +72,44 @@ test("prep professional QR is a decodable GW bitmap without fallback text", () =
     includeQr: true,
     copies: 1,
   });
-  const qrLine = ezpl.split(/\r?\n/).find((line) => line.startsWith("GW,"));
+  const lines = ezpl.split(/\r?\n/);
+  const qrLineIndex = lines.findIndex((line) => line.startsWith("W360,150,2,2,M,8,5,"));
 
-  assert.ok(qrLine);
-  assert.equal(isStructurallyValidQrBitmapEzpl(qrLine), true);
-  const parsed = parseGodexGwBitmap(qrLine);
-  assert.ok(parsed);
-  const decoded = decodeGodexGwQr(qrLine, qrValue);
-  assert.equal(decoded.ok, true, decoded.error);
-  assert.equal(decoded.decoded, qrValue);
-  assert.equal(parsed.widthBytes * 8, 168);
-  assert.equal(parsed.rows, 165);
-  assert.equal(parsed.x, 438);
-  assert.equal(parsed.y, 124);
-  assert.ok(parsed.x + parsed.widthBytes * 8 <= 640);
-  assert.ok(parsed.y + parsed.rows <= 400);
-  assert.ok(parsed.x > 390);
-  assert.ok(parsed.y > 112);
-  assert.ok(parsed.x + parsed.widthBytes * 8 <= 640);
-  assert.ok(parsed.y + parsed.rows <= 400);
+  assert.notEqual(qrLineIndex, -1);
+  assert.equal(lines[qrLineIndex], `W360,150,2,2,M,8,5,${qrValue.length},0`);
+  assert.equal(lines[qrLineIndex + 1], qrValue);
+  assert.deepEqual(parseNativeQrCommand(lines, qrLineIndex), {
+    x: 360,
+    y: 150,
+    model: 2,
+    multiplier: 2,
+    errorCorrection: "M",
+    mask: 8,
+    rotation: 5,
+    length: qrValue.length,
+    mode: 0,
+    value: qrValue,
+  });
+  assert.doesNotMatch(ezpl, /^GW,/m);
   assert.doesNotMatch(ezpl, /QR INTERNO/);
+});
+
+test("native QR sanitization preserves colon and length", () => {
+  const qrValue = "ERP:prep_batch:GM-070726-001";
+  const ezpl = buildGodex80x50PrepProfessionalEzpl({
+    prepName: "Guacamole",
+    batchCode: "GM-070726-001",
+    qrValue: `${qrValue}^bad~cmd`,
+    includeQr: true,
+  });
+  const lines = ezpl.split(/\r?\n/);
+  const qrLineIndex = lines.findIndex((line) => line.startsWith("W360,150,2,2,M,8,5,"));
+  const parsed = parseNativeQrCommand(lines, qrLineIndex);
+
+  assert.ok(parsed);
+  assert.equal(parsed.value, `${qrValue} bad cmd`);
+  assert.equal(parsed.length, parsed.value.length);
+  assert.match(parsed.value, /^ERP:prep_batch:/);
 });
 
 test("cleanLabelText removes control characters and command delimiters", () => {

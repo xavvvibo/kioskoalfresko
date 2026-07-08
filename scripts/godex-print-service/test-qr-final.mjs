@@ -1,4 +1,4 @@
-import { buildGodex80x50QrTestEzpl, decodeGodexGwQr } from "../../lib/admin-kiosko/printing/godex-80x50-ezpl.mjs";
+import { buildGodex80x50QrTestEzpl, parseNativeQrCommand } from "../../lib/admin-kiosko/printing/godex-80x50-ezpl.mjs";
 import { loadGodexEnv } from "./env.mjs";
 
 await loadGodexEnv();
@@ -8,6 +8,8 @@ const config = {
   token: process.env.ERP_API_TOKEN || "",
   printerKey: "kiosko_godex_g500",
   requestId: process.env.QR_FINAL_REQUEST_ID || crypto.randomUUID(),
+  qrFinalValue: (process.env.QR_FINAL_VALUE || "").trim(),
+  qrFinalBatchCode: (process.env.QR_FINAL_BATCH_CODE || "").trim(),
   supabaseUrl: (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, ""),
   serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
 };
@@ -26,11 +28,21 @@ async function fetchJson(url, init = {}) {
 if (!config.erpApiUrl) fail("Falta ERP_API_URL.");
 if (!config.token) fail("Falta ERP_API_TOKEN.");
 
-const qrValue = `ERP:QR-TEST:${config.requestId.slice(0, 8)}`;
-const ezpl = buildGodex80x50QrTestEzpl({ qrValue, batchCode: "QR FINAL" });
-const qrLine = ezpl.split(/\r?\n/).find((line) => line.startsWith("GW,"));
-const decoded = decodeGodexGwQr(qrLine, qrValue);
-if (!decoded.ok) fail("QR automatico no valido; no se encola prueba fisica.", decoded);
+const qrValue = config.qrFinalValue
+  || (config.qrFinalBatchCode ? `ERP:prep_batch:${config.qrFinalBatchCode}` : `ERP:QR-TEST:${config.requestId.slice(0, 8)}`);
+const visibleBatchCode = config.qrFinalBatchCode || "NO USAR";
+const ezpl = buildGodex80x50QrTestEzpl({ qrValue, batchCode: config.qrFinalBatchCode || "QR FINAL" });
+const ezplLines = ezpl.split(/\r?\n/);
+const qrLineIndex = ezplLines.findIndex((line) => line.startsWith("W360,150,2,2,M,8,5,"));
+const parsedQr = parseNativeQrCommand(ezplLines, qrLineIndex);
+if (!parsedQr || parsedQr.value !== qrValue || parsedQr.length !== qrValue.length) {
+  fail("QR automatico no valido; no se encola prueba fisica.", {
+    error: "QR nativo W invalido.",
+    expected: qrValue,
+    qrCommand: qrLineIndex >= 0 ? ezplLines[qrLineIndex] : null,
+    qrPayload: qrLineIndex >= 0 ? ezplLines[qrLineIndex + 1] : null,
+  });
+}
 
 if (config.supabaseUrl && config.serviceRoleKey) {
   const headers = {
@@ -69,7 +81,7 @@ const create = await fetchJson(`${config.erpApiUrl}/api/print-jobs`, {
       prepName: "PRUEBA QR ERP",
       productionDateTime: new Date().toISOString(),
       shelfLifeDays: 1,
-      batchCode: "NO USAR",
+      batchCode: visibleBatchCode,
       responsibleName: "xavibocanegra",
       storageCondition: "NO USAR",
       brandName: "KIOSKO ALFRESKO",
@@ -101,6 +113,8 @@ console.info(JSON.stringify({
   message: "Prueba QR final encolada. El bridge debe recorrer queued -> claimed -> sending -> sent_unconfirmed -> printed.",
   requestId: config.requestId,
   qrValue,
-  qrPreviewPath: decoded.previewPath,
+  batchCode: visibleBatchCode,
+  qrValidation: "native_w",
+  qrCommand: ezplLines[qrLineIndex],
   job: create.body?.job || create.body,
 }, null, 2));

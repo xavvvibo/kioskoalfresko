@@ -2,7 +2,7 @@ import net from "node:net";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { loadGodexEnv, packageVersion } from "./env.mjs";
-import { buildGodex80x50QrTestEzpl, decodeGodexGwQr } from "../../lib/admin-kiosko/printing/godex-80x50-ezpl.mjs";
+import { buildGodex80x50QrTestEzpl, parseNativeQrCommand } from "../../lib/admin-kiosko/printing/godex-80x50-ezpl.mjs";
 
 const loadedEnvFiles = await loadGodexEnv();
 const version = process.env.BRIDGE_VERSION || process.env.npm_package_version || await packageVersion();
@@ -108,14 +108,15 @@ addCheck("Journal dir", "OK", config.journalDir);
 try {
   const qrValue = "ERP:QR-TEST:DOCTOR";
   const ezpl = buildGodex80x50QrTestEzpl({ qrValue });
-  const qrLine = ezpl.split(/\r?\n/).find((line) => line.startsWith("GW,"));
-  const decoded = decodeGodexGwQr(qrLine, qrValue);
+  const lines = ezpl.split(/\r?\n/);
+  const qrLineIndex = lines.findIndex((line) => line.startsWith("W360,150,2,2,M,8,5,"));
+  const parsedQr = parseNativeQrCommand(lines, qrLineIndex);
   addCheck(
     "QR automatic validation",
-    decoded.ok ? "OK" : "ERROR",
-    decoded.ok
-      ? `decoded=${decoded.decoded} size=${decoded.width}x${decoded.height} preview=${decoded.previewPath}`
-      : decoded.error,
+    parsedQr?.value === qrValue ? "OK" : "ERROR",
+    parsedQr?.value === qrValue
+      ? `native=${lines[qrLineIndex]} value=${parsedQr.value}`
+      : `QR nativo invalido: ${lines[qrLineIndex] || "sin linea W"}`,
   );
 } catch (error) {
   addCheck("QR automatic validation", "ERROR", error instanceof Error ? error.message : String(error));
