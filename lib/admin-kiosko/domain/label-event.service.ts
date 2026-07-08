@@ -9,6 +9,7 @@ import {
 import { getPrintJobsByProductionBatch, getRecentPrintJobs } from "@/lib/admin-kiosko/repositories/print-jobs.repository";
 import type { AdminKioskoDomainEvent } from "./events";
 import {
+  goodsReceivedLabelIdempotencyKey,
   prepLabelIdempotencyKey,
   productionLabelIdempotencyKey,
   type LabelDecision,
@@ -62,6 +63,30 @@ type ManualGodexLabelInput = {
   requestId?: string;
 };
 
+type GoodsReceivedLabelInput = {
+  receiptId?: string;
+  receptionId?: string;
+  supplierId?: string;
+  supplierName?: string;
+  productId?: string;
+  productName?: string;
+  batchCode?: string;
+  quantity?: number;
+  unit?: string;
+  receivedAt?: string;
+  expiryDate?: string;
+  storageCondition?: string;
+  receivedBy?: string;
+  idempotencyKey?: string;
+  uploadedDocumentId?: string;
+  items?: Array<{
+    productName: string;
+    batchNumber?: string;
+    quantity?: number;
+    unit?: string;
+    expiryDate?: string;
+  }>;
+};
 
 function dateTimeFromDateAndTime(date: string, time: string) {
   return `${date}T${(time || "00:00").slice(0, 5)}`;
@@ -244,6 +269,70 @@ export const labelEventService = {
     return executeLabelDecision(decision);
   },
 
+  decideGoodsReceived(input: GoodsReceivedLabelInput): LabelDecision {
+    const productName = input.productName || "";
+    const batchCode = input.batchCode || "";
+
+    if ((!productName || !batchCode) && input.items?.length) {
+      return { shouldPrint: false, reason: "legacy_payload_ignored" };
+    }
+    if (!productName) return { shouldPrint: false, reason: "goods_received_without_product" };
+    if (!batchCode) return { shouldPrint: false, reason: "goods_received_without_batch" };
+
+    const receiptKey = input.receiptId || input.receptionId || batchCode;
+    const productKey = input.productId || productName;
+    const idempotencyKey = input.idempotencyKey || goodsReceivedLabelIdempotencyKey(receiptKey, productKey);
+    const expiryDate = input.expiryDate;
+
+    return {
+      shouldPrint: true,
+      reason: "goods_received",
+      input: {
+        printerKey: DEFAULT_GODEX_G500_PRINTER_KEY,
+        template: "ingredient_label_basic",
+        data: {
+          ingredientName: productName,
+          supplierName: input.supplierName || undefined,
+          internalCode: undefined,
+          lot: batchCode,
+          expiryDate,
+          copies: 1,
+        },
+        metadata: {
+          requestedBy: input.receivedBy || "admin-kiosko",
+          module: "goods-reception",
+          sourceType: "goods_reception",
+          sourceId: receiptKey,
+          createdFrom: "goods_received_event",
+          reason: "goods_received",
+          batchCode,
+          idempotencyKey,
+          requestedCopies: "1",
+        },
+      },
+    };
+  },
+
+  async requestGoodsReceivedLabel(input: GoodsReceivedLabelInput): Promise<LabelEventResult> {
+    const decision = this.decideGoodsReceived(input);
+    if (!decision.shouldPrint) return { ok: false, error: decision.reason, decision };
+
+    const existing = await findExistingByIdempotencyKey(decision.input.metadata.idempotencyKey || "");
+    if (existing.ok && existing.data) {
+      return { ok: true, skipped: true, data: existing.data, decision };
+    }
+
+    console.info("[GOODS RECEIVED LABEL QUEUED]", {
+      sourceId: decision.input.metadata.sourceId,
+      batchCode: decision.input.metadata.batchCode,
+      productName: input.productName || input.items?.[0]?.productName,
+      quantity: input.quantity,
+      unit: input.unit,
+    });
+
+    return executeLabelDecision(decision);
+  },
+
   async requestManualGodexLabel(input: ManualGodexLabelInput): Promise<LabelEventResult> {
     const idempotencyKey = manualRequestKey(
       "print",
@@ -321,6 +410,9 @@ export const labelEventService = {
     }
     if (event.name === "PrepCreated") {
       return this.requestPrepCreatedLabel(event.payload);
+    }
+    if (event.name === "GoodsReceived") {
+      return this.requestGoodsReceivedLabel(event.payload);
     }
     if (event.name === "LabelRequested") {
       const decision: LabelDecision = {

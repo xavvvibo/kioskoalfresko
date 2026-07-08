@@ -4,12 +4,12 @@ import { labelEventService } from "../label-event.service";
 
 export const labelHandler: DomainEventHandler<AdminKioskoDomainEvent> = {
   name: "LabelHandler",
-  handles: ["ProductionBatchClosed", "PrepCreated", "LabelRequested"],
+  handles: ["ProductionBatchClosed", "PrepCreated", "GoodsReceived", "LabelRequested"],
   async handle(event) {
-    if (event.name === "ProductionBatchClosed" || event.name === "PrepCreated" || event.name === "LabelRequested") {
+    if (event.name === "ProductionBatchClosed" || event.name === "PrepCreated" || event.name === "GoodsReceived" || event.name === "LabelRequested") {
       const result = await labelEventService.handleDomainEvent(event);
       if (!result.ok) {
-        if (/without|sin|pending|no_policy|prep_without_batch_code|prep_without_name/i.test(result.error)) {
+        if (/without|sin|pending|no_policy|legacy_payload_ignored|prep_without_batch_code|prep_without_name/i.test(result.error)) {
           console.info("[LABEL EVENT SERVICE SKIPPED]", {
             eventName: event.name,
             eventId: event.id,

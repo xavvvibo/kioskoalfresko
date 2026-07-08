@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { clearAdminSession, createAdminSession, isCorrectAdminPassword, requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { createDomainEvent, emitDomainEventSafe } from "@/lib/admin-kiosko/domain";
+import { goodsReceptionService } from "@/lib/admin-kiosko/domain/goods-reception.service";
 import { labelEventService, type LabelEventResult } from "@/lib/admin-kiosko/domain/label-event.service";
 import { processPendingInboxOcr, reprocessInboxOcr } from "@/lib/admin-kiosko/domain/inbox-ocr/processor";
 import { DOCUMENT_TYPES } from "@/lib/admin-kiosko/domain/document-types";
@@ -746,6 +747,51 @@ export async function saveGoodsReceptionRecordAction(formData: FormData) {
       }],
     },
   })));
+}
+
+export async function registerManualGoodsReceptionAction(formData: FormData) {
+  await requireAdminSession();
+
+  const result = await goodsReceptionService.registerManualReception({
+    supplierId: text(formData, "supplier_id"),
+    supplierName: text(formData, "supplier_name"),
+    productId: text(formData, "product_id"),
+    batchCode: text(formData, "batch_code"),
+    quantity: requiredNumber(formData, "quantity"),
+    unit: text(formData, "unit"),
+    receivedDate: text(formData, "received_date") || todayMadrid(),
+    receivedTime: text(formData, "received_time") || timeMadrid(),
+    expiryDate: text(formData, "expiry_date"),
+    storageCondition: text(formData, "storage_condition"),
+    receivedBy: text(formData, "received_by") || "F. Javier Bocanegra Sanjuan",
+    observations: text(formData, "observations"),
+  });
+
+  revalidatePath("/admin-kiosko/compras");
+  revalidatePath("/admin-kiosko/inventario");
+  revalidatePath("/admin-kiosko/recepcion-mercancia");
+  revalidatePath("/admin-kiosko/impresiones");
+  revalidatePath("/admin-kiosko/trazabilidad");
+
+  if (!result.ok) {
+    redirect(`/admin-kiosko/compras?receipt_error=${encodeURIComponent(result.error.slice(0, 240))}`);
+  }
+
+  const params = new URLSearchParams({
+    receipt: result.data.receiptId,
+    batch: result.data.batchCode,
+  });
+  if (result.data.skippedExistingReception) {
+    params.set("receipt_existing", result.data.receiptId);
+  }
+  const printResult = result.data.printResult;
+  if (printResult?.ok) {
+    params.set(printResult.skipped ? "print_existing" : "print_job", printResult.data.id);
+  } else if (printResult?.error && printResult.error !== "skipped_existing_reception") {
+    params.set("print_error", printResult.error.slice(0, 240));
+  }
+
+  redirect(`/admin-kiosko/compras?${params.toString()}`);
 }
 
 export async function saveAiReceptionAction(formData: FormData) {

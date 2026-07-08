@@ -126,11 +126,22 @@ export type SupplierCreatedPayload = {
 };
 
 export type GoodsReceivedPayload = {
+  receiptId?: string;
   receptionId?: string;
   supplierId?: string;
-  supplierName: string;
+  supplierName?: string;
+  productId?: string;
+  productName?: string;
+  batchCode?: string;
+  quantity?: number;
+  unit?: string;
+  receivedAt?: string;
+  expiryDate?: string;
+  storageCondition?: string;
+  receivedBy?: string;
+  idempotencyKey?: string;
   uploadedDocumentId?: string;
-  items: Array<{
+  items?: Array<{
     productName: string;
     batchNumber?: string;
     quantity?: number;

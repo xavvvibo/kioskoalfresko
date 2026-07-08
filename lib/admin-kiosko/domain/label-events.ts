@@ -3,11 +3,11 @@ import type { PrintJobMetadata, PrintLabelData, PrintLabelTemplate } from "@/lib
 export const implementedLabelEvents = [
   "ProductionBatchClosed",
   "PrepCreated",
+  "GoodsReceived",
   "LabelRequested",
 ] as const;
 
 export const preparedLabelEvents = [
-  "GoodsReceived",
   "InventoryAdjusted",
   "RecipeProduced",
   "RecipeConsumed",
@@ -46,4 +46,8 @@ export function manualLabelIdempotencyKey(sourceId: string, reason: string) {
 
 export function prepLabelIdempotencyKey(batchCode: string, reason: string) {
   return `prep_label:${batchCode}:${reason}`;
+}
+
+export function goodsReceivedLabelIdempotencyKey(receiptOrBatchId: string, productKey: string) {
+  return `goods_received:${receiptOrBatchId}:${productKey}`;
 }

@@ -45,16 +45,21 @@ No se inventa lote fisico desde una receta activa y no se emite `PrepCreated` si
 
 Origen: `/admin-kiosko/recepcion-mercancia`, Inbox/OCR confirmado.
 
-- `GoodsReceived`: recepcion APPCC manual o desde documento.
+- `GoodsReceived`: recepcion APPCC manual o desde documento. La politica de etiqueta solo se activa cuando el evento trae campos top-level de recepcion real (`receiptId`, `productName`, `batchCode`).
 - `InventoryLotCreated`: lote FEFO preparado/creado desde recepcion o importacion.
 
-Regla futura:
+Regla activa para recepcion manual desde `/admin-kiosko/compras`:
 
 ```text
 GoodsReceived
-  -> labelEventService
-  -> etiqueta recepcion/lote proveedor si el lote queda validado
+  -> si hay productName y batchCode: etiqueta ingredient_label_basic 80x50
+  -> printer kiosko_godex_g500
+  -> idempotencyKey estable de recepcion manual
 ```
+
+Los eventos antiguos procedentes de OCR que solo contienen `items` quedan registrados, pero no disparan etiqueta automatica en esta fase.
+
+La recepcion manual busca duplicados por proveedor, producto, lote, cantidad, unidad y fecha antes de crear stock. Tambien verifica que exista lote trazable para `productId + batchCode` antes de emitir etiqueta. La atomicidad fuerte queda pendiente de RPC/transaccion futura.
 
 ### Movimientos internos
 
@@ -80,7 +85,8 @@ Eventos preparados:
 
 | Area | Punto actual | Evento actual | Etiqueta automatica |
 | --- | --- | --- | --- |
-| Recepcion manual | `saveGoodsReceptionRecordAction` | `GoodsReceived` | Preparada, no activa |
+| Recepcion manual Compras | `registerManualGoodsReceptionAction` | `GoodsReceived` | Activa si hay producto y lote |
+| Recepcion APPCC legacy | `saveGoodsReceptionRecordAction` | `GoodsReceived` | Preparada, no activa |
 | Recepcion IA/OCR | `saveAiReceptionAction` | `GoodsReceived`, `InventoryLotCreated` | Preparada, no activa |
 | Produccion directa | `saveProductionBatchAction` | `ProductionBatchCreated`, `ProductionBatchClosed`, `PrintJobCreated` | Activa |
 | Produccion por receta | `registerProductionMovements` desde action | `ProductionBatchCreated`, `FinishedProductLotCreated`, `InventoryLotConsumed`, `ProductionBatchClosed`, `PrintJobCreated` | Activa |
@@ -91,5 +97,6 @@ Eventos preparados:
 ## Deuda tecnica
 
 - Garantia fuerte de idempotencia requiere indice unico futuro en `print_jobs` sobre clave logica de metadata.
+- La recepcion manual usa clave en observaciones para evitar doble submit sin schema nuevo; no sustituye una constraint.
 - Recepcion, fraccionamiento, reenvasado y devoluciones necesitan payloads definitivos antes de activar etiquetas.
 - La etiqueta de ingrediente sigue siendo accion directa existente; no se ha migrado para evitar ampliar alcance.

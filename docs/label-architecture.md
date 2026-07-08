@@ -68,6 +68,32 @@ No se emite `PrepCreated` desde una receta activa sin lote real. No se genera lo
 
 La impresion manual desde `/admin-kiosko/etiquetas-prep` usa `requestPrepManualLabel()` y no aplica deduplicacion automatica.
 
+## Recepcion de mercancia
+
+```text
+/admin-kiosko/compras
+  -> registerManualGoodsReceptionAction()
+  -> goodsReceptionService.registerManualReception()
+  -> admin_goods_reception_records
+  -> applyInventoryMovement(entrada)
+  -> GoodsReceived
+  -> requestGoodsReceivedLabel()
+  -> ingredient_label_basic
+  -> kiosko_godex_g500
+```
+
+La politica activa exige `productName` y `batchCode` en el payload top-level del evento. Los eventos heredados de OCR basados en `items` no imprimen automaticamente para no cambiar el comportamiento OCR en esta fase.
+
+La idempotencia usa:
+
+```text
+goods_reception_manual:<supplierName>:<productId>:<batchCode>:<quantity>:<unit>:<receivedDate>
+```
+
+Antes de crear una nueva recepcion manual, el servicio busca una recepcion equivalente reciente con la misma clave operativa guardada en observaciones. Si existe, no crea otro movimiento de inventario ni otra etiqueta automatica. La garantia fuerte sigue requiriendo una constraint/RPC transaccional futura.
+
+Tras `applyInventoryMovement()`, el servicio verifica que exista un lote para `productId + batchCode`. Si no puede confirmarlo, no emite `GoodsReceived` ni etiqueta.
+
 ## Etiqueta manual actual
 
 La UI existente de `/admin-kiosko/etiquetas` sigue funcionando, pero ya no crea `print_jobs` legacy. Llama a:

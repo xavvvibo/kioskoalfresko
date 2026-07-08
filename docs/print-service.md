@@ -1180,6 +1180,7 @@ Eventos activos:
 
 - `ProductionBatchClosed`: etiqueta automatica al cerrar lote.
 - `PrepCreated`: preparado para preparaciones con lote real; no se emite desde recetas activas sin lote.
+- `GoodsReceived`: etiqueta automatica de recepcion manual si hay producto y lote.
 - `PrintJobCreated`: auditoria de job creado o reutilizado. Es audit-only.
 
 Eventos preparados:
@@ -1199,6 +1200,33 @@ Eventos preparados:
 La idempotencia usa `payload.metadata.idempotencyKey` sin cambiar schema. Una garantia fuerte requerira indice unico futuro si se permite migracion.
 
 Las acciones manuales de impresion no usan la deduplicacion automatica: cada solicitud manual valida crea un `print_job` nuevo. En esos casos `metadata.idempotencyKey` es una clave unica de auditoria, no una garantia de deduplicacion.
+
+### Recepcion de mercancia
+
+La recepcion manual de `/admin-kiosko/compras` usa `goodsReceptionService`:
+
+```text
+admin_goods_reception_records
+admin_inventory_movements / admin_inventory_lots
+GoodsReceived
+print_jobs
+```
+
+La etiqueta se encola con:
+
+- `template = ingredient_label_basic`
+- `printer_key = kiosko_godex_g500`
+- `metadata.sourceType = goods_reception`
+- `metadata.reason = goods_received`
+- `metadata.batchCode = <lote proveedor>`
+- `data.lot = <lote proveedor>` como linea visible prioritaria
+- `payload.raw_command` generado como EZPL 80x50.
+
+Los eventos `GoodsReceived` procedentes de OCR que solo contienen `items` quedan sin etiqueta automatica hasta validar ese flujo. El handler los ignora como `legacy_payload_ignored`.
+
+La recepcion manual evita doble submit con una clave operativa estable basada en proveedor, producto, lote, cantidad, unidad y fecha. Si detecta duplicado, no crea otro movimiento ni otra etiqueta.
+
+Limitacion: la operacion no es transaccional porque no hay RPC/schema nuevo. Si se crea la recepcion APPCC pero falla inventario o no se confirma el lote, el servicio devuelve un error parcial con el `receiptId` y no emite etiqueta.
 
 ### Evitar duplicados
 
