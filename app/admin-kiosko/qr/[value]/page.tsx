@@ -37,8 +37,8 @@ export default async function InternalQrResolverPage({
 }: {
   params: Promise<{ value: string }>;
 }) {
-  await requireAdminSession();
   const { value } = await params;
+  await requireAdminSession(`/admin-kiosko/qr/${encodeURIComponent(value)}`);
   const parsed = parseInternalQrValue(value);
 
   if (!parsed.ok && parsed.error === "invalid_format") {

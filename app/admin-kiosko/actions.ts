@@ -63,13 +63,14 @@ import type { InboxDocumentType } from "@/lib/admin-kiosko/inbox";
 
 export async function loginAdminKioskoAction(formData: FormData) {
   const password = String(formData.get("password") || "");
+  const next = safeAdminRedirectTarget(String(formData.get("next") || ""));
 
   if (!isCorrectAdminPassword(password)) {
-    redirect("/admin-kiosko?error=1");
+    redirect(next ? `/admin-kiosko?error=1&next=${encodeURIComponent(next)}` : "/admin-kiosko?error=1");
   }
 
   await createAdminSession();
-  redirect("/admin-kiosko");
+  redirect(next || "/admin-kiosko");
 }
 
 export async function logoutAdminKioskoAction() {
@@ -79,6 +80,14 @@ export async function logoutAdminKioskoAction() {
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
+}
+
+function safeAdminRedirectTarget(value: string) {
+  const target = value.trim();
+  if (!target || target.includes("\n") || target.includes("\r")) return "";
+  if (!target.startsWith("/admin-kiosko")) return "";
+  if (target.startsWith("//")) return "";
+  return target;
 }
 
 function optionalNumber(formData: FormData, key: string) {

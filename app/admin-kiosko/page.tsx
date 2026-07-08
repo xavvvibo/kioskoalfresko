@@ -25,13 +25,13 @@ const categoryStyles = {
 export default async function AdminKioskoPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ error?: string; inspector?: string }>;
+  searchParams?: Promise<{ error?: string; inspector?: string; next?: string }>;
 }) {
   const isAuthenticated = await isAdminAuthenticated();
   const params = await searchParams;
 
   if (!isAuthenticated) {
-    return <LoginPanel hasError={params?.error === "1"} />;
+    return <LoginPanel hasError={params?.error === "1"} returnTo={params?.next} />;
   }
 
   const [dashboard, executive, productionOps] = await Promise.all([

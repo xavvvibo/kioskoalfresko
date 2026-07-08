@@ -1,6 +1,6 @@
 import { loginAdminKioskoAction } from "../actions";
 
-export function LoginPanel({ hasError }: { hasError: boolean }) {
+export function LoginPanel({ hasError, returnTo }: { hasError: boolean; returnTo?: string }) {
   return (
     <main className="flex min-h-screen items-center bg-[#0d0d0d] px-4 py-10 text-white">
       <section className="mx-auto w-full max-w-md rounded-[2rem] border border-white/10 bg-[#151515] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.22)] sm:p-8">
@@ -14,6 +14,7 @@ export function LoginPanel({ hasError }: { hasError: boolean }) {
           Zona privada para personal autorizado.
         </p>
         <form action={loginAdminKioskoAction} className="mt-6 grid gap-4">
+          {returnTo ? <input type="hidden" name="next" value={returnTo} /> : null}
           <label className="grid gap-2 text-sm font-semibold text-stone-200">
             Contraseña
             <input

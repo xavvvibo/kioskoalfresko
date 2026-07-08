@@ -42,11 +42,12 @@ export async function isAdminAuthenticated() {
   return safeEqual(sessionToken, createSessionToken(password));
 }
 
-export async function requireAdminSession() {
+export async function requireAdminSession(returnTo?: string) {
   const isAuthenticated = await isAdminAuthenticated();
 
   if (!isAuthenticated) {
-    redirect("/admin-kiosko");
+    const target = returnTo ? `/admin-kiosko?next=${encodeURIComponent(returnTo)}` : "/admin-kiosko";
+    redirect(target);
   }
 }
 
