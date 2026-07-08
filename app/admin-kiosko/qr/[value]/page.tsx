@@ -3,20 +3,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { getProductionBatchByBatchCode } from "@/lib/admin-kiosko/database";
+import { parseInternalQrValue } from "@/lib/admin-kiosko/qr/resolve-qr";
 import { AdminHeader } from "../../_components/AdminHeader";
 
 export const metadata: Metadata = {
   title: "Resolver QR interno | Panel interno",
   description: "Resolucion interna protegida de codigos QR del ERP.",
 };
-
-function decodeQrValue(value: string) {
-  try {
-    return decodeURIComponent(value).trim();
-  } catch {
-    return "";
-  }
-}
 
 function ErrorPanel({ title, detail, qrValue }: { title: string; detail: string; qrValue?: string }) {
   return (
@@ -46,30 +39,39 @@ export default async function InternalQrResolverPage({
 }) {
   await requireAdminSession();
   const { value } = await params;
-  const qrValue = decodeQrValue(value);
-  const prefix = "ERP:prep_batch:";
+  const parsed = parseInternalQrValue(value);
 
-  if (!qrValue || !qrValue.startsWith(prefix)) {
+  if (!parsed.ok && parsed.error === "invalid_format") {
     return (
       <ErrorPanel
         title="Formato de QR no valido"
         detail="Este codigo no corresponde a un lote interno de subelaboracion del ERP."
-        qrValue={qrValue || value}
+        qrValue={parsed.qrValue || value}
       />
     );
   }
 
-  const batchCode = qrValue.slice(prefix.length).trim();
-  if (!batchCode) {
+  if (!parsed.ok && parsed.error === "missing_batch_code") {
     return (
       <ErrorPanel
         title="Lote no informado"
         detail="El QR indica un lote de subelaboracion, pero no contiene codigo de lote."
-        qrValue={qrValue}
+        qrValue={parsed.qrValue}
       />
     );
   }
 
+  if (!parsed.ok) {
+    return (
+      <ErrorPanel
+        title="Formato de QR no valido"
+        detail="Este codigo no corresponde a un lote interno de subelaboracion del ERP."
+        qrValue={parsed.qrValue || value}
+      />
+    );
+  }
+
+  const { batchCode, qrValue } = parsed;
   const result = await getProductionBatchByBatchCode(batchCode);
   if (!result.ok) {
     return (
@@ -85,7 +87,7 @@ export default async function InternalQrResolverPage({
     return (
       <ErrorPanel
         title="Lote no encontrado"
-        detail={`No existe ningun lote interno con codigo ${batchCode}.`}
+        detail={`QR valido en formato, pero lote no encontrado: ${batchCode}`}
         qrValue={qrValue}
       />
     );
