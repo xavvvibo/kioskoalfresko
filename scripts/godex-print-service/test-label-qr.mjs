@@ -18,7 +18,7 @@ const timeoutMs = Number(process.env.GODEX_TCP_TIMEOUT_MS || 5000);
 const ezpl = buildGodex80x50QrTestEzpl();
 const qrValue = "ERP:QR-TEST:LOCAL";
 const lines = ezpl.split(/\r?\n/);
-const qrLineIndex = lines.findIndex((line) => line.startsWith("W360,150,2,2,M,8,5,"));
+const qrLineIndex = lines.findIndex((line) => line.startsWith("W360,150,3,2,M,8,5,"));
 const parsedQr = parseNativeQrCommand(lines, qrLineIndex);
 const started = Date.now();
 

@@ -33,9 +33,9 @@ const qrValue = config.qrFinalValue
 const visibleBatchCode = config.qrFinalBatchCode || "NO USAR";
 const ezpl = buildGodex80x50QrTestEzpl({ qrValue, batchCode: config.qrFinalBatchCode || "QR FINAL" });
 const ezplLines = ezpl.split(/\r?\n/);
-const qrLineIndex = ezplLines.findIndex((line) => line.startsWith("W360,150,2,2,M,8,5,"));
+const qrLineIndex = ezplLines.findIndex((line) => line.startsWith("W360,150,3,2,M,8,5,"));
 const parsedQr = parseNativeQrCommand(ezplLines, qrLineIndex);
-if (!parsedQr || parsedQr.value !== qrValue || parsedQr.length !== qrValue.length) {
+if (!parsedQr || parsedQr.value !== qrValue || parsedQr.length !== Buffer.byteLength(qrValue, "utf8")) {
   fail("QR automatico no valido; no se encola prueba fisica.", {
     error: "QR nativo W invalido.",
     expected: qrValue,
@@ -107,6 +107,15 @@ if (create.response.status === 200) {
   fail("La misma prueba ya existia para este requestId; no se permite ejecutar dos veces.", { requestId: config.requestId, body: create.body });
 }
 if (!create.response.ok) fail("No se pudo crear el print job QR final.", { status: create.response.status, body: create.body });
+
+const createdRawCommand = String(create.body?.job?.payload?.raw_command || create.body?.payload?.raw_command || "");
+if (!createdRawCommand.includes(`${ezplLines[qrLineIndex]}\r\n${qrValue}`)) {
+  fail("El ERP ha creado un raw_command QR distinto al validado localmente.", {
+    expectedQrCommand: ezplLines[qrLineIndex],
+    expectedQrValue: qrValue,
+    actualQrCommand: createdRawCommand.split(/\r?\n/).find((line) => line.startsWith("W360,150,")) || null,
+  });
+}
 
 console.info(JSON.stringify({
   ok: true,

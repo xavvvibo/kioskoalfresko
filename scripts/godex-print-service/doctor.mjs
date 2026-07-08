@@ -109,7 +109,7 @@ try {
   const qrValue = "ERP:QR-TEST:DOCTOR";
   const ezpl = buildGodex80x50QrTestEzpl({ qrValue });
   const lines = ezpl.split(/\r?\n/);
-  const qrLineIndex = lines.findIndex((line) => line.startsWith("W360,150,2,2,M,8,5,"));
+  const qrLineIndex = lines.findIndex((line) => line.startsWith("W360,150,3,2,M,8,5,"));
   const parsedQr = parseNativeQrCommand(lines, qrLineIndex);
   addCheck(
     "QR automatic validation",

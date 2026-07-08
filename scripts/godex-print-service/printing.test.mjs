@@ -73,20 +73,20 @@ test("prep professional QR uses native EZPL W command without GW bitmap", () => 
     copies: 1,
   });
   const lines = ezpl.split(/\r?\n/);
-  const qrLineIndex = lines.findIndex((line) => line.startsWith("W360,150,2,2,M,8,5,"));
+  const qrLineIndex = lines.findIndex((line) => line.startsWith("W360,150,3,2,M,8,5,"));
 
   assert.notEqual(qrLineIndex, -1);
-  assert.equal(lines[qrLineIndex], `W360,150,2,2,M,8,5,${qrValue.length},0`);
+  assert.equal(lines[qrLineIndex], `W360,150,3,2,M,8,5,${Buffer.byteLength(qrValue, "utf8")},0`);
   assert.equal(lines[qrLineIndex + 1], qrValue);
   assert.deepEqual(parseNativeQrCommand(lines, qrLineIndex), {
     x: 360,
     y: 150,
-    model: 2,
+    model: 3,
     multiplier: 2,
     errorCorrection: "M",
     mask: 8,
     rotation: 5,
-    length: qrValue.length,
+    length: Buffer.byteLength(qrValue, "utf8"),
     mode: 0,
     value: qrValue,
   });
@@ -103,13 +103,31 @@ test("native QR sanitization preserves colon and length", () => {
     includeQr: true,
   });
   const lines = ezpl.split(/\r?\n/);
-  const qrLineIndex = lines.findIndex((line) => line.startsWith("W360,150,2,2,M,8,5,"));
+  const qrLineIndex = lines.findIndex((line) => line.startsWith("W360,150,3,2,M,8,5,"));
   const parsed = parseNativeQrCommand(lines, qrLineIndex);
 
   assert.ok(parsed);
   assert.equal(parsed.value, `${qrValue} bad cmd`);
-  assert.equal(parsed.length, parsed.value.length);
+  assert.equal(parsed.length, Buffer.byteLength(parsed.value, "utf8"));
   assert.match(parsed.value, /^ERP:prep_batch:/);
+});
+
+test("native QR byte mode preserves full ERP URL payload", () => {
+  const qrValue = "https://kioskoalfresko.es/admin-kiosko/qr/ERP%3Aprep_batch%3AQR-TEST-080726-001";
+  const ezpl = buildGodex80x50PrepProfessionalEzpl({
+    prepName: "PRUEBA QR ERP",
+    batchCode: "QR-TEST-080726-001",
+    qrValue,
+    includeQr: true,
+  });
+  const lines = ezpl.split(/\r?\n/);
+  const qrLineIndex = lines.findIndex((line) => line.startsWith("W360,150,3,2,M,8,5,"));
+
+  assert.notEqual(qrLineIndex, -1);
+  assert.equal(lines[qrLineIndex], `W360,150,3,2,M,8,5,${Buffer.byteLength(qrValue, "utf8")},0`);
+  assert.equal(lines[qrLineIndex + 1], qrValue);
+  assert.match(ezpl, /prep_batch/);
+  assert.doesNotMatch(ezpl, /PREPGBATCH/);
 });
 
 test("cleanLabelText removes control characters and command delimiters", () => {
