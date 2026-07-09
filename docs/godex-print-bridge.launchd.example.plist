@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.kioskoalfresko.godex-print-bridge</string>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/xavibocanegra/kioskoalfresko</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>cd /Users/xavibocanegra/kioskoalfresko &amp;&amp; npm run print:godex</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/xavibocanegra/kioskoalfresko/var/godex-print-bridge.out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/xavibocanegra/kioskoalfresko/var/godex-print-bridge.err.log</string>
+</dict>
+</plist>

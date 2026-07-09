@@ -46,6 +46,8 @@ next-env.d.ts
 scripts/godex-print-service/*.journal.jsonl
 
 # packaged artifacts
+/dist/
+dist/
 *.tar
 *.tar.*
 *.jar
