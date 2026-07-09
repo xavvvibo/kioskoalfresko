@@ -170,6 +170,30 @@ Etiquetas preparadas:
 - Apertura: pepino rodajas, salsa ranchera, salsa BBQ whiskey, mayonesa trufada, Corn Flakes y Panko.
 - Transformacion: `POLLO CONTRAMUSLO MARINADO`, vinculado a `POLLO CONTRAMUSLO VC KG`, factura `003-314013`, lote proveedor `26002392`.
 
+### Maquetacion fisica GoDEX 80x50
+
+Las etiquetas Makro usan una version compacta para respetar la zona segura real de la GoDEX 80x50 a 203 dpi:
+
+- Producto en maximo 2 lineas.
+- Responsable abreviado, por ejemplo `RESP: FJB`.
+- Conservacion abreviada, por ejemplo `CONSERV: REFRIG. 0-4C`.
+- Avisos criticos separados en lineas cortas, por ejemplo `COCINAR COMPLETO` y `NO CONSUMIR CRUDO`.
+- El lote interno largo no se fuerza al pie si no cabe; la traza completa queda en el QR.
+- El contenido critico queda por encima de la zona inferior que se ha observado como recortable en impresion fisica.
+
+Para `POLLO CONTRAMUSLO MARINADO`, la etiqueta debe priorizar:
+
+- `MARINADO/CRUDO`
+- cantidad
+- proveedor/factura
+- lote proveedor
+- recepcion factura
+- fecha/hora marinado
+- uso interno
+- conservacion
+- responsable
+- avisos de cocinado/no crudo
+
 ## Impresion remota segura GoDEX
 
 Arquitectura operativa:

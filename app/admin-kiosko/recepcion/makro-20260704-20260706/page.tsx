@@ -93,7 +93,9 @@ function LabelPreviewCard({
   operativeTime: string;
   responsible: string;
 }) {
-  const kind = label.kind === "opening" ? "ABIERTO" : label.kind === "marinated" ? "MARINADO" : "RECEPCION";
+  const kind = label.kind === "opening" ? "ABIERTO" : label.kind === "marinated" ? "MARINADO/CRUDO" : "RECEPCION";
+  const previewResponsible = label.responsible.toUpperCase().includes("JAVIER") ? "FJB" : label.responsible;
+  const previewStorage = label.conservation.toUpperCase().includes("REFRIG") ? "REFRIG. 0-4C" : label.conservation;
   return (
     <article className="grid gap-3 rounded-[1rem] border border-white/10 bg-white/6 p-3">
       <div className="flex items-start justify-between gap-3">
@@ -112,8 +114,8 @@ function LabelPreviewCard({
         productionDate={`Recep. factura: ${label.receivedDate}`}
         expiryDate={label.kind === "reception" ? label.originalExpiry : label.useBy}
         quantity={label.quantityText}
-        responsible={label.responsible}
-        storage={label.conservation}
+        responsible={previewResponsible}
+        storage={previewStorage}
         trace={label.traceValue}
         observations={label.warning}
       />
