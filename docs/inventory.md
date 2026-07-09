@@ -175,13 +175,13 @@ Etiquetas preparadas:
 Arquitectura operativa:
 
 ```text
-Admin web / casa -> Supabase print_jobs -> bridge local en kiosko -> GoDEX 192.168.1.37:9100
+Admin web / casa -> Supabase print_jobs -> bridge local en kiosko -> GoDEX 192.168.1.36:9100
 ```
 
 Reglas de seguridad:
 
 - No abrir el puerto RAW `9100` a internet.
-- No hacer port forwarding del router hacia `192.168.1.37`.
+- No hacer port forwarding del router hacia `192.168.1.36`.
 - El `SUPABASE_SERVICE_ROLE_KEY` solo se usa en el bridge local del kiosko, nunca en cliente web.
 - La web interna solo encola `print_jobs` tras las validaciones APPCC del flujo correspondiente.
 - El bridge no imprime trabajos ya `printed`, `error` o `cancelled`.
@@ -230,13 +230,18 @@ Variables esperadas en `.env.local` del kiosko:
 NEXT_PUBLIC_SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
 PRINTER_KEY=kiosko_godex_g500
-GODEX_PRINTER_HOST=192.168.1.37
+GODEX_PRINTER_HOST=192.168.1.36
 GODEX_PRINTER_PORT=9100
 GODEX_PRINTER_KEY=kiosko_godex_g500
 GODEX_MIN_JOB_CREATED_AT=2026-07-09T09:00:00+02:00
+GODEX_SOCKET_SETTLE_MS=1200
+GODEX_BETWEEN_JOBS_MS=2000
+GODEX_TCP_TIMEOUT_MS=10000
 ```
 
-El bridge marca `claimed`, `sending` y finalmente `printed` solo si el envío TCP RAW a la GoDEX se acepta. Si falla, marca `error` con detalle corto en la cola.
+El bridge marca `claimed`, `sending` y finalmente `printed` cuando el comando TCP RAW se ha enviado a la GoDEX. `printed` no confirma visualmente la salida fisica del papel porque RAW 9100 no da ACK fiable. Si falla el transporte, marca `error` con detalle corto en la cola.
+
+Para lotes grandes, imprimir primero 1 etiqueta y validar salida fisica antes de lanzar muchas etiquetas. No lanzar las 52 etiquetas FRZ sin haber validado salida real de papel en la GoDEX.
 
 ## Bridge GoDEX standalone para PC Windows del kiosko
 
@@ -259,7 +264,7 @@ Copiar al PC Windows por USB/Drive, por ejemplo a:
 C:\godex-print-bridge
 ```
 
-El PC Windows debe estar en la misma red local que la GoDEX `192.168.1.37:9100`. No abrir `9100` a internet y no hacer port forwarding.
+El PC Windows debe estar en la misma red local que la GoDEX `192.168.1.36:9100`. No abrir `9100` a internet y no hacer port forwarding.
 
 Contenido del paquete:
 
@@ -275,7 +280,7 @@ En el PC Windows:
 
 1. Instalar Node.js LTS.
 2. Copiar `.env.example` a `.env.local`.
-3. Rellenar `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GODEX_PRINTER_HOST=192.168.1.37`, `GODEX_PRINTER_PORT=9100` y `GODEX_PRINTER_KEY=kiosko_godex_g500`.
+3. Rellenar `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GODEX_PRINTER_HOST=192.168.1.36`, `GODEX_PRINTER_PORT=9100`, `GODEX_PRINTER_KEY=kiosko_godex_g500`, `GODEX_SOCKET_SETTLE_MS=1200`, `GODEX_BETWEEN_JOBS_MS=2000` y `GODEX_TCP_TIMEOUT_MS=10000`.
 4. Probar sin imprimir:
 
 ```powershell

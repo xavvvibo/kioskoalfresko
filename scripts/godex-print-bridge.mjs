@@ -36,9 +36,12 @@ await loadEnvFile(path.join(cwd, ".env"), cwdAllowedKeys);
 
 const BRIDGE_STARTED_AT = new Date();
 const DEFAULT_PRINTER_KEY = "kiosko_godex_g500";
-const DEFAULT_PRINTER_HOST = "192.168.1.37";
+const DEFAULT_PRINTER_HOST = "192.168.1.36";
 const DEFAULT_PRINTER_PORT = 9100;
 const DEFAULT_POLL_MS = 4000;
+const DEFAULT_TCP_TIMEOUT_MS = 10000;
+const DEFAULT_SOCKET_SETTLE_MS = 1200;
+const DEFAULT_BETWEEN_JOBS_MS = 2000;
 const MAX_ATTEMPTS = 3;
 
 function ezplLines(ezpl) {
@@ -75,23 +78,31 @@ function summarizeGodexEzpl(ezpl) {
   };
 }
 
-async function sendRawToTcpPrinter(rawCommand, host, port = 9100, timeoutMs = 5000) {
+async function sendRawToTcpPrinter(rawCommand, host, port = 9100, options = {}) {
   const payload = Buffer.from(String(rawCommand), "utf8");
   const printerPort = Number(port || 9100);
-  const socketTimeoutMs = Math.max(1000, Number(timeoutMs || 5000));
+  const settleMs = Math.max(0, Number(options.settleMs || DEFAULT_SOCKET_SETTLE_MS));
+  const socketTimeoutMs = Math.max(1000, Number(options.timeoutMs || DEFAULT_TCP_TIMEOUT_MS)) + settleMs;
 
-  await new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const socket = new net.Socket();
     let settled = false;
     let timer;
+    const startedAt = Date.now();
 
     function finish(error) {
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
-      socket.destroy();
+      if (error) socket.destroy();
       if (error) reject(error);
-      else resolve();
+      else resolve({
+        bytes: payload.length,
+        host,
+        port: printerPort,
+        settleMs,
+        durationMs: Date.now() - startedAt,
+      });
     }
 
     timer = setTimeout(() => {
@@ -102,16 +113,26 @@ async function sendRawToTcpPrinter(rawCommand, host, port = 9100, timeoutMs = 50
       finish(new Error(`Error TCP GoDEX ${host}:${printerPort}: ${error.message}`));
     });
 
-    socket.on("finish", () => finish());
+    socket.on("close", (hadError) => {
+      if (!hadError) finish();
+    });
 
     socket.connect(printerPort, host, () => {
-      socket.write(payload, (error) => {
+      const writeAccepted = socket.write(payload, async (error) => {
         if (error) {
           finish(new Error(`No se pudo enviar EZPL a GoDEX ${host}:${printerPort}: ${error.message}`));
           return;
         }
-        socket.end();
+        try {
+          if (settleMs > 0) await sleep(settleMs);
+          socket.end();
+        } catch (settleError) {
+          finish(settleError);
+        }
       });
+      if (!writeAccepted) {
+        socket.once("drain", () => undefined);
+      }
     });
   });
 }
@@ -180,7 +201,9 @@ const config = {
   printerHost: process.env.GODEX_PRINTER_HOST || process.env.GODEX_BRIDGE_PRINTER_HOST || DEFAULT_PRINTER_HOST,
   printerPort: Number(process.env.GODEX_PRINTER_PORT || process.env.GODEX_BRIDGE_PRINTER_PORT || DEFAULT_PRINTER_PORT),
   pollIntervalMs: Math.max(3000, Math.min(5000, Number(process.env.GODEX_BRIDGE_POLL_MS || DEFAULT_POLL_MS))),
-  tcpTimeoutMs: Math.max(1000, Number(process.env.GODEX_TCP_TIMEOUT_MS || 5000)),
+  tcpTimeoutMs: Math.max(1000, Number(process.env.GODEX_TCP_TIMEOUT_MS || DEFAULT_TCP_TIMEOUT_MS)),
+  socketSettleMs: Math.max(0, Number(process.env.GODEX_SOCKET_SETTLE_MS || DEFAULT_SOCKET_SETTLE_MS)),
+  betweenJobsMs: Math.max(0, Number(process.env.GODEX_BETWEEN_JOBS_MS || DEFAULT_BETWEEN_JOBS_MS)),
   since: args.since || process.env.GODEX_MIN_JOB_CREATED_AT || BRIDGE_STARTED_AT.toISOString(),
   batch: args.batch,
   jobGroup: args.jobGroup,
@@ -316,12 +339,14 @@ async function markSending(jobId) {
       transport: "tcp_9100",
       host: config.printerHost,
       port: config.printerPort,
+      settleMs: config.socketSettleMs,
+      betweenJobsMs: config.betweenJobsMs,
       bridge: "scripts/godex-print-bridge.mjs",
     },
   });
 }
 
-async function markPrinted(jobId) {
+async function markPrinted(jobId, transportResult = {}) {
   if (config.dryRun) return;
   const now = new Date().toISOString();
   await patchJob(jobId, {
@@ -331,7 +356,7 @@ async function markPrinted(jobId) {
     transport_confirmed_at: now,
     transport_confirmation_source: "godex-print-bridge",
     transport_confirmed_by: "local-kiosko-bridge",
-    transport_confirmation_note: "TCP RAW 9100 aceptado por bridge local. No se expone la impresora a internet.",
+    transport_confirmation_note: "TCP sent to printer; physical paper output not confirmed.",
     printed_at: now,
     error: null,
     error_message: null,
@@ -340,8 +365,12 @@ async function markPrinted(jobId) {
       transport: "tcp_9100",
       host: config.printerHost,
       port: config.printerPort,
+      settleMs: config.socketSettleMs,
+      betweenJobsMs: config.betweenJobsMs,
       bridge: "scripts/godex-print-bridge.mjs",
-      printedAt: now,
+      sentAt: now,
+      note: "TCP sent to printer; physical paper output not confirmed.",
+      ...transportResult,
     },
   });
 }
@@ -358,6 +387,8 @@ async function markError(jobId, error) {
       transport: "tcp_9100",
       host: config.printerHost,
       port: config.printerPort,
+      settleMs: config.socketSettleMs,
+      betweenJobsMs: config.betweenJobsMs,
       bridge: "scripts/godex-print-bridge.mjs",
       error: message,
       failedAt: new Date().toISOString(),
@@ -379,6 +410,10 @@ async function processJob(job) {
     bytes: byteLength,
     firstLines: summary.firstLines,
     lastLines: summary.lastLines,
+    settleMs: config.socketSettleMs,
+    betweenJobsMs: config.betweenJobsMs,
+    host: config.printerHost,
+    port: config.printerPort,
   });
 
   if (!rawCommand || !isValidGodex80x50Ezpl(rawCommand)) {
@@ -396,9 +431,23 @@ async function processJob(job) {
 
   await markSending(claimed.id);
   try {
-    await sendRawToTcpPrinter(rawCommand, config.printerHost, config.printerPort, config.tcpTimeoutMs);
-    await markPrinted(claimed.id);
-    logInfo("[GODEX BRIDGE PRINTED]", { id: claimed.id, printerKey: claimed.printer_key, bytes: byteLength });
+    const transportResult = await sendRawToTcpPrinter(rawCommand, config.printerHost, config.printerPort, {
+      timeoutMs: config.tcpTimeoutMs,
+      settleMs: config.socketSettleMs,
+    });
+    await markPrinted(claimed.id, transportResult);
+    logInfo("[GODEX BRIDGE SENT_TO_PRINTER]", {
+      id: claimed.id,
+      printerKey: claimed.printer_key,
+      bytes: byteLength,
+      firstLines: summary.firstLines,
+      lastLines: summary.lastLines,
+      settleMs: config.socketSettleMs,
+      betweenJobsMs: config.betweenJobsMs,
+      host: config.printerHost,
+      port: config.printerPort,
+      note: "TCP sent to printer; physical paper output not confirmed.",
+    });
     return true;
   } catch (error) {
     await markError(claimed.id, error);
@@ -426,6 +475,9 @@ async function pollOnce() {
     } catch (error) {
       logError("[GODEX BRIDGE JOB ERROR]", { id: job.id, error: cleanError(error) });
     }
+    if (!config.dryRun && config.betweenJobsMs > 0) {
+      await sleep(config.betweenJobsMs);
+    }
   }
   return processed;
 }
@@ -437,6 +489,9 @@ async function main() {
     printerHost: config.printerHost,
     printerPort: config.printerPort,
     pollIntervalMs: config.pollIntervalMs,
+    tcpTimeoutMs: config.tcpTimeoutMs,
+    socketSettleMs: config.socketSettleMs,
+    betweenJobsMs: config.betweenJobsMs,
     dryRun: config.dryRun,
     once: config.once,
     since: config.since,

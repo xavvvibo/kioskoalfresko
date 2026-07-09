@@ -20,10 +20,13 @@ const envExample = `# Copiar este archivo a .env.local en el PC Windows del kios
 # No guardar claves reales en el repositorio.
 NEXT_PUBLIC_SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
-GODEX_PRINTER_HOST=192.168.1.37
+GODEX_PRINTER_HOST=192.168.1.36
 GODEX_PRINTER_PORT=9100
 GODEX_PRINTER_KEY=kiosko_godex_g500
 GODEX_MIN_JOB_CREATED_AT=2026-07-09T09:00:00+02:00
+GODEX_SOCKET_SETTLE_MS=1200
+GODEX_BETWEEN_JOBS_MS=2000
+GODEX_TCP_TIMEOUT_MS=10000
 `;
 
 const readme = `# GoDEX print bridge Windows
@@ -33,7 +36,7 @@ Bridge local para ejecutar en el PC Windows del kiosko, en la misma LAN que la G
 Arquitectura:
 
 \`\`\`text
-Admin web / casa -> Supabase print_jobs -> bridge local Windows -> GoDEX 192.168.1.37:9100
+Admin web / casa -> Supabase print_jobs -> bridge local Windows -> GoDEX 192.168.1.36:9100
 \`\`\`
 
 ## Seguridad
@@ -60,10 +63,13 @@ C:\\godex-print-bridge
 \`\`\`text
 NEXT_PUBLIC_SUPABASE_URL=https://...
 SUPABASE_SERVICE_ROLE_KEY=...
-GODEX_PRINTER_HOST=192.168.1.37
+GODEX_PRINTER_HOST=192.168.1.36
 GODEX_PRINTER_PORT=9100
 GODEX_PRINTER_KEY=kiosko_godex_g500
 GODEX_MIN_JOB_CREATED_AT=2026-07-09T09:00:00+02:00
+GODEX_SOCKET_SETTLE_MS=1200
+GODEX_BETWEEN_JOBS_MS=2000
+GODEX_TCP_TIMEOUT_MS=10000
 \`\`\`
 
 ## Probar sin imprimir
@@ -90,6 +96,8 @@ o:
 \`\`\`powershell
 .\\once.ps1
 \`\`\`
+
+Para lotes grandes, imprimir primero 1 etiqueta y validar salida fisica antes de lanzar muchas etiquetas.
 
 ## Dejarlo corriendo
 
@@ -149,6 +157,10 @@ node godex-print-bridge.mjs --once --since "2026-07-09T09:00:00+02:00" --batch F
 ## Flujo APPCC
 
 Las validaciones APPCC ocurren antes, en el ERP, al crear \`print_jobs\`. Este bridge no crea etiquetas ni relaja validaciones: solo imprime trabajos ya encolados manualmente desde el panel interno.
+
+## Estado printed
+
+En Supabase, \`printed\` significa que el bridge ha enviado el TCP RAW a la GoDEX. La salida fisica del papel no tiene ACK fiable; revisar visualmente la impresora, especialmente antes de lotes grandes.
 `;
 
 const powerShellScripts = {
@@ -174,7 +186,7 @@ $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument ('-NoProfi
 $Trigger = New-ScheduledTaskTrigger -AtLogOn
 $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Days 30) -MultipleInstances IgnoreNew
 
-Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Description "Bridge local Kiosko Alfresko: Supabase print_jobs -> GoDEX 192.168.1.37:9100" -Force
+Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Description "Bridge local Kiosko Alfresko: Supabase print_jobs -> GoDEX 192.168.1.36:9100" -Force
 
 Write-Host "Tarea programada instalada: $TaskName"
 Write-Host "Carpeta: $PSScriptRoot"
