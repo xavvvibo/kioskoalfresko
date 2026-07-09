@@ -4,8 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { clearAdminSession, createAdminSession, isCorrectAdminPassword, requireAdminSession } from "@/lib/admin-kiosko/auth";
 import { createDomainEvent, emitDomainEventSafe } from "@/lib/admin-kiosko/domain";
+import { freezerInventory20260708Service } from "@/lib/admin-kiosko/domain/freezer-inventory-20260708.service";
 import { goodsReceptionService } from "@/lib/admin-kiosko/domain/goods-reception.service";
 import { labelEventService, type LabelEventResult } from "@/lib/admin-kiosko/domain/label-event.service";
+import { makroReception202607Service } from "@/lib/admin-kiosko/domain/makro-reception-202607.service";
+import { palomitasTraceabilityService, type PalomitasLabelVariant } from "@/lib/admin-kiosko/domain/palomitas-traceability.service";
 import { processPendingInboxOcr, reprocessInboxOcr } from "@/lib/admin-kiosko/domain/inbox-ocr/processor";
 import { DOCUMENT_TYPES } from "@/lib/admin-kiosko/domain/document-types";
 import type { GodexLabelTemplate } from "@/lib/admin-kiosko/printing/godex-ezpl";
@@ -2173,6 +2176,275 @@ export async function printGodexLabelAction(_previousState: { ok: boolean; messa
   return {
     ok: true,
     message: `Etiqueta encolada para GoDEX · trabajo ${printResult.data.id}. No confirma salida física del papel.`,
+  };
+}
+
+export async function registerPalomitasTraceabilitySplitAction(formData: FormData) {
+  await requireAdminSession();
+
+  const lotId = text(formData, "parent_lot_id");
+  const result = await palomitasTraceabilityService.registerSplit({
+    parentLotId: lotId,
+    responsible: text(formData, "responsible") || "F. Javier Bocanegra Sanjuan",
+    registerDate: text(formData, "register_date"),
+  });
+
+  [
+    "/admin-kiosko/trazabilidad/palomitas-017843",
+    "/admin-kiosko/trazabilidad",
+    "/admin-kiosko/inventario",
+    "/admin-kiosko/etiquetas",
+  ].forEach((path) => revalidatePath(path));
+
+  if (!result.ok) {
+    redirect(`/admin-kiosko/trazabilidad/palomitas-017843?lot=${encodeURIComponent(lotId)}&error=${encodeURIComponent(result.error.slice(0, 240))}`);
+  }
+
+  redirect(`/admin-kiosko/trazabilidad/palomitas-017843?lot=${encodeURIComponent(result.data.parentLot.id)}&split=ok`);
+}
+
+export async function printPalomitasTraceabilityLabelAction(_previousState: { ok: boolean; message: string } | null, formData: FormData) {
+  await requireAdminSession();
+
+  const variant = text(formData, "variant") as PalomitasLabelVariant;
+  if (variant !== "defrosting" && variant !== "frozen") {
+    return { ok: false, message: "Tipo de etiqueta no valido." };
+  }
+
+  const result = await palomitasTraceabilityService.queueLabel({
+    parentLotId: text(formData, "parent_lot_id"),
+    variant,
+    responsible: text(formData, "responsible") || "F. Javier Bocanegra Sanjuan",
+    requestId: text(formData, "request_id") || crypto.randomUUID(),
+  });
+  if (!result.ok) return { ok: false, message: result.error };
+
+  await emitPrintJobCreatedEvent({
+    printJobId: result.data.printJob.id,
+    printerKey: result.data.printJob.printer_key,
+    template: "appcc_traceability_80x50",
+    sourceType: "palomitas_traceability_split",
+    sourceId: result.data.label.inventoryLotId,
+    reason: result.data.label.variant === "defrosting" ? "print_defrosting_use_label" : "print_frozen_reserve_label",
+    correlationId: result.data.label.parentLotId,
+  });
+
+  await emitDomainEventSafe(createDomainEvent("LabelPrinted", {
+    source: "labels",
+    trace: {
+      inventoryLotId: result.data.label.inventoryLotId,
+      productId: result.data.label.productId,
+    },
+    payload: {
+      template: "appcc_traceability_80x50",
+      copies: 1,
+      printer: "Godex G500",
+      inventoryLotId: result.data.label.inventoryLotId,
+    },
+  }));
+
+  revalidatePath("/admin-kiosko/trazabilidad/palomitas-017843");
+  revalidatePath("/admin-kiosko/impresiones");
+  revalidatePath("/admin-kiosko/etiquetas");
+
+  return {
+    ok: true,
+    message: `Etiqueta ${variant === "defrosting" ? "A" : "B"} encolada para GoDEX · trabajo ${result.data.printJob.id}.`,
+  };
+}
+
+export async function printFreezerInventory20260708LabelsAction(_previousState: { ok: boolean; message: string } | null, formData: FormData) {
+  await requireAdminSession();
+
+  const scope = text(formData, "scope");
+  if (scope !== "apt" && scope !== "review_or_quarantine") {
+    return { ok: false, message: "Grupo de etiquetas no valido." };
+  }
+
+  const result = await freezerInventory20260708Service.queueLabels({
+    scope,
+    requestId: text(formData, "request_id") || crypto.randomUUID(),
+  });
+  if (!result.ok) return { ok: false, message: result.error };
+
+  for (const job of result.data.queued) {
+    await emitPrintJobCreatedEvent({
+      printJobId: job.id,
+      printerKey: job.printer_key,
+      template: "freezer_inventory_80x50",
+      sourceType: "freezer_inventory_20260708",
+      sourceId: typeof job.payload?.metadata === "object" && job.payload.metadata && "sourceId" in job.payload.metadata ? String(job.payload.metadata.sourceId || "") : undefined,
+      reason: scope === "apt" ? "print_freezer_accepted_labels" : "print_freezer_review_quarantine_labels",
+      correlationId: "FRZ-20260708",
+    });
+  }
+
+  await emitDomainEventSafe(createDomainEvent("LabelPrinted", {
+    source: "labels",
+    trace: { caseId: "FRZ-20260708" },
+    payload: {
+      template: "freezer_inventory_80x50",
+      copies: result.data.queued.length,
+      printer: "Godex G500",
+    },
+  }));
+
+  revalidatePath("/admin-kiosko/trazabilidad/inventario-congelado-20260708");
+  revalidatePath("/admin-kiosko/impresiones");
+  revalidatePath("/admin-kiosko/etiquetas");
+
+  return {
+    ok: true,
+    message: `${result.data.queued.length} etiquetas encoladas para GoDEX (${scope === "apt" ? "aptas" : "revision/cuarentena"}).`,
+  };
+}
+
+const MAKRO_RECEPTION_202607_PATH = "/admin-kiosko/recepcion/makro-20260704-20260706";
+
+function revalidateMakroReception202607Paths() {
+  [
+    MAKRO_RECEPTION_202607_PATH,
+    "/admin-kiosko/compras",
+    "/admin-kiosko/inventario",
+    "/admin-kiosko/trazabilidad",
+    "/admin-kiosko/etiquetas",
+    "/admin-kiosko/impresiones",
+  ].forEach((path) => revalidatePath(path));
+}
+
+export async function registerMakroReception202607Action(formData: FormData) {
+  void formData;
+  await requireAdminSession();
+
+  const result = await makroReception202607Service.registerReception();
+  revalidateMakroReception202607Paths();
+
+  if (!result.ok) {
+    redirect(`${MAKRO_RECEPTION_202607_PATH}?error=${encodeURIComponent(result.error.slice(0, 240))}`);
+  }
+
+  await emitDomainEventSafe(createDomainEvent("GoodsReceived", {
+    source: "appcc",
+    correlationId: "makro-20260704-20260706",
+    trace: { caseId: "makro-20260704-20260706" },
+    payload: {
+      supplierName: "Makro",
+      receivedBy: "F. Javier Bocanegra Sanjuan",
+      idempotencyKey: "makro-20260704-20260706",
+      items: makroReception202607Service.receptionItems.map((item) => ({
+        productName: item.productName,
+        batchNumber: item.supplierLot,
+        quantity: item.quantity,
+        unit: item.unit,
+      })),
+    },
+  }));
+
+  redirect(`${MAKRO_RECEPTION_202607_PATH}?reception=ok&created=${result.data.createdLots}&existing=${result.data.existingLots}`);
+}
+
+export async function registerMakroOpenings202607Action(formData: FormData) {
+  await requireAdminSession();
+
+  const result = await makroReception202607Service.registerOpenings({
+    operativeDate: text(formData, "operative_date") || todayMadrid(),
+    operativeTime: text(formData, "operative_time") || timeMadrid(),
+    responsible: text(formData, "responsible") || "F. Javier Bocanegra Sanjuan",
+  });
+  revalidateMakroReception202607Paths();
+
+  if (!result.ok) {
+    redirect(`${MAKRO_RECEPTION_202607_PATH}?error=${encodeURIComponent(result.error.slice(0, 240))}`);
+  }
+
+  await emitDomainEventSafe(createDomainEvent("LabelPrepared", {
+    source: "labels",
+    correlationId: "makro-openings-20260708",
+    trace: { caseId: "makro-20260704-20260706" },
+    payload: {
+      productName: "Aperturas Makro 04/07 y 06/07",
+      batchNumber: "makro-openings-20260708",
+      template: "makro_opening_80x50",
+    },
+  }));
+
+  redirect(`${MAKRO_RECEPTION_202607_PATH}?openings=ok`);
+}
+
+export async function registerMakroChickenMarinade202607Action(formData: FormData) {
+  await requireAdminSession();
+
+  const operativeDate = text(formData, "operative_date") || todayMadrid();
+  const result = await makroReception202607Service.registerChickenTransformation({
+    operativeDate,
+    operativeTime: text(formData, "operative_time") || timeMadrid(),
+    responsible: text(formData, "responsible") || "F. Javier Bocanegra Sanjuan",
+    quantity: optionalNumber(formData, "quantity") || 1.846,
+  });
+  revalidateMakroReception202607Paths();
+
+  if (!result.ok) {
+    redirect(`${MAKRO_RECEPTION_202607_PATH}?error=${encodeURIComponent(result.error.slice(0, 240))}`);
+  }
+
+  await emitDomainEventSafe(createDomainEvent("ProductionBatchCreated", {
+    source: "production",
+    correlationId: "makro-pollo-marinado-26002392",
+    trace: { caseId: "makro-20260704-20260706" },
+    payload: {
+      productionBatchId: "MAK-003314013-POLLO-MARINADO",
+      batchCode: "MAK-003314013-POLLO-MARINADO",
+      outputProduct: "POLLO CONTRAMUSLO MARINADO",
+      outputQuantity: optionalNumber(formData, "quantity") || 1.846,
+      outputUnit: "kg",
+    },
+  }));
+
+  redirect(`${MAKRO_RECEPTION_202607_PATH}?marinade=ok`);
+}
+
+export async function printMakroReception202607LabelsAction(_previousState: { ok: boolean; message: string } | null, formData: FormData) {
+  await requireAdminSession();
+
+  const keys = formData.getAll("label_key").map(String).filter(Boolean);
+  if (!keys.length) return { ok: false, message: "Selecciona al menos una etiqueta." };
+
+  const result = await makroReception202607Service.queueLabels({
+    keys,
+    operativeDate: text(formData, "operative_date") || todayMadrid(),
+    operativeTime: text(formData, "operative_time") || timeMadrid(),
+    responsible: text(formData, "responsible") || "F. Javier Bocanegra Sanjuan",
+    requestId: text(formData, "request_id") || crypto.randomUUID(),
+  });
+  if (!result.ok) return { ok: false, message: result.error };
+
+  for (const job of result.data.queued) {
+    await emitPrintJobCreatedEvent({
+      printJobId: job.id,
+      printerKey: job.printer_key,
+      template: "makro_goods_reception_80x50",
+      sourceType: "makro_reception_202607",
+      sourceId: typeof job.payload?.metadata === "object" && job.payload.metadata && "sourceId" in job.payload.metadata ? String(job.payload.metadata.sourceId || "") : undefined,
+      reason: "manual_print_makro_label",
+      correlationId: "makro-20260704-20260706",
+    });
+  }
+
+  await emitDomainEventSafe(createDomainEvent("LabelPrinted", {
+    source: "labels",
+    trace: { caseId: "makro-20260704-20260706" },
+    payload: {
+      template: "makro_goods_reception_80x50",
+      copies: result.data.queued.length,
+      printer: "Godex G500",
+    },
+  }));
+
+  revalidateMakroReception202607Paths();
+
+  return {
+    ok: true,
+    message: `${result.data.queued.length} etiqueta(s) Makro encolada(s) para GoDEX. No confirma salida física del papel.`,
   };
 }
 
