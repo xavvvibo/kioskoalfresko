@@ -1,0 +1,28 @@
+-- Seed opcional para owner inicial de admin-kiosko.
+-- No contiene secretos. Ejecuta primero supabase/admin_kiosko_users.sql.
+--
+-- Forma recomendada:
+-- 1. Mantener temporalmente ADMIN_KIOSKO_PASSWORD.
+-- 2. Entrar en /admin-kiosko.
+-- 3. Crear el owner real en /admin-kiosko/usuarios.
+-- 4. Retirar ADMIN_KIOSKO_PASSWORD cuando todos los usuarios usen login nominal.
+--
+-- Forma SQL:
+-- Genera un password_hash scrypt compatible con lib/admin-kiosko/auth.ts fuera del repo
+-- y sustituye el placeholder antes de ejecutar este bloque.
+
+-- insert into public.admin_users (username, email, display_name, role, status, password_hash)
+-- values (
+--   'xavi',
+--   null,
+--   'F. Javier Bocanegra Sanjuan',
+--   'owner',
+--   'active',
+--   'scrypt:REEMPLAZAR_SALT:REEMPLAZAR_HASH'
+-- )
+-- on conflict (username) do update
+-- set role = 'owner',
+--     status = 'active',
+--     display_name = excluded.display_name,
+--     password_hash = excluded.password_hash,
+--     disabled_at = null;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 
 export const runtime = "nodejs";
 
@@ -42,7 +42,7 @@ async function checkCanvasImport(): Promise<ImportCheck> {
 }
 
 export async function GET() {
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
   const openaiImport = await checkOpenAIImport();
   const canvasImport = await checkCanvasImport();
 

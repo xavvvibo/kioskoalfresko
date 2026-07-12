@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { buildZebraLabelZpl, zebraDefaultConfig } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../../_components/AdminHeader";
 
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PrinterSettingsPage() {
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
   const testZpl = buildZebraLabelZpl({
     template: "trazabilidad",
     product: "PRUEBA APPCC",

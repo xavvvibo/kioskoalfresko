@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { AdminHeader } from "../_components/AdminHeader";
 import { Label80x50Preview } from "../_components/Label80x50Preview";
 import { LocalBridgeStatus } from "../_components/LocalBridgeStatus";
@@ -30,7 +30,7 @@ function madridDateTimeInput(addDays = 0) {
 }
 
 export default async function PrepLabelsPage() {
-  await requireAdminSession();
+  await requireAdminPermission("labels:basic_print");
 
   return (
     <main className="min-h-screen bg-stone-50">

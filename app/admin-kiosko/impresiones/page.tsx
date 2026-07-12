@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getRecentPrintJobs, type PrintJobPayload } from "@/lib/admin-kiosko/database";
 import { AdminEmptyState } from "../_components/AdminEmptyState";
 import { AdminHeader } from "../_components/AdminHeader";
@@ -83,7 +83,7 @@ export default async function ImpresionesPage({
 }: {
   searchParams?: Promise<{ limit?: string; status?: string; template?: string; sourceType?: string; printer_key?: string; q?: string }>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("print:manage");
   const params = await searchParams;
   const limit = Number(params?.limit || 50);
   const filters = {

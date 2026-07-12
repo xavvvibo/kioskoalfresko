@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getAdminDashboardSummary, getRecentEquipmentAssets } from "@/lib/admin-kiosko/database";
 import { temperatureEquipment } from "@/lib/admin-kiosko/temperature-rules";
 import { saveEquipmentAssetAction } from "../actions";
@@ -25,7 +25,7 @@ function target(kind: string, active: boolean) {
 }
 
 export default async function EquiposPage({ searchParams }: { searchParams?: Promise<{ saved?: string; error?: string }> }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const params = await searchParams;
   const [records, dashboard] = await Promise.all([getRecentEquipmentAssets(), getAdminDashboardSummary()]);
   const latest = dashboard.ok ? dashboard.data.latestByEquipment : [];

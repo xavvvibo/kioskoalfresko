@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { appccRecordsToCsv, getAppccRecords, type AppccRecordFilters } from "@/lib/admin-kiosko/database";
 
 function parseFilters(request: NextRequest): AppccRecordFilters {
@@ -25,7 +25,7 @@ function getMadridDate() {
 }
 
 export async function GET(request: NextRequest) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
 
   const records = await getAppccRecords(parseFilters(request));
 

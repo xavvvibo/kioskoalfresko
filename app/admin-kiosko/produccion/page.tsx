@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getInternalRecipes, getProductionBatches, getProductionMaterialOptions, getProductionMetrics, getInventoryProducts, previewProductionBatch, type InternalRecipe, type ProductionMaterialOption, type InventoryProduct } from "@/lib/admin-kiosko/database";
 import type { ProductionPreview } from "@/lib/admin-kiosko/production/contracts";
 import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
@@ -289,7 +289,7 @@ export default async function ProduccionPage({
     batch_code?: string;
   }>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("traceability:manage");
   const params = await searchParams;
   const [batchesResult, recipesResult, materialsResult, metricsResult, inventoryResult] = await Promise.all([
     getProductionBatches(80),

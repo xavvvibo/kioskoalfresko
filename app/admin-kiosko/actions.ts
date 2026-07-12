@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { clearAdminSession, createAdminSession, isCorrectAdminPassword, requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { clearAdminSession, createAdminSession, hashAdminPassword, isCorrectAdminPassword, loginAdminUser, requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { createDomainEvent, emitDomainEventSafe } from "@/lib/admin-kiosko/domain";
 import { freezerInventory20260708Service } from "@/lib/admin-kiosko/domain/freezer-inventory-20260708.service";
 import { goodsReceptionService } from "@/lib/admin-kiosko/domain/goods-reception.service";
@@ -63,21 +64,51 @@ import {
   getPrintJobById,
   getProductionBatchById,
 } from "@/lib/admin-kiosko/database";
+import { createAdminUser, updateAdminUser, writeAdminAuditLog, type AdminUserRole, type AdminUserStatus } from "@/lib/admin-kiosko/repositories/admin-users.repository";
 import type { InboxDocumentType } from "@/lib/admin-kiosko/inbox";
 
 export async function loginAdminKioskoAction(formData: FormData) {
+  const username = text(formData, "username");
   const password = String(formData.get("password") || "");
   const next = safeAdminRedirectTarget(String(formData.get("next") || ""));
 
+  if (username) {
+    const result = await loginAdminUser(username, password);
+    if (!result.ok) {
+      redirect(next ? `/admin-kiosko?error=1&next=${encodeURIComponent(next)}` : "/admin-kiosko?error=1");
+    }
+    redirect(next || (result.data.role === "employee" ? "/admin-kiosko/empleado" : "/admin-kiosko"));
+  }
+
   if (!isCorrectAdminPassword(password)) {
+    await writeAdminAuditLog({
+      action: "login_failed",
+      entityType: "admin_user",
+      entityId: "legacy-owner",
+      metadata: { reason: "bad_legacy_password" },
+    });
     redirect(next ? `/admin-kiosko?error=1&next=${encodeURIComponent(next)}` : "/admin-kiosko?error=1");
   }
 
   await createAdminSession();
+  await writeAdminAuditLog({
+    action: "login",
+    entityType: "admin_user",
+    entityId: "legacy-owner",
+    metadata: { role: "owner", legacy: true },
+  });
   redirect(next || "/admin-kiosko");
 }
 
 export async function logoutAdminKioskoAction() {
+  const session = await requireAdminSession();
+  await writeAdminAuditLog({
+    actorUserId: session.id,
+    action: "logout",
+    entityType: "admin_user",
+    entityId: session.id || "legacy-owner",
+    metadata: { username: session.username, role: session.role, legacy: session.legacy },
+  });
   await clearAdminSession();
   redirect("/admin-kiosko");
 }
@@ -110,6 +141,100 @@ function checkbox(formData: FormData, key: string) {
 
 function checkboxValue(formData: FormData, key: string) {
   return formData.get(key) === "on" || formData.get(key) === "true";
+}
+
+function adminRole(value: string): AdminUserRole {
+  return value === "owner" ? "owner" : "employee";
+}
+
+function adminStatus(value: string): AdminUserStatus {
+  return value === "disabled" ? "disabled" : "active";
+}
+
+function auditSessionMetadata(session: Awaited<ReturnType<typeof requireAdminSession>>) {
+  return {
+    actorDisplayName: session.displayName,
+    actorRole: session.role,
+    actorUsername: session.username,
+    legacy: session.legacy,
+  };
+}
+
+async function auditAdminAction(
+  session: Awaited<ReturnType<typeof requireAdminSession>>,
+  action: string,
+  entityType: string,
+  entityId: string | null,
+  metadata: Record<string, unknown> = {},
+) {
+  await writeAdminAuditLog({
+    actorUserId: session.id,
+    action,
+    entityType,
+    entityId,
+    metadata: { ...auditSessionMetadata(session), ...metadata },
+  });
+}
+
+export async function createAdminUserAction(formData: FormData) {
+  const session = await requireAdminPermission("users:manage");
+  const password = String(formData.get("password") || "");
+  const role = adminRole(text(formData, "role"));
+
+  if (role === "owner" && session.role !== "owner") redirect("/admin-kiosko/403");
+  if (!password || password.length < 8) redirect("/admin-kiosko/usuarios?error=password");
+
+  const result = await createAdminUser({
+    displayName: text(formData, "display_name"),
+    username: text(formData, "username"),
+    email: text(formData, "email") || null,
+    role,
+    status: "active",
+    passwordHash: hashAdminPassword(password),
+    createdBy: session.id,
+  });
+
+  if (!result.ok) redirect(`/admin-kiosko/usuarios?error=${encodeURIComponent(result.error.slice(0, 160))}`);
+
+  await writeAdminAuditLog({
+    actorUserId: session.id,
+    action: "admin_user_created",
+    entityType: "admin_user",
+    entityId: result.data.id,
+    metadata: { ...auditSessionMetadata(session), username: result.data.username, role: result.data.role },
+  });
+  revalidatePath("/admin-kiosko/usuarios");
+  redirect("/admin-kiosko/usuarios?saved=created");
+}
+
+export async function updateAdminUserAction(formData: FormData) {
+  const session = await requireAdminPermission("users:manage");
+  const id = text(formData, "id");
+  const role = adminRole(text(formData, "role"));
+  const status = adminStatus(text(formData, "status"));
+  const password = String(formData.get("password") || "");
+
+  const result = await updateAdminUser({
+    id,
+    displayName: text(formData, "display_name"),
+    username: text(formData, "username"),
+    email: text(formData, "email") || null,
+    role,
+    status,
+    ...(password ? { passwordHash: hashAdminPassword(password) } : {}),
+  });
+
+  if (!result.ok) redirect(`/admin-kiosko/usuarios?error=${encodeURIComponent(result.error.slice(0, 160))}`);
+
+  await writeAdminAuditLog({
+    actorUserId: session.id,
+    action: "admin_user_updated",
+    entityType: "admin_user",
+    entityId: id,
+    metadata: { ...auditSessionMetadata(session), username: result.data.username, role, status, passwordReset: Boolean(password) },
+  });
+  revalidatePath("/admin-kiosko/usuarios");
+  redirect("/admin-kiosko/usuarios?saved=updated");
 }
 
 const inboxDocumentTypes = new Set<InboxDocumentType>(DOCUMENT_TYPES);
@@ -376,7 +501,7 @@ async function redirectAfterSaveWithEvent(
 }
 
 export async function uploadInboxDocumentsAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
 
   const selectedType = optionalInboxDocumentType(text(formData, "selected_type"));
   const responsible = text(formData, "responsible") || "F. Javier Bocanegra Sanjuan";
@@ -494,7 +619,7 @@ export async function uploadInboxDocumentsAction(formData: FormData) {
 }
 
 export async function confirmInboxReviewAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
 
   const uploadedDocumentId = text(formData, "uploaded_document_id");
   const confirmedType = optionalInboxDocumentType(text(formData, "confirmed_type")) || "other";
@@ -549,7 +674,7 @@ export async function confirmInboxReviewAction(formData: FormData) {
 }
 
 export async function archiveInboxDocumentAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
 
   const result = await archiveInboxDocument(
     text(formData, "uploaded_document_id"),
@@ -560,7 +685,7 @@ export async function archiveInboxDocumentAction(formData: FormData) {
 }
 
 export async function bulkInboxDocumentsAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
 
   const action = text(formData, "bulk_action") as "confirm" | "archive" | "change_type" | "reprocess_ocr" | "mark_duplicate";
   const uploadedDocumentIds = formData.getAll("document_ids").map(String).filter(Boolean);
@@ -612,7 +737,7 @@ export async function bulkInboxDocumentsAction(formData: FormData) {
 }
 
 export async function processInboxPendingOcrAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
 
   const limit = Math.max(1, Math.min(50, Number(text(formData, "limit")) || 10));
   const result = await processPendingInboxOcr(limit);
@@ -626,7 +751,7 @@ export async function processInboxPendingOcrAction(formData: FormData) {
 }
 
 export async function saveTemperatureRecordAction(formData: FormData) {
-  await requireAdminSession();
+  const session = await requireAdminPermission("temperatures:create");
 
   const result = await createTemperatureRecord({
     record_date: text(formData, "record_date"),
@@ -637,6 +762,13 @@ export async function saveTemperatureRecordAction(formData: FormData) {
     observations: text(formData, "observations"),
     responsible: text(formData, "responsible"),
   });
+  if (result.ok) {
+    await auditAdminAction(session, "temperature_recorded", "temperature_record", null, {
+      equipment: text(formData, "equipment"),
+      temperature: Number(text(formData, "temperature").replace(",", ".")),
+      status: text(formData, "status"),
+    });
+  }
 
   await redirectAfterSaveWithEvent("/admin-kiosko/temperaturas", result, () => emitDomainEventSafe(createDomainEvent("TemperatureRecorded", {
     source: "appcc",
@@ -649,7 +781,7 @@ export async function saveTemperatureRecordAction(formData: FormData) {
 }
 
 export async function updateEquipmentAlertStatusAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
 
   const status = text(formData, "status");
   const result = await updateEquipmentAlertStatus({
@@ -663,7 +795,7 @@ export async function updateEquipmentAlertStatusAction(formData: FormData) {
 }
 
 export async function saveCleaningRecordAction(formData: FormData) {
-  await requireAdminSession();
+  const session = await requireAdminPermission("cleaning:create");
   const cleaningObservations = [
     text(formData, "observations"),
     text(formData, "cleaning_method") ? `Método aplicado: ${text(formData, "cleaning_method")}` : "",
@@ -681,6 +813,12 @@ export async function saveCleaningRecordAction(formData: FormData) {
     observations: cleaningObservations,
     responsible: text(formData, "responsible"),
   });
+  if (result.ok) {
+    await auditAdminAction(session, "cleaning_recorded", "cleaning_record", null, {
+      area: text(formData, "area"),
+      status: text(formData, "status"),
+    });
+  }
 
   await redirectAfterSaveWithEvent("/admin-kiosko/limpieza", result, () => emitDomainEventSafe(createDomainEvent("CleaningRecorded", {
     source: "appcc",
@@ -692,7 +830,7 @@ export async function saveCleaningRecordAction(formData: FormData) {
 }
 
 export async function saveFryerOilRecordAction(formData: FormData) {
-  await requireAdminSession();
+  const session = await requireAdminPermission("appcc:manage");
   const oilObservations = [
     text(formData, "observations"),
     checkbox(formData, "oil_filtered") ? "Aceite filtrado." : "",
@@ -716,12 +854,19 @@ export async function saveFryerOilRecordAction(formData: FormData) {
     observations: oilObservations,
     responsible: text(formData, "responsible"),
   });
+  if (result.ok) {
+    await auditAdminAction(session, "fryer_oil_recorded", "fryer_oil_record", null, {
+      fryer: text(formData, "fryer"),
+      status: text(formData, "status"),
+      oilChanged: checkbox(formData, "oil_changed"),
+    });
+  }
 
   redirectAfterSave("/admin-kiosko/aceite-freidora", result);
 }
 
 export async function saveGoodsReceptionRecordAction(formData: FormData) {
-  await requireAdminSession();
+  const session = await requireAdminPermission("goods_reception:basic_create");
   const supplier = await resolveSupplierFromForm(formData);
 
   const result = await createGoodsReceptionRecord({
@@ -737,6 +882,14 @@ export async function saveGoodsReceptionRecordAction(formData: FormData) {
     observations: text(formData, "observations"),
     responsible: text(formData, "responsible"),
   });
+  if (result.ok) {
+    await auditAdminAction(session, "goods_reception_recorded", "goods_reception_record", null, {
+      supplier,
+      product: text(formData, "product"),
+      accepted: checkbox(formData, "accepted"),
+      status: text(formData, "status"),
+    });
+  }
 
   await redirectAfterSaveWithEvent("/admin-kiosko/recepcion-mercancia", result, () => emitDomainEventSafe(createDomainEvent("GoodsReceived", {
     source: "appcc",
@@ -753,7 +906,7 @@ export async function saveGoodsReceptionRecordAction(formData: FormData) {
 }
 
 export async function registerManualGoodsReceptionAction(formData: FormData) {
-  await requireAdminSession();
+  const session = await requireAdminPermission("goods_reception:advanced_create");
 
   const result = await goodsReceptionService.registerManualReception({
     supplierId: text(formData, "supplier_id"),
@@ -793,12 +946,16 @@ export async function registerManualGoodsReceptionAction(formData: FormData) {
   } else if (printResult?.error && printResult.error !== "skipped_existing_reception") {
     params.set("print_error", printResult.error.slice(0, 240));
   }
+  await auditAdminAction(session, "goods_reception_advanced_registered", "goods_reception", result.data.receiptId, {
+    supplier: text(formData, "supplier_name"),
+    batchCode: result.data.batchCode,
+  });
 
   redirect(`/admin-kiosko/compras?${params.toString()}`);
 }
 
 export async function saveAiReceptionAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("goods_reception:advanced_create");
 
   const ocrJson = parseJson<Record<string, unknown>>(text(formData, "ocr_json"), {});
   const productCount = Number(text(formData, "product_count")) || 0;
@@ -1139,7 +1296,7 @@ export async function saveAiReceptionAction(formData: FormData) {
 }
 
 export async function updateAccountingReconciliationAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("reports:view");
 
   const result = await updateAccountingReconciliationStatus({
     id: text(formData, "document_id"),
@@ -1158,7 +1315,7 @@ export async function updateAccountingReconciliationAction(formData: FormData) {
 }
 
 export async function saveIncidentRecordAction(formData: FormData) {
-  await requireAdminSession();
+  const session = await requireAdminPermission("incidents:create");
 
   const result = await createIncidentRecord({
     record_date: text(formData, "record_date"),
@@ -1171,6 +1328,13 @@ export async function saveIncidentRecordAction(formData: FormData) {
     observations: text(formData, "observations"),
     responsible: text(formData, "responsible"),
   });
+  if (result.ok) {
+    await auditAdminAction(session, "incident_created", "incident_record", null, {
+      incidentType: text(formData, "incident_type"),
+      severity: text(formData, "severity"),
+      status: text(formData, "status"),
+    });
+  }
 
   await redirectAfterSaveWithEvent("/admin-kiosko/incidencias", result, () => emitDomainEventSafe(createDomainEvent("IncidentCreated", {
     source: "appcc",
@@ -1182,7 +1346,7 @@ export async function saveIncidentRecordAction(formData: FormData) {
 }
 
 export async function saveProductionBatchAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("traceability:manage");
   const material = parseJson<{
     lot_id?: string;
     product_id?: string;
@@ -1401,7 +1565,7 @@ export async function saveProductionBatchAction(formData: FormData) {
 }
 
 export async function saveProductionMovementAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("traceability:manage");
 
   const movementType = text(formData, "movement_type") as Parameters<typeof createProductionMovement>[0]["movement_type"];
   const result = await createProductionMovement({
@@ -1423,7 +1587,7 @@ export async function saveProductionMovementAction(formData: FormData) {
 }
 
 export async function registerBatchConsumption(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("traceability:manage");
 
   const batchId = text(formData, "batch_id");
   const result = await registerBatchConsumptionRecord({
@@ -1464,7 +1628,7 @@ export async function registerBatchConsumption(formData: FormData) {
 }
 
 export async function reprintProductionBatchLabelAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("print:manage");
 
   const batchId = text(formData, "batch_id");
   const reprintReason = text(formData, "reprint_reason");
@@ -1520,7 +1684,7 @@ export async function reprintProductionBatchLabelAction(formData: FormData) {
 }
 
 export async function saveInternalRecipeAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("traceability:manage");
   const inputProduct = parseJson<{ id?: string; name?: string; unit?: string }>(text(formData, "recipe_input_product"), {});
 
   const result = await createInternalRecipe({
@@ -1549,7 +1713,7 @@ export async function saveInternalRecipeAction(formData: FormData) {
 }
 
 export async function saveChecklistRecordAction(formData: FormData) {
-  await requireAdminSession();
+  const session = await requireAdminPermission("cleaning:create");
 
   const items = ["item_1", "item_2", "item_3", "item_4"]
     .map((key) => text(formData, key))
@@ -1565,12 +1729,19 @@ export async function saveChecklistRecordAction(formData: FormData) {
     observations: text(formData, "observations"),
     responsible: text(formData, "responsible"),
   });
+  if (result.ok) {
+    await auditAdminAction(session, "checklist_completed", "checklist_record", null, {
+      checklistType: text(formData, "checklist_type"),
+      completed: checkbox(formData, "completed"),
+      status: text(formData, "status"),
+    });
+  }
 
   redirectAfterSave("/admin-kiosko/checklists", result);
 }
 
 export async function signMonthlyAppccReportAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
 
   const year = Number(text(formData, "year"));
   const month = Number(text(formData, "month"));
@@ -1591,7 +1762,7 @@ export async function signMonthlyAppccReportAction(formData: FormData) {
 }
 
 export async function saveChecklistOpeningAction(formData: FormData) {
-  await requireAdminSession();
+  const session = await requireAdminPermission("cleaning:create");
 
   const checks = [
     "Arcón frío correcto",
@@ -1613,12 +1784,18 @@ export async function saveChecklistOpeningAction(formData: FormData) {
     observations: text(formData, "observations"),
     responsible: text(formData, "responsible"),
   });
+  if (result.ok) {
+    await auditAdminAction(session, "checklist_opening_completed", "checklist_record", null, {
+      completed: items.length === checks.length,
+      status: items.length === checks.length ? "correcto" : "revisar",
+    });
+  }
 
   redirectAfterSave("/admin-kiosko/checklists/apertura", result);
 }
 
 export async function saveChecklistClosingAction(formData: FormData) {
-  await requireAdminSession();
+  const session = await requireAdminPermission("cleaning:create");
 
   const checks = [
     "Basura retirada",
@@ -1639,12 +1816,18 @@ export async function saveChecklistClosingAction(formData: FormData) {
     observations: text(formData, "observations"),
     responsible: text(formData, "responsible"),
   });
+  if (result.ok) {
+    await auditAdminAction(session, "checklist_closing_completed", "checklist_record", null, {
+      completed: items.length === checks.length,
+      status: items.length === checks.length ? "correcto" : "revisar",
+    });
+  }
 
   redirectAfterSave("/admin-kiosko/checklists/cierre", result);
 }
 
 export async function saveInspectionRecordAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
 
   const result = await createInspectionRecord({
     inspection_date: text(formData, "inspection_date"),
@@ -1670,7 +1853,7 @@ export async function saveInspectionRecordAction(formData: FormData) {
 }
 
 export async function saveSupplierRecordAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
 
   const result = await createSupplierRecord({
     supplier: text(formData, "supplier"),
@@ -1707,7 +1890,7 @@ export async function saveSupplierRecordAction(formData: FormData) {
 }
 
 export async function saveInventoryProductAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("inventory:manage");
 
   const id = text(formData, "id");
   const payload = {
@@ -1753,7 +1936,7 @@ function printIngredientErrorMessage(error: string) {
 }
 
 export async function printIngredientLabelAction(_previousState: IngredientPrintState, formData: FormData): Promise<IngredientPrintState> {
-  await requireAdminSession();
+  await requireAdminPermission("labels:basic_print");
 
   const productId = text(formData, "product_id");
   if (!productId) {
@@ -1830,7 +2013,7 @@ function printPrepErrorMessage(error: string) {
 }
 
 export async function printPrepLabelAction(_previousState: PrepPrintState, formData: FormData): Promise<PrepPrintState> {
-  await requireAdminSession();
+  await requireAdminPermission("labels:basic_print");
 
   const prepName = text(formData, "prepName");
   const productionDateTime = text(formData, "productionDateTime");
@@ -1915,7 +2098,7 @@ function isReprintCompatiblePayload(payload: Record<string, unknown>) {
 }
 
 export async function reprintPrintJobAction(_previousState: ReprintPrintJobState, formData: FormData): Promise<ReprintPrintJobState> {
-  await requireAdminSession();
+  await requireAdminPermission("print:manage");
 
   const jobId = text(formData, "job_id");
   const reprintReason = text(formData, "reprint_reason");
@@ -1967,7 +2150,7 @@ export async function reprintPrintJobAction(_previousState: ReprintPrintJobState
 }
 
 export async function saveInventoryMovementAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("inventory:manage");
 
   const movement = text(formData, "movement_type");
   const movementType = ["entrada", "consumo", "merma", "regularizacion", "baja"].includes(movement)
@@ -2013,7 +2196,7 @@ export async function saveInventoryMovementAction(formData: FormData) {
 }
 
 export async function saveInventoryLotReviewAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("inventory:manage");
 
   const expirySource = text(formData, "expiry_source");
   const safeExpirySource = ["real_documentada", "estimada_por_regla", "revisada_manual"].includes(expirySource)
@@ -2038,7 +2221,7 @@ export async function saveInventoryLotReviewAction(formData: FormData) {
 }
 
 export async function saveLabelRecordAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("labels:basic_print");
   const supplier = await resolveSupplierFromForm(formData);
 
   const result = await createLabelRecord({
@@ -2077,7 +2260,7 @@ export async function saveLabelRecordAction(formData: FormData) {
 }
 
 export async function printGodexLabelAction(_previousState: { ok: boolean; message: string } | null, formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("labels:basic_print");
 
   const copies = Math.max(1, Math.min(8, Math.round(requiredNumber(formData, "copies") || 1)));
   const model = text(formData, "model") || "Etiqueta APPCC";
@@ -2180,7 +2363,7 @@ export async function printGodexLabelAction(_previousState: { ok: boolean; messa
 }
 
 export async function registerPalomitasTraceabilitySplitAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("traceability:manage");
 
   const lotId = text(formData, "parent_lot_id");
   const result = await palomitasTraceabilityService.registerSplit({
@@ -2204,7 +2387,7 @@ export async function registerPalomitasTraceabilitySplitAction(formData: FormDat
 }
 
 export async function printPalomitasTraceabilityLabelAction(_previousState: { ok: boolean; message: string } | null, formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("print:manage");
 
   const variant = text(formData, "variant") as PalomitasLabelVariant;
   if (variant !== "defrosting" && variant !== "frozen") {
@@ -2254,7 +2437,7 @@ export async function printPalomitasTraceabilityLabelAction(_previousState: { ok
 }
 
 export async function printFreezerInventory20260708LabelsAction(_previousState: { ok: boolean; message: string } | null, formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("print:manage");
 
   const scope = text(formData, "scope");
   if (scope !== "apt" && scope !== "review_or_quarantine") {
@@ -2314,7 +2497,7 @@ function revalidateMakroReception202607Paths() {
 
 export async function registerMakroReception202607Action(formData: FormData) {
   void formData;
-  await requireAdminSession();
+  await requireAdminPermission("goods_reception:advanced_create");
 
   const result = await makroReception202607Service.registerReception();
   revalidateMakroReception202607Paths();
@@ -2344,7 +2527,7 @@ export async function registerMakroReception202607Action(formData: FormData) {
 }
 
 export async function registerMakroOpenings202607Action(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("traceability:manage");
 
   const result = await makroReception202607Service.registerOpenings({
     operativeDate: text(formData, "operative_date") || todayMadrid(),
@@ -2372,7 +2555,7 @@ export async function registerMakroOpenings202607Action(formData: FormData) {
 }
 
 export async function registerMakroChickenMarinade202607Action(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("traceability:manage");
 
   const operativeDate = text(formData, "operative_date") || todayMadrid();
   const result = await makroReception202607Service.registerChickenTransformation({
@@ -2404,7 +2587,7 @@ export async function registerMakroChickenMarinade202607Action(formData: FormDat
 }
 
 export async function printMakroReception202607LabelsAction(_previousState: { ok: boolean; message: string } | null, formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("print:manage");
 
   const keys = formData.getAll("label_key").map(String).filter(Boolean);
   if (!keys.length) return { ok: false, message: "Selecciona al menos una etiqueta." };
@@ -2449,7 +2632,7 @@ export async function printMakroReception202607LabelsAction(_previousState: { ok
 }
 
 export async function saveEquipmentAssetAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
 
   const result = await createEquipmentAsset({
     name: text(formData, "name"),
@@ -2469,7 +2652,7 @@ export async function saveEquipmentAssetAction(formData: FormData) {
 }
 
 export async function saveMaintenanceRecordAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
 
   const result = await createMaintenanceRecord({
     record_date: text(formData, "record_date"),
@@ -2485,7 +2668,7 @@ export async function saveMaintenanceRecordAction(formData: FormData) {
 }
 
 export async function saveWaterRecordAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
 
   const result = await createWaterRecord({
     record_date: text(formData, "record_date"),
@@ -2507,7 +2690,7 @@ export async function saveWaterRecordAction(formData: FormData) {
 }
 
 export async function saveAnnualVerificationAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
 
   const result = await createAnnualVerification({
     record_date: text(formData, "record_date"),

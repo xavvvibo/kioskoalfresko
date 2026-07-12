@@ -16,6 +16,15 @@ export function LoginPanel({ hasError, returnTo }: { hasError: boolean; returnTo
         <form action={loginAdminKioskoAction} className="mt-6 grid gap-4">
           {returnTo ? <input type="hidden" name="next" value={returnTo} /> : null}
           <label className="grid gap-2 text-sm font-semibold text-stone-200">
+            Usuario o email
+            <input
+              name="username"
+              type="text"
+              autoComplete="username"
+              className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-base text-stone-950 outline-none focus:border-[#d94b2b] focus:ring-2 focus:ring-[#d94b2b]/30"
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-semibold text-stone-200">
             Contraseña
             <input
               name="password"
@@ -27,7 +36,7 @@ export function LoginPanel({ hasError, returnTo }: { hasError: boolean; returnTo
           </label>
           {hasError ? (
             <p className="rounded-2xl border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-3 text-sm font-semibold text-[#f2c6bb]">
-              Contraseña incorrecta.
+              Credenciales incorrectas o usuario desactivado.
             </p>
           ) : null}
           <button

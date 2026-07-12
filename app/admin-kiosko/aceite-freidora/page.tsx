@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getRecentFryerOilRecords } from "@/lib/admin-kiosko/database";
 import { resolveAppccRecordFilters } from "@/lib/admin-kiosko/appcc-record-filters";
 import { wasteOilContract } from "@/lib/admin-kiosko/documents";
@@ -20,7 +20,7 @@ export default async function AceiteFreidoraPage({
 }: {
   searchParams?: Promise<Record<string, string | undefined>>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const params = await searchParams;
   const filters = resolveAppccRecordFilters(params);
   const hasFilters = filters.preset !== "all" || Boolean(filters.subject || filters.status || filters.source || filters.dateFrom || filters.dateTo);

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAdminDocument, hasDocumentPdf } from "@/lib/admin-kiosko/documents";
 import { getAppccDocumentCatalog } from "@/lib/admin-kiosko/waste-oil-documents";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { AdminHeader } from "../../_components/AdminHeader";
 
 export const metadata: Metadata = {
@@ -15,7 +15,7 @@ export default async function DocumentoPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const { slug } = await params;
   const catalog = await getAppccDocumentCatalog();
   const document = catalog.ok

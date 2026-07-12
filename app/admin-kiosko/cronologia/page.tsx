@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import {
   getAppccRecords,
   getRecentAiProcessingLogs,
@@ -39,7 +39,7 @@ function mapRecent(record: RecentAdminRecord, type: string): TimelineItem {
 }
 
 export default async function CronologiaPage() {
-  await requireAdminSession();
+  await requireAdminPermission("reports:view");
   const [records, maintenance, inspections, water, aiLogs, aiDocuments] = await Promise.all([
     getAppccRecords({ type: "todos", includeArchivedEquipment: false }),
     getRecentMaintenanceRecords(),

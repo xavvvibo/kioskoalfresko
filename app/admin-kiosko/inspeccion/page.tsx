@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { resolveAppccRecordFilters } from "@/lib/admin-kiosko/appcc-record-filters";
 import { adminDocuments, wasteOilContract } from "@/lib/admin-kiosko/documents";
 import { getAppccDocumentCatalog } from "@/lib/admin-kiosko/waste-oil-documents";
@@ -90,7 +90,7 @@ export default async function ModoInspeccionPage({
 }: {
   searchParams?: Promise<Record<string, string | undefined>>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const params = await searchParams;
   const recordFilters = resolveAppccRecordFilters(params);
   const inspectionRecordFilters = recordFilters.preset === "all" ? { ...recordFilters, limit: 10 } : { ...recordFilters, limit: 50 };

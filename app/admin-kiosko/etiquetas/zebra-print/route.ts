@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { createInventoryLotLabelRecord, createLabelRecord, listLabelEligibleInventoryLots } from "@/lib/admin-kiosko/database";
 import { createDomainEvent, emitDomainEventSafe } from "@/lib/admin-kiosko/domain";
 import { zebraDefaultConfig } from "@/lib/admin-kiosko/zebra";
 
 export async function POST(request: Request) {
-  await requireAdminSession();
+  await requireAdminPermission("labels:basic_print");
   const body = await request.json() as Record<string, unknown>;
   const inventoryLotId = String(body.inventory_lot_id || "");
 

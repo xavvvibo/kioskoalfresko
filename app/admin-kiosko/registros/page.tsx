@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getAppccRecords, type AppccRecordFilters, type AppccRecordType } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../_components/AdminHeader";
 
@@ -140,7 +140,7 @@ export default async function RegistrosAppccPage({
 }: {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const params = await searchParams;
   const filters = parseFilters(params);
   const monthDefaults = getMadridMonthDefaults();

@@ -1,4 +1,5 @@
 import { canAccessSection, type AdminRole, type AdminSection } from "@/lib/admin-kiosko/roles";
+import { getOptionalAdminSession } from "@/lib/admin-kiosko/auth/permissions";
 import { logoutAdminKioskoAction } from "../actions";
 import { AdminNavLink } from "./AdminNavLink";
 
@@ -7,15 +8,10 @@ const navGroups = [
     label: "Operativa",
     section: "operativa",
     links: [
-      ["Calendario APPCC", "/admin-kiosko/calendario"],
       ["Temperaturas", "/admin-kiosko/temperaturas"],
       ["Limpieza", "/admin-kiosko/limpieza"],
-      ["Aceite", "/admin-kiosko/aceite-freidora"],
       ["Recepción", "/admin-kiosko/recepcion-mercancia"],
-      ["Producción", "/admin-kiosko/produccion"],
-      ["Etiquetas", "/admin-kiosko/etiquetas"],
-      ["Etiquetas prep", "/admin-kiosko/etiquetas-prep"],
-      ["Impresiones", "/admin-kiosko/impresiones"],
+      ["Checklists", "/admin-kiosko/checklists"],
       ["Incidencias", "/admin-kiosko/incidencias"],
     ],
   },
@@ -68,7 +64,7 @@ const navGroups = [
     links: [
       ["Configuración", "/admin-kiosko/configuracion"],
       ["Impresoras", "/admin-kiosko/configuracion/impresoras"],
-      ["Usuarios", "/admin-kiosko/configuracion/usuarios"],
+      ["Usuarios", "/admin-kiosko/usuarios"],
       ["Calendario operativo", "/admin-kiosko/configuracion/calendario"],
       ["Equipos", "/admin-kiosko/equipos"],
       ["Proveedores", "/admin-kiosko/proveedores"],
@@ -92,19 +88,21 @@ const inspectorNavLabels = new Set([
   "Equipos",
 ]);
 
-export function AdminHeader({
+export async function AdminHeader({
   title,
   description,
   inspectorMode = false,
-  role = "owner",
+  role,
 }: {
   title: string;
   description: string;
   inspectorMode?: boolean;
   role?: AdminRole;
 }) {
+  const session = role ? null : await getOptionalAdminSession();
+  const effectiveRole = role || session?.role || "owner";
   const groups = navGroups
-    .filter((group) => (!group.ownerOnly || role === "owner") && canAccessSection(role, group.section as AdminSection))
+    .filter((group) => (!group.ownerOnly || effectiveRole === "owner") && canAccessSection(effectiveRole, group.section as AdminSection))
     .map((group) => inspectorMode
       ? { ...group, links: group.links.filter(([label]) => inspectorNavLabels.has(label)) }
       : group)
@@ -135,18 +133,18 @@ export function AdminHeader({
             >
               Panel
             </AdminNavLink>
-            <AdminNavLink href="/admin-kiosko/owner" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12" activeClassName="border-[#d94b2b] bg-[#d94b2b] text-white">
+            {effectiveRole === "owner" ? <AdminNavLink href="/admin-kiosko/owner" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12" activeClassName="border-[#d94b2b] bg-[#d94b2b] text-white">
               Owner
-            </AdminNavLink>
+            </AdminNavLink> : null}
             <AdminNavLink href="/admin-kiosko/empleado" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12" activeClassName="border-[#d94b2b] bg-[#d94b2b] text-white">
               Empleado
             </AdminNavLink>
-            <AdminNavLink href="/admin-kiosko/inspeccion" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12" activeClassName="border-[#d94b2b] bg-[#d94b2b] text-white">
+            {effectiveRole === "owner" ? <AdminNavLink href="/admin-kiosko/inspeccion" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12" activeClassName="border-[#d94b2b] bg-[#d94b2b] text-white">
               Inspector
-            </AdminNavLink>
-            <AdminNavLink href="/admin-kiosko/buscar" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12" activeClassName="border-[#d94b2b] bg-[#d94b2b] text-white">
+            </AdminNavLink> : null}
+            {effectiveRole === "owner" ? <AdminNavLink href="/admin-kiosko/buscar" className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-white/12" activeClassName="border-[#d94b2b] bg-[#d94b2b] text-white">
               Buscar
-            </AdminNavLink>
+            </AdminNavLink> : null}
             <form action={logoutAdminKioskoAction}>
               <button
                 type="submit"
@@ -157,7 +155,7 @@ export function AdminHeader({
             </form>
           </div> : null}
         </div>
-        {!inspectorMode ? <form action="/admin-kiosko/buscar" className="mt-6 grid gap-3 rounded-[1.2rem] border border-white/10 bg-black/20 p-3 md:grid-cols-[1fr_auto]">
+        {!inspectorMode && effectiveRole === "owner" ? <form action="/admin-kiosko/buscar" className="mt-6 grid gap-3 rounded-[1.2rem] border border-white/10 bg-black/20 p-3 md:grid-cols-[1fr_auto]">
           <input name="q" placeholder="Buscar producto, lote, proveedor, documento, equipo, incidencia o fecha" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-sm text-stone-950 outline-none focus:border-[#d94b2b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]" />
           <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">Buscar APPCC</button>
         </form> : null}

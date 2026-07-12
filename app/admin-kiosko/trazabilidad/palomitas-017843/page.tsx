@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import {
   buildPalomitasLabelData,
   PALOMITAS_TRACEABILITY,
@@ -105,7 +105,7 @@ export default async function PalomitasTraceabilityPage({
 }: {
   searchParams?: Promise<{ lot?: string; error?: string; split?: string }>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("traceability:manage");
   const params = await searchParams || {};
   const today = madridDate();
   const responsible = "F. Javier Bocanegra Sanjuan";

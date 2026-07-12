@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getAppccRecords, getOpenEquipmentAlerts, getRecentIncidentRecords, getRecentMaintenanceRecords } from "@/lib/admin-kiosko/database";
 import { adminDocuments } from "@/lib/admin-kiosko/documents";
 import { temperatureEquipment } from "@/lib/admin-kiosko/temperature-rules";
@@ -28,7 +28,7 @@ function target(kind: string, active: boolean) {
 }
 
 export default async function EquipmentDetailPage({ params }: { params: Promise<{ slug: string }> }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const { slug } = await params;
   const equipment = temperatureEquipment.find((item) => slugify(item.name) === slug);
 

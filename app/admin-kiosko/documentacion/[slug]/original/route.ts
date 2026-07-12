@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getUploadedDocumentSignedUrl } from "@/lib/admin-kiosko/database";
 import { getAppccDocumentCatalog } from "@/lib/admin-kiosko/waste-oil-documents";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const { slug } = await params;
   const catalog = await getAppccDocumentCatalog();
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { adminDocuments, getDocumentStatsFor, hasDocumentPdf, prioritizedSanitaryDocuments } from "@/lib/admin-kiosko/documents";
 import { getAppccDocumentCatalog } from "@/lib/admin-kiosko/waste-oil-documents";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { AdminHeader } from "../_components/AdminHeader";
 
 export const metadata: Metadata = {
@@ -20,7 +20,7 @@ function statusClass(status: string) {
 }
 
 export default async function DocumentacionPage() {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const catalog = await getAppccDocumentCatalog();
   const documents = catalog.ok ? catalog.data : adminDocuments;
   const stats = getDocumentStatsFor(documents);

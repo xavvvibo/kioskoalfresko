@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { adminDocuments, getDocumentStats } from "@/lib/admin-kiosko/documents";
 import {
   getAdminDashboardSummary,
@@ -62,7 +62,7 @@ function ListBlock({ title, values }: { title: string; values: string[] }) {
 }
 
 export default async function InspeccionExpressPage({ searchParams }: { searchParams?: Promise<{ inspector?: string }> }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const params = await searchParams;
   const inspectorMode = params?.inspector === "1";
   const [summary, metrics, cleaning, oil, receptions, incidents, maintenance, equipment] = await Promise.all([

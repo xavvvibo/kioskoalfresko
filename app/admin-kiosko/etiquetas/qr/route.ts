@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 
 export async function GET(request: NextRequest) {
-  await requireAdminSession();
+  await requireAdminPermission("labels:basic_print");
   const payload = request.nextUrl.searchParams.get("p") || "KIOSKO ALFRESKO";
   const bytes = new TextEncoder().encode(payload);
   const size = 25;

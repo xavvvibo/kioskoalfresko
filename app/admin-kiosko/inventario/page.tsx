@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getExpiryBuckets, getInventoryLotMovements, getInventoryLots, getInventoryMovements, getInventoryProductById, getInventoryProducts, listInventoryLotsRequiringReview } from "@/lib/admin-kiosko/database";
 import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
@@ -53,7 +53,7 @@ export default async function InventarioPage({
 }: {
   searchParams?: Promise<{ q?: string; status?: string; stock?: string; expiry?: string; product?: string; saved?: string; error?: string }>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("inventory:manage");
   const params = await searchParams;
   const [productsResult, movementsResult, selectedResult, expiryResult, lotsResult, lotMovementsResult, reviewLotsResult] = await Promise.all([
     getInventoryProducts({ q: params?.q, status: params?.status, stock: params?.stock, expiry: params?.expiry }),

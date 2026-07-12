@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getSupplierOptions } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../_components/AdminHeader";
 import { IaAssistantClient } from "./IaAssistantClient";
@@ -18,7 +18,7 @@ export default async function IaAppccPage({
 }: {
   searchParams?: Promise<{ saved?: string; error?: string }>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
   const params = await searchParams;
   const suppliersResult = await getSupplierOptions();
   const suppliers = suppliersResult.ok ? suppliersResult.data : [];

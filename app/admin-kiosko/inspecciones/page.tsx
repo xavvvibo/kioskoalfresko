@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getRecentInspectionRecords } from "@/lib/admin-kiosko/database";
 import { saveInspectionRecordAction } from "../actions";
 import { RecordPageShell } from "../_components/RecordPageShell";
@@ -8,7 +8,7 @@ import { SelectField, SubmitButton, TextAreaField, TextField } from "../_compone
 export const metadata: Metadata = { title: "Inspecciones | Panel interno", description: "Histórico interno de inspecciones sanitarias." };
 
 export default async function InspeccionesPage({ searchParams }: { searchParams?: Promise<{ saved?: string; error?: string }> }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const params = await searchParams;
   const records = await getRecentInspectionRecords();
 

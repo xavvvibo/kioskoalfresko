@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getRecentAiProcessingLogs } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../../_components/AdminHeader";
 
@@ -21,7 +21,7 @@ function formatDate(value: string) {
 }
 
 export default async function IaHistorialPage() {
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
   const logs = await getRecentAiProcessingLogs(50);
   const rows = logs.ok ? logs.data : [];
 

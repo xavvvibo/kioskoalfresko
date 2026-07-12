@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getAdminDashboardSummary, getAppccRecords, getLabelRecords, getProductionBatches, getTraceabilityRows, type AppccRecord } from "@/lib/admin-kiosko/database";
 import { getDocumentStats } from "@/lib/admin-kiosko/documents";
 import { AdminHeader } from "../_components/AdminHeader";
@@ -52,7 +52,7 @@ export default async function CalendarioAppccPage({
 }: {
   searchParams?: Promise<{ year?: string; month?: string; day?: string }>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const params = await searchParams;
   const current = getMadridMonth();
   const year = Number(params?.year) || current.year;

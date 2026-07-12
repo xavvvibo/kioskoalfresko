@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getInboxMetrics, listInboxDocuments, listInboxGroups } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../_components/AdminHeader";
 import { InboxClient } from "./InboxClient";
@@ -18,7 +18,7 @@ export default async function InboxPage({
 }: {
   searchParams?: Promise<{ saved?: string; error?: string }>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
   const params = await searchParams;
   const [documentsResult, groupsResult, metricsResult] = await Promise.all([
     listInboxDocuments({ limit: 200 }),

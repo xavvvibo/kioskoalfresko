@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { internalAdminSections } from "@/content/site";
-import { isAdminAuthenticated } from "@/lib/admin-kiosko/auth";
+import { getCurrentAdminSession, isAdminAuthenticated } from "@/lib/admin-kiosko/auth";
 import { getAdminDashboardSummary, getDashboardProductionOperationalMetrics, getExecutiveDashboardMetrics } from "@/lib/admin-kiosko/database";
 import { temperatureEquipment } from "@/lib/admin-kiosko/temperature-rules";
 import { AdminHeader } from "./_components/AdminHeader";
@@ -32,6 +33,10 @@ export default async function AdminKioskoPage({
 
   if (!isAuthenticated) {
     return <LoginPanel hasError={params?.error === "1"} returnTo={params?.next} />;
+  }
+  const session = await getCurrentAdminSession();
+  if (session?.role === "employee") {
+    redirect("/admin-kiosko/empleado");
   }
 
   const [dashboard, executive, productionOps] = await Promise.all([

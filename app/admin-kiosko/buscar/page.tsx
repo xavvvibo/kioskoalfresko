@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getGlobalSearchResults } from "@/lib/admin-kiosko/database";
 import { AdminHeader } from "../_components/AdminHeader";
 
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function BuscarPage({ searchParams }: { searchParams?: Promise<{ q?: string }> }) {
-  await requireAdminSession();
+  await requireAdminPermission("reports:view");
   const params = await searchParams;
   const q = params?.q || "";
   const result = await getGlobalSearchResults(q);

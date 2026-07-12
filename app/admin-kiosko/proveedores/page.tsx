@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getRecentSupplierRecords, getSupplierProfiles } from "@/lib/admin-kiosko/database";
 import { saveSupplierRecordAction } from "../actions";
 import { RecordPageShell } from "../_components/RecordPageShell";
@@ -24,7 +24,7 @@ function supplierStatus(profile: { status: string | null; cif: string | null; ce
 }
 
 export default async function ProveedoresPage({ searchParams }: { searchParams?: Promise<{ saved?: string; error?: string; q?: string }> }) {
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
   const params = await searchParams;
   const [records, profilesResult] = await Promise.all([
     getRecentSupplierRecords(),

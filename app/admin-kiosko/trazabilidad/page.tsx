@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getInventoryLots, getInventoryLotMovements, getProductionTraceabilityRows, getTraceabilityRows } from "@/lib/admin-kiosko/database";
 import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
 import { AdminHeader } from "../_components/AdminHeader";
@@ -15,7 +15,7 @@ export default async function TrazabilidadPage({
 }: {
   searchParams?: Promise<{ q?: string; date?: string }>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("traceability:manage");
   const params = await searchParams;
   const [result, productionResult, lotsResult, lotMovementsResult] = await Promise.all([
     getTraceabilityRows({ q: params?.q, date: params?.date }),

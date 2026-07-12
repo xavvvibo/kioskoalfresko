@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getRecentMaintenanceRecords } from "@/lib/admin-kiosko/database";
 import { saveMaintenanceRecordAction } from "../actions";
 import { RecordPageShell } from "../_components/RecordPageShell";
@@ -8,7 +8,7 @@ import { SubmitButton, TextAreaField, TextField } from "../_components/InternalF
 export const metadata: Metadata = { title: "Mantenimiento | Panel interno", description: "Registro interno de mantenimiento." };
 
 export default async function MantenimientoPage({ searchParams }: { searchParams?: Promise<{ saved?: string; error?: string }> }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const params = await searchParams;
   const records = await getRecentMaintenanceRecords();
 

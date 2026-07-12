@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import {
   buildMakroLabels,
   makroInvoices,
@@ -147,7 +147,7 @@ export default async function MakroReceptionPage({
 }: {
   searchParams?: Promise<Record<string, string | undefined>>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const params = await searchParams || {};
   const operativeDate = params.operative_date || "2026-07-08";
   const operativeTime = params.operative_time || timeMadrid();

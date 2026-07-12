@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getLabelRecords, getLabelSourceOptions, listLabelEligibleInventoryLots } from "@/lib/admin-kiosko/database";
 import { buildZebraLabelZpl, type ZebraTemplate } from "@/lib/admin-kiosko/zebra";
 import { AdminEmptyState } from "../_components/AdminEmptyState";
@@ -96,7 +96,7 @@ export default async function EtiquetasPage({
 }: {
   searchParams?: Promise<Record<string, string>>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("labels:basic_print");
   const params = await searchParams || {};
   const [historyResult, sourcesResult, inventoryLotsResult] = await Promise.all([
     getLabelRecords(20),

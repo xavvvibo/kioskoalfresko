@@ -1,4 +1,4 @@
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { storeOriginalOcrDocument, updateUploadedDocumentReview } from "@/lib/admin-kiosko/database";
 import { createDomainEvent, emitDomainEventSafe } from "@/lib/admin-kiosko/domain";
 import { isAcceptedDirectImageMimeType, isAcceptedOcrMimeType, isPdfMimeType, runAppccOcr } from "@/lib/ai/ocr";
@@ -96,7 +96,7 @@ function ocrConfidence(result: OcrUploadResult) {
 
 export async function POST(request: Request) {
   console.info("[OCR REQUEST]");
-  await requireAdminSession();
+  await requireAdminPermission("settings:manage");
 
   const config = getOpenAiServerConfig();
   console.info("[OCR ENV]", {

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getAccountingDocuments, getInventoryMovements, getInventoryProducts, getRecentGoodsReceptionRecords, getSupplierOptions, getSupplierProfiles, getExecutiveDashboardMetrics, getUploadedDocuments } from "@/lib/admin-kiosko/database";
 import { AdminEmptyState } from "../_components/AdminEmptyState";
 import { AdminHeader } from "../_components/AdminHeader";
@@ -37,7 +37,7 @@ export default async function ComprasPage({
 }: {
   searchParams?: Promise<{ receipt?: string; batch?: string; receipt_existing?: string; print_job?: string; print_existing?: string; print_error?: string; receipt_error?: string }>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("goods_reception:advanced_create");
   const params = await searchParams;
   const [metricsResult, receptionsResult, suppliersResult, movementsResult, accountingResult, uploadsResult, productsResult, supplierOptionsResult] = await Promise.all([
     getExecutiveDashboardMetrics(),

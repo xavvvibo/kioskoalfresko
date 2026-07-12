@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getProductionBatchById, getRecentPrintJobs } from "@/lib/admin-kiosko/database";
 import { registerBatchConsumption, reprintProductionBatchLabelAction } from "@/app/admin-kiosko/actions";
 import {
@@ -104,7 +104,7 @@ export default async function ProductionBatchDetailPage({
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ print_job?: string; print_error?: string; saved?: string }>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("traceability:manage");
   const { id } = await params;
   const query = searchParams ? await searchParams : {};
   const [batchResult, jobsResult] = await Promise.all([

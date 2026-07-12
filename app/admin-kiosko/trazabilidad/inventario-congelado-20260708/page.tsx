@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import {
   FREEZER_BATCH_20260708,
   applyRegisteredFreezerLotStatus,
@@ -92,7 +92,7 @@ function LabelPreviewCard({ lot }: { lot: FreezerInventoryLot }) {
 }
 
 export default async function FrozenInventoryPage() {
-  await requireAdminSession();
+  await requireAdminPermission("traceability:manage");
 
   const verification = await freezerInventory20260708Service.verifyBatchRegistration();
   const lotsResult = await freezerInventory20260708Service.listLotsWithRegisteredStatus();

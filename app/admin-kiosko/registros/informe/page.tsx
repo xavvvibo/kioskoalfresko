@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getMonthlyAppccReport, type AppccRecordFilters } from "@/lib/admin-kiosko/database";
 import { signMonthlyAppccReportAction } from "../../actions";
 import { PrintButton } from "./PrintButton";
@@ -68,7 +68,7 @@ export default async function InformeMensualAppccPage({
 }: {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const filters = parseFilters(await searchParams);
   const report = await getMonthlyAppccReport(filters);
 

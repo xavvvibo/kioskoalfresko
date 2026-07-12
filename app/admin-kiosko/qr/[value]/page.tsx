@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getProductionBatchByBatchCode } from "@/lib/admin-kiosko/database";
 import { parseInternalQrValue } from "@/lib/admin-kiosko/qr/resolve-qr";
 import { AdminHeader } from "../../_components/AdminHeader";
@@ -38,7 +38,7 @@ export default async function InternalQrResolverPage({
   params: Promise<{ value: string }>;
 }) {
   const { value } = await params;
-  await requireAdminSession(`/admin-kiosko/qr/${encodeURIComponent(value)}`);
+  await requireAdminPermission("traceability:manage");
   const parsed = parseInternalQrValue(value);
 
   if (!parsed.ok && parsed.error === "invalid_format") {

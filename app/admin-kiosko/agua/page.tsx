@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getRecentWaterRecords } from "@/lib/admin-kiosko/database";
 import { saveWaterRecordAction } from "../actions";
 import { RecordPageShell } from "../_components/RecordPageShell";
@@ -8,7 +8,7 @@ import { SelectField, SubmitButton, TextAreaField, TextField } from "../_compone
 export const metadata: Metadata = { title: "Control de agua | Panel interno", description: "Registro interno de control de agua." };
 
 export default async function AguaPage({ searchParams }: { searchParams?: Promise<{ saved?: string; error?: string }> }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const params = await searchParams;
   const records = await getRecentWaterRecords();
 

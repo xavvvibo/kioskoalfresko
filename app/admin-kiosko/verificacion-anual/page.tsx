@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getRecentAnnualVerificationRecords } from "@/lib/admin-kiosko/database";
 import { saveAnnualVerificationAction } from "../actions";
 import { RecordPageShell } from "../_components/RecordPageShell";
@@ -19,7 +19,7 @@ const checks = [
 ];
 
 export default async function VerificacionAnualPage({ searchParams }: { searchParams?: Promise<{ saved?: string; error?: string }> }) {
-  await requireAdminSession();
+  await requireAdminPermission("appcc:manage");
   const params = await searchParams;
   const records = await getRecentAnnualVerificationRecords();
 
