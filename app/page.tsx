@@ -3,12 +3,12 @@ import { Section } from "@/components/ui/Section";
 import { Hero } from "@/components/home/Hero";
 import { QuickDecision } from "@/components/home/QuickDecision";
 import { MenuPreview } from "@/components/home/MenuPreview";
-import { UpcomingEvents } from "@/components/home/UpcomingEvents";
 import { ContactPanel } from "@/components/home/ContactPanel";
+import { DeliveryPanel } from "@/components/home/DeliveryPanel";
 
 export const metadata = buildMetadata({
-  title: "Kiosko Alfresko | Terraza en Ogíjares con tapas y smash burgers",
-  description: "Kiosko Alfresko en Ogíjares, Granada sur: terraza, tapas, smash burgers y reservas para eventos de verano en el Parque San Sebastián.",
+  title: "Kiosko Alfresko | Smash Lab, burgers y terraza en Ogíjares",
+  description: "Descubre SMASH LAB by Alfresko: smash burgers, cocina para compartir, terraza, delivery y reservas en el Parque San Sebastián de Ogíjares.",
   path: "/",
 });
 
@@ -16,7 +16,7 @@ export default function HomePage() {
   return (
     <main>
       <Hero />
-      <Section title="Elige tu plan" description="Reservar, ver la carta o preparar tu noche ALFRESKO en Ogíjares.">
+      <Section title="Elige tu plan" description="Ver la carta, pedir para recoger o reservar mesa en Kiosko Alfresko.">
         <QuickDecision />
       </Section>
       <Section eyebrow="Lo que te espera" title="Qué puedes pedir">
@@ -24,9 +24,11 @@ export default function HomePage() {
           <div className="flex flex-wrap gap-3">
             {[
               "Noches de terraza",
-              "Smash burgers 180G",
-              "Tapas y brasas",
-              "Reservas online",
+              "SMASH LAB by Alfresko",
+              "FERXA TRUFADA",
+              "BOURBON BACON",
+              "POLLO KICK",
+              "Reservas en Qamarero",
               "Ogíjares · Granada sur",
             ].map((item) => (
               <span
@@ -39,11 +41,11 @@ export default function HomePage() {
           </div>
         </div>
       </Section>
-      <Section eyebrow="Smash burgers" title="Smash burgers 180G">
+      <Section eyebrow="SMASH LAB by Alfresko" title="Las nuevas burgers">
         <MenuPreview />
       </Section>
-      <Section eyebrow="Eventos de verano" title="Parque San Sebastián con reserva">
-        <UpcomingEvents />
+      <Section eyebrow="Pedidos" title="Delivery y recogida">
+        <DeliveryPanel />
       </Section>
       <Section eyebrow="Contacto" title="Todo a mano antes de venir">
         <ContactPanel />

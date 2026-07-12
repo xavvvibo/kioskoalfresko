@@ -4,11 +4,17 @@ import { QAMARERO_BOOKING_URL, getQamareroReservationUrl } from "@/lib/integrati
 export const siteConfig = {
   name: "Kiosko Alfresko",
   legalName: "Kiosko Alfresko",
+  brandClaim: "Food · Drinks · Planes",
+  subBrand: {
+    name: "SMASH LAB",
+    byline: "by Alfresko",
+    fullName: "SMASH LAB by Alfresko",
+  },
   siteUrl: "https://kioskoalfresko.es",
   domain: "kioskoalfresko.es",
   locale: "es_ES",
   description:
-    "Terraza en Ogíjares, Granada sur, con tapas, smash burgers, carnes a la brasa y ambiente nocturno. Horario actual: lunes y martes descanso; miércoles, jueves y domingo de 20:00h a 24:00h; viernes y sábado de 21:00h a 01:00h.",
+    "Kiosko Alfresko en Ogíjares: SMASH LAB by Alfresko, smash burgers, cocina para compartir, terraza, delivery y reservas en Qamarero.",
   location: {
     area: "Parque San Sebastián",
     city: "Ogíjares",
@@ -25,178 +31,132 @@ export const siteConfig = {
     emailHref: "mailto:info@kioskoalfresko.es",
     whatsappDisplay: "+34 696 320 465",
     whatsappUrl: "https://wa.me/34696320465",
-    orderWhatsappUrl: "https://wa.me/34696320465?text=Hola%20quiero%20pedir%20en%20Kiosko%20Alfresko",
-    instagramUrl: "https://instagram.com/alfresko.granada",
+    orderWhatsappUrl: "https://wa.me/34696320465?text=Hola%2C%20quiero%20hacer%20un%20pedido%20para%20recoger%20en%20Kiosko%20Alfresko.",
+    instagramUrl: "https://www.instagram.com/alfresko.granada/",
     instagramHandle: "@alfresko.granada",
     bookingUrl: QAMARERO_BOOKING_URL,
   },
+  delivery: {
+    glovoUrl: process.env.NEXT_PUBLIC_GLOVO_URL || "",
+    uberEatsUrl: process.env.NEXT_PUBLIC_UBEREATS_URL || "",
+  },
   ctas: {
-    primary: { label: "Cómo llegar ahora", href: "/ubicacion-ogijares" },
-    secondary: { label: "Ver carta", href: "/carta" },
-    call: { label: "Llamar ahora", href: "tel:696320465" },
+    primary: { label: "Ver carta", href: "/carta" },
+    secondary: { label: "Pedir ahora", href: "#pide-alfresko" },
+    call: { label: "Llamar para recoger", href: "tel:696320465" },
     booking: { label: "Reservar mesa", href: getQamareroReservationUrl("hero") },
   },
   positioning: {
-    headline: "Noches al Alfresko",
+    headline: "No es un kiosko. Es el plan.",
     subheadline:
-      "Terraza, tapas, smash burgers, carnes a la brasa y el mejor ambiente al aire libre para las noches de verano en Ogíjares.",
-    support: ["Lunes y martes descanso", "Miércoles, jueves y domingo · 20:00h a 24:00h", "Viernes y sábado · 21:00h a 01:00h"],
+      "Descubre las nuevas burgers de SMASH LAB by Alfresko en el Parque San Sebastián de Ogíjares.",
+    support: ["Martes a jueves y domingo · 21:00h a 24:00h", "Viernes y sábado · 21:00h a 01:30h", "Lunes cerrado"],
   },
   schedule: {
     currentLabel: "Horario actual",
-    currentSummary: "Lunes y martes descanso. Miércoles y jueves de 20:00h a 24:00h. Viernes y sábado de 21:00h a 01:00h. Domingo de 20:00h a 24:00h.",
-    note: "Te esperamos para noches ALFRESKO con terraza, tapas, smash burgers y carnes a la brasa en Ogíjares, Granada sur.",
+    currentSummary: "Lunes cerrado. Martes, miércoles, jueves y domingo de 21:00h a 24:00h. Viernes y sábado de 21:00h a 01:30h.",
+    note: "SMASH LAB by Alfresko, cocina para compartir, terraza, delivery y recogida en Kiosko Alfresko.",
+    rows: [
+      { day: "Lunes", hours: "Cerrado", opens: null, closes: null },
+      { day: "Martes", hours: "21:00–24:00", opens: "21:00", closes: "00:00" },
+      { day: "Miércoles", hours: "21:00–24:00", opens: "21:00", closes: "00:00" },
+      { day: "Jueves", hours: "21:00–24:00", opens: "21:00", closes: "00:00" },
+      { day: "Viernes", hours: "21:00–01:30", opens: "21:00", closes: "01:30" },
+      { day: "Sábado", hours: "21:00–01:30", opens: "21:00", closes: "01:30" },
+      { day: "Domingo", hours: "21:00–24:00", opens: "21:00", closes: "00:00" },
+    ],
   },
 };
 
 export const seasonalSchedule: SeasonalScheduleItem[] = [
-  { month: "Junio", status: "confirmed", summary: "Lunes y martes descanso · Miércoles, jueves y domingo 20:00h a 24:00h · Viernes y sábado 21:00h a 01:00h", note: "Noches de terraza, tapas, burgers y carnes a la brasa en Ogíjares.", highlight: true },
-  { month: "Julio", status: "confirmed", summary: "Lunes y martes descanso · Miércoles, jueves y domingo 20:00h a 24:00h · Viernes y sábado 21:00h a 01:00h", note: "Noches de terraza, tapas, burgers y carnes a la brasa en Ogíjares." },
-  { month: "Agosto", status: "confirmed", summary: "Lunes y martes descanso · Miércoles, jueves y domingo 20:00h a 24:00h · Viernes y sábado 21:00h a 01:00h", note: "Reserva tus noches ALFRESKO si vienes en grupo o quieres asegurar mesa." },
-  { month: "Septiembre", status: "confirmed", summary: "Lunes y martes descanso · Miércoles, jueves y domingo 20:00h a 24:00h · Viernes y sábado 21:00h a 01:00h", note: "Si hubiera alguna actualización en septiembre, la anunciaremos también en Instagram." },
+  { month: "Horario vigente", status: "confirmed", summary: "Lunes cerrado · Martes, miércoles, jueves y domingo 21:00h a 24:00h · Viernes y sábado 21:00h a 01:30h", note: "Consulta Instagram para cualquier ajuste puntual.", highlight: true },
 ];
 
 export const maySchedule = {
   normalLabel: "Horario actual",
-  normalHours: "Miércoles, jueves y domingo · 20:00h a 24:00h · Viernes y sábado · 21:00h a 01:00h",
-  normalSummary: "Horario actual: lunes y martes descanso. Miércoles y jueves de 20:00h a 24:00h. Viernes y sábado de 21:00h a 01:00h. Domingo de 20:00h a 24:00h.",
+  normalHours: "Mar, mié, jue y dom · 21:00h a 24:00h · Vie y sáb · 21:00h a 01:30h",
+  normalSummary: "Horario actual: lunes cerrado. Martes, miércoles, jueves y domingo de 21:00h a 24:00h. Viernes y sábado de 21:00h a 01:30h.",
   weekendNotice: "Horario actual",
-  weekendLead: "Cenas, tapas, smash burgers, carnes a la brasa y el mejor ambiente nocturno al aire libre en Ogíjares.",
+  weekendLead: "SMASH LAB by Alfresko, cocina para compartir y terraza nocturna en Ogíjares.",
 };
 
 export const maySpecialEvents: ScheduleEvent[] = [
   {
-    date: "Miércoles, jueves y domingo",
-    title: "Noches de terraza",
-    hours: "20:00h a 24:00h",
-    note: "Tapas, smash burgers y ambiente nocturno en el Parque San Sebastián de Ogíjares.",
+    date: "Martes, miércoles, jueves y domingo",
+    title: "SMASH LAB y terraza",
+    hours: "21:00h a 24:00h",
+    note: "Burgers, cocina para compartir, bebidas con tapa y reservas por Qamarero.",
     highlight: true,
   },
   {
     date: "Viernes y sábado",
-    title: "Noches hasta la 01:00h",
-    hours: "21:00h a 01:00h",
-    note: "Reserva mesa si vienes en grupo o quieres asegurar tu noche ALFRESKO.",
+    title: "Noches hasta la 01:30h",
+    hours: "21:00h a 01:30h",
+    note: "Reserva mesa en Qamarero o pide para recoger por teléfono y WhatsApp.",
     highlight: true,
   },
 ];
 
 export const maySalesFocus = {
-  title: "🌙 Noches ALFRESKO",
-  body: "Vuelve la temporada de verano con cenas al aire libre, tapas, cerveza fría, smash burgers y carnes a la brasa en Ogíjares, Granada sur.",
-  extra: "Reserva tu mesa y prepárate para el ambiente nocturno de ALFRESKO.",
+  title: "SMASH LAB by Alfresko",
+  body: "Nueva submarca burger de Kiosko Alfresko: FERXA TRUFADA, BOURBON BACON y POLLO KICK.",
+  extra: "Reserva por Qamarero o pide para recoger en Kiosko Alfresko.",
   microcopy: [
     "Parque San Sebastián · Ogíjares",
-    "Smash 180G + patatas",
+    "Burgers con patatas",
     "Tapas y terraza",
-    "Reserva recomendada",
+    "Recogida y delivery",
   ],
 };
 
 export const springHighlights = [
   {
-    date: "Reapertura",
-    title: "🔥 Vuelve el ambiente de noche en ALFRESKO",
-    detail: "Cenas al aire libre, tapas, cerveza fría y terraza en el parque para arrancar el verano.",
+    date: "SMASH LAB",
+    title: "Nueva etapa burger en Kiosko Alfresko",
+    detail: "FERXA TRUFADA, BOURBON BACON y POLLO KICK llegan a la carta de Kiosko Alfresko.",
   },
   {
-    date: "Verano 2026",
-    title: "🌙 Temporada de noches ALFRESKO",
-    detail: "Miércoles, jueves y domingo de 20:00h a 24:00h; viernes y sábado de 21:00h a 01:00h, con burgers y carnes a la brasa.",
+    date: "Horario vigente",
+    title: "Noches en Parque San Sebastián",
+    detail: "Martes, miércoles, jueves y domingo de 21:00h a 24:00h; viernes y sábado de 21:00h a 01:30h.",
   },
   {
     date: "Instagram",
     title: "📲 Novedades en tiempo real",
-    detail: "Síguenos para ver el ambiente y las noches de verano en Ogíjares.",
+    detail: "Síguenos para ver ambiente, burgers y novedades de Kiosko Alfresko.",
   },
 ];
 
 export const upcomingEvents = {
-  eyebrow: "Programa de verano 2026",
-  title: "Eventos en el Parque San Sebastián y Recinto Ferial",
-  intro: "Estamos junto al Recinto Ferial. Recomendamos reservar los días de evento: son fechas de alta afluencia y conviene venir con tiempo.",
-  reservationTitle: "Reserva para los días grandes",
+  eyebrow: "Planes en Ogíjares",
+  title: "Parque San Sebastián con reserva",
+  intro: "Estamos en Parque San Sebastián. Para venir en grupo, reserva mesa en Qamarero.",
+  reservationTitle: "Reserva tu mesa",
   reservationBody:
-    "Estamos junto al Recinto Ferial. Recomendamos reservar los días de evento para asegurar mesa antes del espectáculo.",
+    "Reserva mesa en Qamarero y revisa Instagram para novedades puntuales.",
   reservationMicrocopy:
-    "Reserva tu mesa en kioskoalfresko.es. Días de evento = alta afluencia.",
+    "Reservas oficiales en Qamarero.",
   primaryCta: { label: "Reservar mesa", href: getQamareroReservationUrl("events") },
-  secondaryCta: { label: "Ver Instagram", href: "https://instagram.com/alfresko.granada" },
-  historicTitle: "Histórico de eventos",
-  historicIntro: "Eventos ya pasados en el entorno del Parque San Sebastián y Recinto Ferial.",
+  secondaryCta: { label: "Ver Instagram", href: "https://www.instagram.com/alfresko.granada/" },
+  historicTitle: "Novedades",
+  historicIntro: "Consulta Instagram para novedades de carta, delivery y horarios puntuales.",
   items: [
     {
-      title: "Tributo a Estopa A Toda Pastilla",
-      date: "Sábado 25 de julio · 22:00h",
-      status: "Alta afluencia",
+      title: "SMASH LAB by Alfresko",
+      date: "Horario vigente",
+      status: "Carta activa",
       description:
-        "Parque San Sebastián, Recinto Ferial. Concierto Tributo a Estopa \"A Toda Pastilla\". Recomendamos reservar mesa.",
-      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
-    },
-    {
-      title: "Planetario Mirando a las estrellas",
-      date: "Martes 28 y miércoles 29 de julio · 21:30h a 00:30h",
-      status: "Alta afluencia",
-      description:
-        "Parque San Sebastián, Recinto Ferial. Planetario \"Mirando a las Estrellas\". Recomendamos reservar los días de evento.",
-      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
-    },
-    {
-      title: "Noche de Humor",
-      date: "Viernes 31 de julio · 22:00h",
-      status: "Alta afluencia",
-      description:
-        "Parque San Sebastián, Recinto Ferial. Christian García, Rafa Frías y Manolo Lera presentan \"Lo de los Monólogos\". Recomendamos reservar mesa.",
-      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
-    },
-    {
-      title: "Cine al fresquito",
-      date: "Jueves 13 de agosto · 22:00h",
-      status: "Alta afluencia",
-      description:
-        "Parque San Sebastián, Recinto Ferial. Proyección de \"Cómo entrenar a tu dragón 2025\". Recomendamos reservar mesa.",
-      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
-    },
-    {
-      title: "Romance del amor brujo",
-      date: "Viernes 14 de agosto · 22:00h",
-      status: "Alta afluencia",
-      description:
-        "Parque San Sebastián. Espectáculo flamenco \"Romance del Amor Brujo\". Recomendamos reservar mesa.",
-      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
-    },
-    {
-      title: "La dama ya no es boba",
-      date: "Viernes 28 de agosto · 22:00h",
-      status: "Alta afluencia",
-      description:
-        "Parque San Sebastián, Recinto Ferial. Gran Espectáculo de Teatro Familiar: \"La dama ya no es boba\". Recomendamos reservar mesa.",
-      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
-    },
-    {
-      title: "XLVII Festival Nacional de Cante Flamenco",
-      date: "Sábado 5 de septiembre · 22:30h",
-      status: "Alta afluencia",
-      description:
-        "Parque San Sebastián, Recinto Ferial. Festival Nacional de Cante Flamenco de Ogíjares. Precio indicado en programa: 20 €. Recomendamos reservar mesa.",
-      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
-    },
-    {
-      title: "Fiestas Populares y Feria de Ogíjares",
-      date: "Del 10 al 14 de septiembre",
-      status: "Alta afluencia",
-      description:
-        "Parque San Sebastián / Recinto Ferial. Fiestas, conciertos, orquestas, actividades infantiles y programación especial. Recomendamos reservar con antelación.",
+        "Nuevas burgers, cocina para compartir, delivery, recogida y reservas en Qamarero.",
       cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
     },
   ],
   pastItems: [
     {
-      title: "Gala de Elección de la Reina, Damas y Mister",
-      date: "Viernes 3 de julio · 21:00h",
-      status: "Evento pasado",
+      title: "Carta anterior sustituida",
+      date: "Actualización SMASH LAB",
+      status: "Actualizado",
       description:
-        "Parque San Sebastián, Recinto Ferial. Gala de Elección de la Reina, Damas y Mister de las Fiestas de Ogíjares 2026.",
+        "La comunicación pública prioriza ahora SMASH LAB by Alfresko y el horario vigente.",
     },
   ],
 };
@@ -208,15 +168,15 @@ export const specialWeekendCampaign = {
     "Ambiente en la terraza de Ogíjares: tapas, cerveza fría y smash burgers en Granada sur.",
   scheduleTitle: "Horario actual",
   schedule: [
-    { day: "Lunes y martes", hours: "Descanso" },
-    { day: "Miércoles, jueves y domingo", hours: "20:00h a 24:00h" },
-    { day: "Viernes y sábado", hours: "21:00h a 01:00h" },
+    { day: "Lunes", hours: "Cerrado" },
+    { day: "Martes, miércoles, jueves y domingo", hours: "21:00h a 24:00h" },
+    { day: "Viernes y sábado", hours: "21:00h a 01:30h" },
   ],
   highlights: [
     "Terraza con ambiente",
     "Reserva recomendada",
     "Tapas y cerveza fría",
-    "Smash burgers 180G",
+    "SMASH LAB by Alfresko",
   ],
   reservationNote:
     "Si vienes en grupo, reservar mesa y revisar Instagram antes de salir puede ayudarte a venir más tranquilo.",
@@ -224,19 +184,19 @@ export const specialWeekendCampaign = {
 
 export const corpusClosureNotice = {
   eyebrow: "Horario actual",
-  title: "Noches ALFRESKO en Ogíjares",
+  title: "Kiosko Alfresko · horario vigente",
   body:
-    "Lunes y martes descanso. Miércoles y jueves de 20:00h a 24:00h. Viernes y sábado de 21:00h a 01:00h. Domingo de 20:00h a 24:00h.",
+    "Lunes cerrado. Martes, miércoles, jueves y domingo de 21:00h a 24:00h. Viernes y sábado de 21:00h a 01:30h.",
   support:
-    "Terraza, tapas, smash burgers y noches al fresko en el Parque San Sebastián de Ogíjares.",
+    "SMASH LAB by Alfresko, cocina para compartir, delivery, recogida y reservas en Qamarero.",
 };
 
 export const summerReopening = {
-  badge: "Temporada abierta",
+  badge: "Horario vigente",
   returnTitle: "Horario actual",
-  days: "Lunes y martes descanso",
-  hours: "Mié, jue y dom 20:00h a 24:00h · Vie y sáb 21:00h a 01:00h",
-  claim: "Reserva tus noches ALFRESKO",
+  days: "Lunes cerrado",
+  hours: "Mar, mié, jue y dom 21:00h a 24:00h · Vie y sáb 21:00h a 01:30h",
+  claim: "Reserva en Qamarero o pide para recoger",
 };
 
 export const menuCategories: MenuCategory[] = [
@@ -248,9 +208,9 @@ export const menuCategories: MenuCategory[] = [
 ];
 
 export const heroActions: ActionLink[] = [
-  { label: "Cómo llegar", href: "/ubicacion-ogijares", kind: "primary" },
-  { label: "Ver carta", href: "/carta", kind: "secondary" },
-  { label: "Llamar", href: "tel:696320465", kind: "ghost" },
+  { label: "Ver carta", href: "/carta", kind: "primary" },
+  { label: "Pedir ahora", href: "#pide-alfresko", kind: "secondary" },
+  { label: "Reservar mesa", href: getQamareroReservationUrl("hero_actions"), kind: "ghost" },
 ];
 
 export const seoLandings: SeoLanding[] = [
@@ -258,44 +218,44 @@ export const seoLandings: SeoLanding[] = [
     slug: "tomar-algo-en-ogijares",
     shortTitle: "Tomar algo en Ogíjares",
     title: "Tomar algo en Ogíjares | Kiosko Alfresko",
-    description: "Terraza en Ogíjares para tomar algo, pedir una ronda y alargar el plan en el Parque San Sebastián.",
+    description: "Terraza en Ogíjares para tomar algo, pedir una ronda, probar SMASH LAB by Alfresko y alargar el plan en el Parque San Sebastián.",
     h1: "Tomar algo en Ogíjares",
     intro: "Si buscas un sitio en Ogíjares para tomar algo sin pensarlo demasiado, aquí la idea es esa: llegar, pedir una ronda y quedarse un rato más.",
-    bullets: ["Terraza para plan social", "Bebida, tapas y ritmo fácil", "Parque San Sebastián, Ogíjares"],
+    bullets: ["Terraza para plan social", "Bebida, tapas y SMASH LAB", "Parque San Sebastián, Ogíjares"],
   },
   {
     slug: "tapas-ogijares",
     shortTitle: "Tapas en Ogíjares",
     title: "Tapas en Ogíjares | Kiosko Alfresko",
-    description: "Tapeo y terraza en Ogíjares para pedir una bebida, ver qué cae y seguir el plan.",
+    description: "Tapeo, burgers y terraza en Ogíjares para pedir una bebida, ver qué cae y seguir el plan.",
     h1: "Tapas en Ogíjares",
     intro: "Aquí las tapas acompañan el plan: bebida fría, algo para picar y cero complicación.",
-    bullets: ["Tapeo fácil", "Sitio informal", "Perfecto para repetir ronda"],
+    bullets: ["Tapeo fácil", "SMASH LAB by Alfresko", "Perfecto para repetir ronda"],
   },
   {
     slug: "terraza-ogijares",
     shortTitle: "Terraza en Ogíjares",
     title: "Terraza en Ogíjares | Kiosko Alfresko",
-    description: "Terraza en Ogíjares para echar el rato, tomar algo y quedarte más de la cuenta.",
+    description: "Terraza en Ogíjares para SMASH LAB by Alfresko, cocina para compartir, bebidas y reservas en Qamarero.",
     h1: "Terraza en Ogíjares",
-    intro: "Kiosko Alfresko va de eso: terraza, aire libre y un plan que se monta solo.",
-    bullets: ["Plan de tarde y verano", "Entorno de parque", "Decisión rápida desde móvil"],
+    intro: "Kiosko Alfresko va de eso: terraza, SMASH LAB, aire libre y un plan que se monta solo.",
+    bullets: ["Plan nocturno", "Entorno de parque", "Pedidos y reservas desde móvil"],
   },
   {
     slug: "bar-en-ogijares",
     shortTitle: "Bar en Ogíjares",
     title: "Bar en Ogíjares para tomar algo | Kiosko Alfresko",
-    description: "Bar en Ogíjares para tomar algo, tapear y pasar el rato al aire libre en el Parque San Sebastián.",
+    description: "Bar en Ogíjares para tomar algo, pedir burgers de SMASH LAB, tapear y pasar el rato en el Parque San Sebastián.",
     h1: "Bar en Ogíjares para tomar algo",
     intro: "No hace falta montarlo mucho: vienes, pedís algo y el rato va cayendo solo.",
-    bullets: ["Bebidas primero", "Tapas y raciones después", "Plan fácil de proponer"],
+    bullets: ["Bebidas primero", "Burgers y carta para compartir", "Plan fácil de proponer"],
   },
 ];
 
 export const ownerSections = [
   { title: "Resumen de negocio", items: ["Horario actual publicado", "CTAs activos", "Páginas SEO publicadas", "Estado de placeholders"] },
-  { title: "Horarios estacionales", items: ["Lunes y martes descanso", "Miércoles y jueves 20:00–24:00", "Viernes y sábado 21:00–01:00", "Domingo 20:00–24:00"] },
-  { title: "Carta y categorías", items: ["Bebidas", "Tapas", "Raciones", "Para compartir", "Opciones para niños"] },
+  { title: "Horario vigente", items: ["Lunes cerrado", "Martes a jueves 21:00–24:00", "Viernes y sábado 21:00–01:30", "Domingo 21:00–24:00"] },
+  { title: "Carta y categorías", items: ["SMASH LAB by Alfresko", "Para compartir", "Patatas con toppings", "Carnes", "Bebidas"] },
   { title: "SEO local", items: ["Tomar algo en Ogíjares", "Tapas en Ogíjares", "Terraza en Ogíjares", "Bar en Ogíjares"] },
 ];
 

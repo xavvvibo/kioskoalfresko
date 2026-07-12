@@ -1,4 +1,4 @@
-import { smashPromo } from "@/content/menu";
+import { featuredBurgers, smashPromo } from "@/content/menu";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { SmashPromoCTA } from "@/components/menu/SmashPromoCTA";
 
@@ -7,24 +7,20 @@ export function MenuPreview() {
     <div className="rounded-[2rem] border border-stone-950 bg-white p-6 shadow-[0_18px_40px_rgba(0,0,0,0.06)] md:p-8">
       <div className="grid gap-6 md:grid-cols-[0.9fr_1.1fr]">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d94b2b]">Smash burgers</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d94b2b]">SMASH LAB by Alfresko</p>
           <p className="mt-4 text-[2rem] font-black uppercase leading-[0.95] tracking-[-0.04em] text-stone-950 sm:text-[2.6rem]">
-            Smash Burgers 180G 🔥
+            FERXA, BOURBON y POLLO KICK
           </p>
           <p className="mt-4 max-w-md text-base leading-7 text-stone-700 sm:text-lg">
-            Doble smash con patatas para comer en terraza, compartir algo más y seguir la sobremesa en Ogíjares.
+            Las nuevas burgers de SMASH LAB by Alfresko, todas a 14,00 € con patatas incluidas.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
-            {[
-              "Doble carne 180g",
-              "Patatas incluidas",
-              "Tres versiones de la casa",
-            ].map((item) => (
+            {featuredBurgers.map((item) => (
               <span
-                key={item}
+                key={item.name}
                 className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-stone-950"
               >
-                {item}
+                {item.name}
               </span>
             ))}
           </div>

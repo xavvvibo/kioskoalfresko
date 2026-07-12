@@ -1,103 +1,89 @@
-import { heroActions, maySchedule, maySalesFocus, siteConfig } from "@/content/site";
+import Image from "next/image";
+import { featuredBurgers } from "@/content/menu";
+import { siteConfig } from "@/content/site";
 import { ActionButton } from "@/components/ui/ActionButton";
 
 export function Hero() {
-  const scheduleRows = [
-    ["Lunes y martes", "Descanso"],
-    ["Miércoles, jueves y domingo", "20:00–24:00"],
-    ["Viernes y sábado", "21:00–01:00"],
-  ];
-
   return (
-    <section className="relative overflow-hidden border-b border-stone-950 bg-[radial-gradient(circle_at_85%_14%,rgba(217,75,43,0.28),transparent_19%),radial-gradient(circle_at_20%_10%,rgba(17,17,17,0.06),transparent_28%),linear-gradient(180deg,#f5efe5_0%,#eadfce_100%)]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[linear-gradient(90deg,transparent_0%,rgba(17,17,17,0.08)_48%,transparent_100%)]" />
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 pb-16 pt-10 sm:px-6 md:grid-cols-[0.98fr_1.02fr] md:gap-12 md:pb-24 md:pt-16">
-        <div className="relative max-w-2xl">
-          <div className="absolute -left-3 top-20 hidden h-28 w-1 bg-[#d94b2b] md:block" />
-          <p className="inline-flex rounded-full border border-stone-950 bg-stone-950 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-white shadow-[0_10px_24px_rgba(0,0,0,0.14)]">Ogíjares · Parque San Sebastián</p>
-          <p className="mt-5 inline-flex rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-white shadow-[0_14px_28px_rgba(217,75,43,0.24)]">
-            Reservas abiertas
+    <section className="relative overflow-hidden border-b border-stone-950 bg-[radial-gradient(circle_at_82%_16%,rgba(217,75,43,0.34),transparent_22%),linear-gradient(180deg,#090909_0%,#14100f_56%,#060606_100%)] text-white">
+      <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] [background-size:24px_24px]" />
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 pb-10 pt-8 sm:px-6 md:grid-cols-[0.94fr_1.06fr] md:gap-10 md:pb-16 md:pt-14">
+        <div className="relative z-10">
+          <p className="inline-flex rounded-full border border-white/15 bg-white/8 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#f2c6bb]">
+            Kiosko Alfresko · {siteConfig.brandClaim}
           </p>
-          <h1 className="mt-7 max-w-2xl text-[2.45rem] font-black uppercase leading-[0.92] tracking-[-0.05em] text-stone-950 sm:text-[3.15rem] md:text-[4.55rem]">{siteConfig.positioning.headline}</h1>
-          <p className="mt-6 max-w-xl text-base font-medium leading-7 text-stone-800 md:text-lg md:leading-8">{siteConfig.positioning.subheadline}</p>
-          <div className="mt-7 max-w-xl rounded-[1.7rem] border border-stone-950 bg-white p-5 shadow-[0_14px_34px_rgba(0,0,0,0.08)]">
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d94b2b]">Horario actual</p>
-            <div className="mt-4 grid gap-3">
-              {scheduleRows.map(([day, hours]) => (
-                <div key={day} className="flex flex-col gap-1 border-t border-stone-950/10 pt-3 first:border-t-0 first:pt-0 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-sm font-black uppercase tracking-[0.08em] text-stone-950">{day}</span>
-                  <span className="text-base font-semibold text-stone-800">{hours}</span>
-                </div>
+          <p className="mt-4 text-[11px] font-black uppercase tracking-[0.28em] text-[#d94b2b]">
+            Presenta
+          </p>
+          <div className="mt-3">
+            <p className="text-[3.2rem] font-black uppercase leading-[0.78] tracking-[-0.07em] text-[#fff8ef] sm:text-[4.6rem] md:text-[6.4rem]">
+              SMASH<span className="text-[#d94b2b]">LAB</span>
+            </p>
+            <p className="mt-2 text-[1.45rem] font-black italic leading-none text-[#f2c6bb] sm:text-[2rem]">
+              by Alfresko
+            </p>
+          </div>
+          <h1 className="mt-6 max-w-2xl text-[2.45rem] font-black uppercase leading-[0.9] tracking-[-0.055em] text-white sm:text-[3.2rem] md:text-[4.5rem]">
+            No es un kiosko. Es el plan.
+          </h1>
+          <p className="mt-5 max-w-xl text-base font-semibold leading-7 text-stone-200 md:text-lg">
+            Descubre las nuevas burgers de SMASH LAB by Alfresko: FERXA TRUFADA, BOURBON BACON y POLLO KICK.
+          </p>
+
+          <div className="mt-6 grid gap-2 rounded-[1.35rem] border border-white/12 bg-black/28 p-3 sm:grid-cols-2">
+            {siteConfig.schedule.rows.map((row) => (
+              <div key={row.day} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/6 px-3 py-2">
+                <span className="text-[11px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{row.day}</span>
+                <span className="text-sm font-black text-white">{row.hours}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-7 grid gap-3 sm:grid-cols-3">
+            <ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "hero" }}>
+              Ver carta
+            </ActionButton>
+            <ActionButton href="#pide-alfresko" kind="secondary" analyticsEvent="click_pedir_ahora" analyticsPayload={{ location: "hero" }}>
+              Pedir ahora
+            </ActionButton>
+            <ActionButton href={siteConfig.ctas.booking.href} kind="ghost" newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "hero" }}>
+              Reservar mesa
+            </ActionButton>
+          </div>
+        </div>
+
+        <div className="relative z-10 grid gap-4">
+          <div className="relative min-h-[17rem] overflow-hidden rounded-[1.8rem] border border-white/12 bg-black shadow-[0_30px_90px_rgba(0,0,0,0.42)] sm:min-h-[22rem] md:min-h-[30rem]">
+            <Image
+              src="/menu/smash-burgers-hero-clean.png"
+              alt="Burgers de SMASH LAB by Alfresko con patatas"
+              fill
+              priority
+              sizes="(min-width: 768px) 52vw, 100vw"
+              className="object-cover object-center"
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0.28)_55%,rgba(0,0,0,0.82)_100%)]" />
+            <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
+              {featuredBurgers.map((burger) => (
+                <span key={burger.name} className="rounded-full border border-white/20 bg-black/64 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white backdrop-blur">
+                  {burger.name}
+                </span>
               ))}
             </div>
           </div>
-          <div className="mt-6 flex max-w-xl flex-wrap gap-2.5">
-            {["Smash burgers 180G", "Tapas", "Terraza", "Reservas"].map((item) => (
-              <span key={item} className="rounded-full border border-stone-950/20 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-stone-950 shadow-[0_8px_20px_rgba(0,0,0,0.05)]">{item}</span>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            {featuredBurgers.map((burger) => (
+              <article key={burger.name} className="rounded-[1.2rem] border border-white/12 bg-white p-4 text-stone-950 shadow-[0_18px_40px_rgba(0,0,0,0.16)]">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-[#d94b2b] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white">{burger.badge}</span>
+                  <span className="text-sm font-black text-[#d94b2b]">{burger.price}</span>
+                </div>
+                <h2 className="mt-3 text-xl font-black uppercase leading-none tracking-[-0.04em]">{burger.name}</h2>
+                <p className="mt-3 text-sm leading-5 text-stone-700">{burger.description}</p>
+              </article>
             ))}
           </div>
-          <div className="mt-10 flex flex-wrap gap-3">
-            <ActionButton href={siteConfig.ctas.booking.href} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "hero_primary" }}>
-              Reservar mesa
-            </ActionButton>
-            {heroActions.filter((action) => action.label === "Ver carta").map((action) => (
-              <ActionButton
-                key={action.label}
-                href={action.href}
-                kind={action.kind}
-                analyticsEvent="click_ver_carta"
-                analyticsPayload={{ location: "hero_primary" }}
-              >
-                Ver carta
-              </ActionButton>
-            ))}
-            <ActionButton href={siteConfig.contact.instagramUrl} kind="ghost" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "hero_primary" }}>Instagram</ActionButton>
-          </div>
-          <div className="mt-8 space-y-2.5 text-sm text-stone-700">
-            <p>Temporada de verano con ambiente nocturno al aire libre.</p>
-            <p>Tapas, smash burgers y carnes a la brasa en la terraza de Ogíjares.</p>
-            <p>Si vienes desde Granada sur, llegar al Parque San Sebastián sigue siendo rápido.</p>
-          </div>
-        </div>
-        <div className="relative grid gap-5 self-end md:pl-6">
-          <div className="absolute -left-5 top-10 hidden h-[78%] w-px bg-stone-950/14 md:block" />
-          <div className="relative overflow-hidden rounded-[2.4rem] border border-stone-950/90 bg-stone-950 p-7 text-white shadow-[0_26px_70px_rgba(0,0,0,0.18)] md:p-8">
-            <div className="absolute right-0 top-0 h-24 w-24 rounded-bl-[2.4rem] bg-[#d94b2b]" />
-            <p className="relative z-10 text-xs font-black uppercase tracking-[0.22em] text-[#efb7a8]">Smash burgers · Tapas · Terraza</p>
-            <p className="relative z-10 mt-5 text-[2.1rem] font-black uppercase leading-[0.96] tracking-[-0.05em] md:text-[3.2rem]">Cena fácil, reserva rápida.</p>
-            <p className="relative z-10 mt-5 max-w-sm text-sm leading-6 text-stone-300 md:text-base">{maySchedule.weekendLead}</p>
-            <div className="relative z-10 mt-6 flex flex-wrap gap-3">
-              <ActionButton href={siteConfig.ctas.booking.href} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "hero_schedule" }}>Reservar mesa</ActionButton>
-              <ActionButton href="/carta" kind="secondary" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "hero_schedule" }}>Ver carta</ActionButton>
-              <ActionButton href={siteConfig.contact.instagramUrl} kind="ghost" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "hero_schedule_instagram" }}>Instagram</ActionButton>
-            </div>
-            <p className="relative z-10 mt-4 text-sm text-white/75">Reserva tus noches ALFRESKO</p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[1.8rem] border border-stone-950/90 bg-white p-5 shadow-[0_12px_28px_rgba(0,0,0,0.06)]">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#d94b2b]">Carta directa</div>
-              <div className="mt-3 text-base font-semibold leading-7 text-stone-900 md:text-[1.05rem]">Smash burgers, tapas y brasas para pedir sin darle muchas vueltas.</div>
-            </div>
-            <div className="rounded-[1.8rem] border border-stone-950/10 bg-[#cf5336] p-5 text-white shadow-[0_14px_26px_rgba(217,75,43,0.18)]">
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80">Noche ALFRESKO</div>
-              <div className="mt-3 text-lg font-black leading-tight md:text-[1.25rem]">{maySalesFocus.title}</div>
-              <p className="mt-3 text-sm leading-6 text-white/88">{maySalesFocus.extra}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {maySalesFocus.microcopy.map((item) => (
-                  <span key={item} className="rounded-full border border-white/18 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-white">
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="px-4 pb-10 sm:px-6 md:pb-14">
-        <div className="mx-auto max-w-6xl">
-          <p className="text-center text-sm font-medium tracking-[0.08em] text-stone-700">
-            Terraza, tapas y un plan de noche fácil para volver a Ogíjares este verano.
-          </p>
         </div>
       </div>
     </section>

@@ -9,6 +9,7 @@ import { getQamareroReservationUrl } from "@/lib/integrations/qamarero";
 
 const links = [
   { href: "/carta", label: "Carta", analyticsEvent: "click_ver_carta" },
+  { href: "/#pide-alfresko", label: "Pedir", analyticsEvent: "click_pedir_ahora" },
   { href: "/horarios", label: "Horarios" },
   { href: "/ubicacion-ogijares", label: "Ubicación", analyticsEvent: "click_como_llegar" },
   { href: getQamareroReservationUrl("header"), label: "Reservar", external: true, analyticsEvent: "click_reserva_qamarero" },
@@ -45,7 +46,7 @@ export function SiteHeader() {
             </div>
             <div className="hidden sm:block">
               <div className="text-[11px] font-black uppercase tracking-[0.22em] text-stone-500">{siteConfig.location.city} · {siteConfig.location.area}</div>
-              <div className="mt-1 text-sm font-semibold tracking-[0.02em] text-stone-950 md:text-base">Terraza, tapas y smash burgers en Ogíjares.</div>
+              <div className="mt-1 text-sm font-semibold tracking-[0.02em] text-stone-950 md:text-base">SMASH LAB, terraza y pedidos en Ogíjares.</div>
             </div>
           </Link>
           <button
@@ -64,7 +65,7 @@ export function SiteHeader() {
                   key={item.href}
                   href={item.href}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   onClick={() => item.analyticsEvent ? trackEvent(item.analyticsEvent, { location: "header_desktop" }) : undefined}
                   className="text-[11px] font-black uppercase tracking-[0.18em] text-stone-700 transition hover:text-[#d94b2b]"
                 >
@@ -106,7 +107,7 @@ export function SiteHeader() {
                   key={item.href}
                   href={item.href}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   onClick={() => {
                     if (item.analyticsEvent) trackEvent(item.analyticsEvent, { location: "header_mobile" });
                     closeMenu();
@@ -132,8 +133,8 @@ export function SiteHeader() {
           </nav>
 
           <div className="mt-auto flex flex-col gap-4 pt-10">
-            <ActionButton href={siteConfig.contact.phoneHref} analyticsEvent="click_llamar" analyticsPayload={{ location: "header_mobile" }}>Llamar</ActionButton>
-            <ActionButton href={siteConfig.contact.whatsappUrl} kind="secondary" newTab analyticsEvent="click_whatsapp" analyticsPayload={{ location: "header_mobile" }}>WhatsApp</ActionButton>
+            <ActionButton href={siteConfig.contact.phoneHref} analyticsEvent="click_llamar_recoger" analyticsPayload={{ location: "header_mobile" }}>Llamar</ActionButton>
+            <ActionButton href={siteConfig.contact.orderWhatsappUrl} kind="secondary" newTab analyticsEvent="click_whatsapp_pedido" analyticsPayload={{ location: "header_mobile" }}>WhatsApp</ActionButton>
           </div>
         </div>
       </div>

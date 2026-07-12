@@ -3,9 +3,9 @@ import { buildMetadata } from "@/lib/metadata";
 import { SmashBarScreen } from "@/components/menu/SmashBarScreen";
 
 export const metadata = buildMetadata({
-  title: "Smash Burgers 180G | Pantalla de barra | Kiosko Alfresko",
+  title: "SMASH LAB by Alfresko | Pantalla de barra | Kiosko Alfresko",
   description:
-    "Pantalla promocional de Kiosko Alfresko para pedir Smash Burgers 180G con doble carne smash y patatas incluidas.",
+    "Pantalla promocional de Kiosko Alfresko para SMASH LAB by Alfresko: FERXA TRUFADA, BOURBON BACON y POLLO KICK.",
   path: "/barra/smash",
 });
 

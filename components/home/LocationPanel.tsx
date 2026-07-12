@@ -9,7 +9,7 @@ export function LocationPanel() {
         <p className="mt-4 text-base leading-7 text-stone-700">Ogíjares, Parque San Sebastián. Lo bastante claro como para decidirlo sobre la marcha.</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Parque San Sebastián · Ogíjares</span>
-          <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Smash 180G + patatas</span>
+          <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">SMASH LAB + patatas</span>
           <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Cada bebida con tapa</span>
         </div>
         <div className="mt-6 flex flex-wrap gap-3">

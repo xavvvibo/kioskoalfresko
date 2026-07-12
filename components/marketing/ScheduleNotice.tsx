@@ -2,7 +2,7 @@ import { corpusClosureNotice, siteConfig, summerReopening } from "@/content/site
 import { ActionButton } from "@/components/ui/ActionButton";
 import { getQamareroReservationUrl } from "@/lib/integrations/qamarero";
 
-export function CorpusClosureNotice() {
+export function ScheduleNotice() {
   return (
     <section className="overflow-hidden rounded-[2rem] border border-stone-950/90 bg-[linear-gradient(90deg,#111111_0%,#111111_56%,#c74428_56%,#d94b2b_100%)] text-white shadow-[0_18px_42px_rgba(0,0,0,0.14)]">
       <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
@@ -23,19 +23,19 @@ export function CorpusClosureNotice() {
             {summerReopening.claim}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <ActionButton href={getQamareroReservationUrl("closure_banner")} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "closure_banner" }}>
+            <ActionButton href={getQamareroReservationUrl("schedule_notice")} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "schedule_notice" }}>
               Reservar mesa
             </ActionButton>
-            <ActionButton href={siteConfig.contact.instagramUrl} kind="secondary" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "closure_banner" }}>
+            <ActionButton href={siteConfig.contact.instagramUrl} kind="secondary" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "schedule_notice" }}>
               Ver Instagram
             </ActionButton>
-            <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab analyticsEvent="click_como_llegar" analyticsPayload={{ location: "closure_banner" }}>
+            <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab analyticsEvent="click_como_llegar" analyticsPayload={{ location: "schedule_notice" }}>
               Cómo llegar
             </ActionButton>
           </div>
         </div>
 
-        <div className="border-t border-white/12 p-6 lg:border-l lg:border-t-0 md:p-8">
+        <div className="border-t border-white/12 p-6 md:p-8 lg:border-l lg:border-t-0">
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/75">
             Horario actual
           </p>

@@ -1,112 +1,109 @@
-"use client";
-
+import Image from "next/image";
+import { DeliveryPanel } from "@/components/home/DeliveryPanel";
 import { MenuHero } from "@/components/menu/MenuHero";
 import { MenuSectionBlock } from "@/components/menu/MenuSectionBlock";
 import { SmashPromoCTA } from "@/components/menu/SmashPromoCTA";
-import { CorpusClosureNotice } from "@/components/marketing/CorpusClosureNotice";
-import { menuHero, foodSections, drinksSections, smashPromo, menuFooter } from "@/content/menu";
-import { getQamareroReservationUrl } from "@/lib/integrations/qamarero";
+import { ScheduleNotice } from "@/components/marketing/ScheduleNotice";
+import { drinksSections, foodSections, menuArtwork, menuFooter, menuHero, smashPromo } from "@/content/menu";
+import { buildMetadata } from "@/lib/metadata";
+
+export const metadata = buildMetadata({
+  title: "Carta Kiosko Alfresko | SMASH LAB by Alfresko en Ogíjares",
+  description: "Carta de Kiosko Alfresko: SMASH LAB by Alfresko, burgers a 14 €, platos para compartir, patatas, carnes, bebidas con tapa y pedidos para recoger.",
+  path: "/carta",
+});
 
 export default function CartaPage() {
-  const smashSection = foodSections.find((section) => section.id === "smash-burgers")!;
-  const premiumSection = foodSections.find((section) => section.id === 
-"parrilla-premium")!;
-  const shareSection = foodSections.find((section) => section.id === "para-compartir")!;
-  const plansSection = foodSections.find((section) => section.id === "planes")!;
-  const grillSection = foodSections.find((section) => section.id === 
-"brasa")!;
-  const potatoesSection = foodSections.find((section) => section.id === "patatas")!;
-  const easySection = foodSections.find((section) => section.id === "sin-complicarse")!;
-  const eggsSection = foodSections.find((section) => section.id === "huevos")!;
-  const kidsSection = foodSections.find((section) => section.id === "peques")!;
-  const sodaSection = drinksSections.find((section) => section.id === "refrescos")!;
-  const beerSection = drinksSections.find((section) => section.id === "cervezas")!;
-  const packsSection = drinksSections.find((section) => section.id === "packs")!;
+  const sections = [...foodSections, ...drinksSections];
 
   return (
     <main className="bg-[linear-gradient(180deg,#090909_0%,#151515_24%,#100f0f_58%,#0b0b0b_100%)] text-white">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-20">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 md:py-16">
         <MenuHero {...menuHero} />
         <div className="mt-6">
-          <CorpusClosureNotice />
+          <ScheduleNotice />
         </div>
 
+        <nav className="mt-6 flex gap-2 overflow-x-auto pb-2" aria-label="Categorías de carta">
+          {sections.map((section) => (
+            <a
+              key={section.id}
+              href={`#${section.id}`}
+              className="shrink-0 rounded-full border border-white/12 bg-white/8 px-4 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-white transition hover:border-[#d94b2b] hover:bg-[#d94b2b]"
+            >
+              {section.title}
+            </a>
+          ))}
+        </nav>
+
         <section className="mt-8 space-y-5 md:mt-10">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex rounded-full border border-[#d94b2b]/40 bg-[#d94b2b]/12 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#fff8ef] shadow-[0_10px_24px_rgba(217,75,43,0.12)]">
-              Horario actual
-            </div>
-            <div className="inline-flex rounded-full border border-white/12 bg-white/6 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-[#fff8ef]">
-              Cenas, tapas y smash burgers
-            </div>
-          </div>
           <SmashPromoCTA
             promo={smashPromo}
-            size="lg"
-            theme="dark"
-            primaryAction={{ label: "Pedir ahora", href: getQamareroReservationUrl("menu"), analyticsEvent: "click_reserva_qamarero" }}
-            secondaryAction={{ label: "Cómo llegar", href: "/ubicacion-ogijares", analyticsEvent: "click_como_llegar" }}
+            primaryAction={{ label: "Pedir ahora", href: "#pide-alfresko", analyticsEvent: "click_pedir_ahora" }}
+            secondaryAction={{ label: "Reservar mesa", href: "/reservas-contacto", analyticsEvent: "click_reserva_contacto" }}
           />
 
-          <MenuSectionBlock
-            section={smashSection}
-            className="shadow-[0_30px_70px_rgba(217,75,43,0.18)]"
-          />
-
-          <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
-            <MenuSectionBlock section={premiumSection} />
-            <div className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,#1a1a1a_0%,#111111_100%)] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.2)]">
-              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#f2c6bb]">
-                Comida
-              </p>
-              <h2 className="mt-3 text-[2.2rem] font-black uppercase leading-[0.92] tracking-[-0.05em] text-[#fff8ef] md:text-[3rem]">
-                Para compartir, picar o sentarse con calma
-              </h2>
-              <p className="mt-4 text-sm leading-6 text-stone-300">
-                Smash burgers, tapas para compartir, cerveza fría y una terraza en Ogíjares pensada para quedarse un rato.
-              </p>
-            </div>
+          <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+            <MenuSectionBlock
+              section={foodSections.find((section) => section.id === "smash-lab")}
+              className="shadow-[0_30px_70px_rgba(217,75,43,0.18)]"
+            />
+            <MenuSectionBlock section={foodSections.find((section) => section.id === "lab-extras")} />
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-[1.18fr_0.82fr]">
-            <MenuSectionBlock section={shareSection} />
-            <MenuSectionBlock section={plansSection} />
+          <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+            <MenuSectionBlock section={foodSections.find((section) => section.id === "para-compartir")} />
+            <MenuSectionBlock section={foodSections.find((section) => section.id === "huevos")} />
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+            <MenuSectionBlock section={foodSections.find((section) => section.id === "patatas")} />
+            <MenuSectionBlock section={foodSections.find((section) => section.id === "carnes")} />
           </div>
         </section>
 
-        <section className="mt-10 grid gap-5 lg:grid-cols-[0.95fr_0.95fr_1.1fr]">
-          <div className="space-y-5">
-            <MenuSectionBlock section={grillSection} />
-            <MenuSectionBlock section={kidsSection} className="lg:max-w-[26rem]" />
+        <section className="mt-12">
+          <div className="mb-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#f2c6bb]">Bebidas</p>
+            <h2 className="mt-3 text-[3rem] font-black uppercase leading-[0.88] tracking-[-0.06em] text-[#fff8ef] md:text-[4.6rem]">
+              Bebidas
+            </h2>
           </div>
-          <MenuSectionBlock section={potatoesSection} />
-          <MenuSectionBlock section={easySection} />
+          <div className="grid gap-5 lg:grid-cols-[1.1fr_0.95fr_0.95fr]">
+            {drinksSections.map((section) => (
+              <MenuSectionBlock key={section.id} section={section} />
+            ))}
+          </div>
         </section>
 
-        <section className="mt-10 grid gap-5 lg:grid-cols-[1fr_1fr]">
-          <MenuSectionBlock section={eggsSection} />
-          <div className="hidden lg:block" aria-hidden="true" />
+        <section className="mt-12">
+          <DeliveryPanel />
         </section>
 
-        <section className="mt-14">
-          <div className="mb-5 flex items-end justify-between gap-4">
+        <section className="mt-12 rounded-[2rem] border border-white/10 bg-white/6 p-4 md:p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#f2c6bb]">
-                Bebidas
-              </p>
-              <h2 className="mt-3 text-[3rem] font-black uppercase leading-[0.88] tracking-[-0.06em] text-[#fff8ef] md:text-[4.6rem]">
-                Bebidas
-              </h2>
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#f2c6bb]">Carta visual</p>
+              <h2 className="mt-2 text-2xl font-black uppercase tracking-[-0.04em] text-[#fff8ef]">Carta de comida y bebida</h2>
             </div>
-            <p className="hidden text-sm font-semibold uppercase tracking-[0.18em] text-stone-400 md:block">
-              Cerveza fría, tapas y terraza
-            </p>
+            <a
+              href={menuArtwork.foodAndDrinks.src}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-black uppercase tracking-[0.14em] text-[#f2c6bb] underline underline-offset-4"
+            >
+              Abrir imagen original
+            </a>
           </div>
-
-          <div className="grid gap-5 lg:grid-cols-[1fr_1fr_0.9fr]">
-            <MenuSectionBlock section={sodaSection} />
-            <MenuSectionBlock section={beerSection} />
-            <MenuSectionBlock section={packsSection} className="lg:-translate-y-2" />
+          <div className="relative mt-5 overflow-hidden rounded-[1.4rem] border border-white/10 bg-black">
+            <Image
+              src={menuArtwork.foodAndDrinks.src}
+              alt={menuArtwork.foodAndDrinks.alt}
+              width={1024}
+              height={1536}
+              sizes="(min-width: 1024px) 58vw, 100vw"
+              className="h-auto w-full"
+            />
           </div>
         </section>
 

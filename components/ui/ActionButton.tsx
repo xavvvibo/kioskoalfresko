@@ -14,6 +14,7 @@ export function ActionButton({
   newTab = false,
   analyticsEvent,
   analyticsPayload,
+  ariaLabel,
 }: {
   href: string;
   children: React.ReactNode;
@@ -21,6 +22,7 @@ export function ActionButton({
   newTab?: boolean;
   analyticsEvent?: string;
   analyticsPayload?: Record<string, string | number | boolean | null | undefined>;
+  ariaLabel?: string;
 }) {
   const className =
     kind === "primary"
@@ -37,6 +39,7 @@ export function ActionButton({
         aria-disabled="true"
         title="Pendiente de configurar"
         className={`${sharedClassName} cursor-not-allowed opacity-60`}
+        aria-label={ariaLabel}
       >
         {children}
       </span>
@@ -60,13 +63,14 @@ export function ActionButton({
         href={href}
         className={sharedClassName}
         target={newTab ? "_blank" : undefined}
-        rel={newTab ? "noreferrer noopener" : undefined}
+        rel={newTab ? "noopener noreferrer" : undefined}
         onClick={handleClick}
+        aria-label={ariaLabel}
       >
         {children}
       </a>
     );
   }
 
-  return <Link href={href} className={sharedClassName} onClick={handleClick}>{children}</Link>;
+  return <Link href={href} className={sharedClassName} onClick={handleClick} aria-label={ariaLabel}>{children}</Link>;
 }

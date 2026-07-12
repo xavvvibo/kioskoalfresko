@@ -14,6 +14,8 @@ export function SmashPromoCTA({
   primaryAction?: { label: string; href: string; analyticsEvent?: string };
   secondaryAction?: { label: string; href: string; analyticsEvent?: string };
 }) {
+  const primaryHref = primaryAction?.href || getQamareroReservationUrl("menu");
+  const primaryExternal = primaryHref.startsWith("http");
   const backgroundImage = promo.image?.src
     ? [
         "radial-gradient(circle at 75% 45%, rgba(255,120,40,0.25), transparent 60%)",
@@ -66,8 +68,8 @@ export function SmashPromoCTA({
 
         <div className="mt-8 flex flex-wrap gap-3">
           <ActionButton
-            href={primaryAction?.href || getQamareroReservationUrl("menu")}
-            newTab
+            href={primaryHref}
+            newTab={primaryExternal}
             analyticsEvent={primaryAction?.analyticsEvent || "click_reserva_qamarero"}
             analyticsPayload={{ location: "smash_promo" }}
           >

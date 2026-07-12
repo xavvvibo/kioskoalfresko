@@ -17,17 +17,17 @@ export function OwnerDashboard() {
         <div className="mt-6 grid gap-4 lg:grid-cols-3">
           <section className="rounded-[1.8rem] border border-stone-950 bg-stone-950 p-6 text-white shadow-sm">
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#efb7a8]">Horario actual</p>
-            <h2 className="mt-3 text-2xl font-black uppercase leading-tight tracking-[-0.03em]">Lunes y martes descanso</h2>
-            <p className="mt-3 text-sm leading-6 text-stone-300">Miércoles, jueves y domingo de 20:00h a 24:00h.</p>
+            <h2 className="mt-3 text-2xl font-black uppercase leading-tight tracking-[-0.03em]">Lunes cerrado</h2>
+            <p className="mt-3 text-sm leading-6 text-stone-300">Martes, miércoles, jueves y domingo de 21:00h a 24:00h.</p>
           </section>
           <section className="rounded-[1.8rem] border border-stone-950 bg-[#d94b2b] p-6 text-white shadow-sm">
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/80">Viernes y sábado</p>
-            <h2 className="mt-3 text-2xl font-black uppercase leading-tight tracking-[-0.03em]">21:00h a 01:00h</h2>
-            <p className="mt-3 text-sm leading-6 text-white/85">Noches ALFRESKO con terraza, tapas y smash burgers.</p>
+            <h2 className="mt-3 text-2xl font-black uppercase leading-tight tracking-[-0.03em]">21:00h a 01:30h</h2>
+            <p className="mt-3 text-sm leading-6 text-white/85">SMASH LAB by Alfresko, terraza y pedidos.</p>
           </section>
           <section className="rounded-[1.8rem] border border-stone-950 bg-white p-6 shadow-sm">
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#d94b2b]">Domingo</p>
-            <h2 className="mt-3 text-2xl font-black uppercase leading-tight tracking-[-0.03em] text-stone-950">20:00h a 24:00h</h2>
+            <h2 className="mt-3 text-2xl font-black uppercase leading-tight tracking-[-0.03em] text-stone-950">21:00h a 24:00h</h2>
             <p className="mt-3 text-sm leading-6 text-stone-700">Horario publicado en contenido, home, horarios, reservas y SEO.</p>
           </section>
         </div>
@@ -64,9 +64,9 @@ export function OwnerDashboard() {
           <section className="rounded-3xl border border-stone-950 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-stone-950">Estados pendientes</h2>
             <div className="mt-4 space-y-3 text-sm text-stone-700">
-              <div className="rounded-2xl bg-stone-50 p-3">Qamarero pendiente de credenciales reales</div>
-              <div className="rounded-2xl bg-stone-50 p-3">Teléfono, email y Maps pendientes</div>
-              <div className="rounded-2xl bg-stone-50 p-3">Carta final pendiente</div>
+              <div className="rounded-2xl bg-stone-50 p-3">Qamarero activo para reservas</div>
+              <div className="rounded-2xl bg-stone-50 p-3">Glovo y Uber Eats pendientes de URL oficial</div>
+              <div className="rounded-2xl bg-stone-50 p-3">Carta SMASH LAB publicada</div>
             </div>
           </section>
         </div>

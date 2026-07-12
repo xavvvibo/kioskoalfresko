@@ -21,7 +21,7 @@ export default function UbicacionPage() {
             <p className="mt-3 text-sm leading-6 text-stone-600">{siteConfig.location.city}, {siteConfig.location.province}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Parque San Sebastián · Ogíjares</span>
-              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Smash 180G + patatas</span>
+              <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">SMASH LAB + patatas</span>
               <span className="rounded-full border border-stone-950/10 bg-[#f8f1e7] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-stone-950">Cada bebida con tapa</span>
             </div>
             <p className="mt-3 text-sm leading-6 text-stone-500">Abre la ruta y ven directo al Parque San Sebastián de Ogíjares.</p>

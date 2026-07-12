@@ -1,9 +1,9 @@
 export function QuickDecision() {
   const items = [
-    ["El plan", "Noches de terraza y sobremesa larga."],
+    ["El plan", "SMASH LAB, terraza y sobremesa larga."],
     ["Dónde estamos", "Parque San Sebastián. Ogíjares."],
-    ["Qué hay", "Tapas, cerveza fría y smash burgers."],
-    ["Lo básico", "Reserva, carta e Instagram."],
+    ["Qué hay", "Burgers, carta para compartir y bebidas."],
+    ["Lo básico", "Carta, pedidos, reservas e Instagram."],
   ];
 
   return (
