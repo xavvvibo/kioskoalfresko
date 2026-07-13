@@ -15,6 +15,10 @@ import { getStaffDocumentById } from "@/lib/admin-kiosko/repositories/staff-reco
 import { createSignedDocumentUrl } from "@/lib/admin-kiosko/staff/documents.service";
 import { registerHandwrittenSignature } from "@/lib/admin-kiosko/staff/signature.service";
 import { createEmployeeLeaveRequest } from "@/lib/admin-kiosko/staff/leave-request.service";
+import { requestAvailabilityException, saveRecurringAvailability, saveWorkPreferences } from "@/lib/admin-kiosko/staff/availability.service";
+import { submitShiftChangeRequest } from "@/lib/admin-kiosko/staff/shift-change.service";
+import { respondToShiftOffer } from "@/lib/admin-kiosko/staff/coverage.service";
+import { markEveryStaffNotificationRead, markStaffNotificationRead } from "@/lib/admin-kiosko/staff/notification.service";
 
 async function requireLinkedEmployee() {
   const session = await requireAdminSession("/staff");
@@ -111,6 +115,96 @@ export async function staffCreateLeaveRequestAction(formData: FormData) {
     submit: formData.get("submit") === "on",
   });
   revalidatePath("/staff/ausencias");
+}
+
+function formDateTimeToIso(value: FormDataEntryValue | null) {
+  const raw = String(value || "");
+  return raw ? new Date(raw).toISOString() : "";
+}
+
+export async function staffAvailabilityAction(formData: FormData) {
+  const { session, employee } = await requireLinkedEmployee();
+  const intent = String(formData.get("intent") || "");
+  if (intent === "recurring_availability") {
+    await saveRecurringAvailability({
+      actorUserId: session.id,
+      employeeId: employee.id,
+      weekday: Number(formData.get("weekday") || 0),
+      availabilityType: String(formData.get("availabilityType") || "available") as "available",
+      startsAt: String(formData.get("startsAt") || "") || null,
+      endsAt: String(formData.get("endsAt") || "") || null,
+      fullDay: formData.get("fullDay") === "on",
+      notes: String(formData.get("notes") || "") || null,
+      validFrom: String(formData.get("validFrom") || new Date().toISOString().slice(0, 10)),
+      validUntil: String(formData.get("validUntil") || "") || null,
+    });
+  }
+  if (intent === "availability_exception") {
+    await requestAvailabilityException({
+      actorUserId: session.id,
+      employeeId: employee.id,
+      startsAt: formDateTimeToIso(formData.get("startsAt")),
+      endsAt: formDateTimeToIso(formData.get("endsAt")),
+      availabilityType: String(formData.get("availabilityType") || "unavailable") as "unavailable",
+      reason: String(formData.get("reason") || "") || null,
+      notes: String(formData.get("notes") || "") || null,
+    });
+  }
+  if (intent === "work_preferences") {
+    await saveWorkPreferences({
+      actorUserId: session.id,
+      employeeId: employee.id,
+      preferredShiftParts: String(formData.get("preferredShiftParts") || "").split(",").map((item) => item.trim()).filter(Boolean),
+      preferredFreeWeekdays: String(formData.get("preferredFreeWeekdays") || "").split(",").map((item) => Number(item.trim())).filter((item) => Number.isInteger(item) && item >= 0 && item <= 6),
+      preferredRoles: String(formData.get("preferredRoles") || "").split(",").map((item) => item.trim()).filter(Boolean),
+      avoidSplitShifts: formData.get("avoidSplitShifts") === "on",
+      acceptsAdditionalHours: formData.get("acceptsAdditionalHours") === "on",
+      acceptsUrgentCoverage: formData.get("acceptsUrgentCoverage") === "on",
+      notes: String(formData.get("notes") || "") || null,
+    });
+  }
+  revalidatePath("/staff/disponibilidad");
+}
+
+export async function staffShiftChangeAction(formData: FormData) {
+  const { session, employee } = await requireLinkedEmployee();
+  await submitShiftChangeRequest({
+    actorUserId: session.id,
+    employeeId: employee.id,
+    originalShiftId: String(formData.get("originalShiftId") || ""),
+    requestType: String(formData.get("requestType") || "release") as "release",
+    reason: String(formData.get("reason") || ""),
+    proposedEmployeeId: String(formData.get("proposedEmployeeId") || "") || null,
+    deadlineAt: formDateTimeToIso(formData.get("deadlineAt")) || null,
+  });
+  revalidatePath("/staff/cambios");
+}
+
+export async function staffOfferResponseAction(formData: FormData) {
+  const { session, employee } = await requireLinkedEmployee();
+  await respondToShiftOffer({
+    actorUserId: session.id,
+    employeeId: employee.id,
+    offerId: String(formData.get("offerId") || ""),
+    response: String(formData.get("response") || "declined") as "declined",
+    comment: String(formData.get("comment") || "") || null,
+  });
+  revalidatePath("/staff/ofertas");
+}
+
+export async function staffNotificationAction(formData: FormData) {
+  const { session, employee } = await requireLinkedEmployee();
+  const intent = String(formData.get("intent") || "");
+  if (intent === "read_all") {
+    await markEveryStaffNotificationRead({ actorUserId: session.id, employeeId: employee.id });
+  } else {
+    await markStaffNotificationRead({
+      actorUserId: session.id,
+      employeeId: employee.id,
+      notificationId: String(formData.get("notificationId") || ""),
+    });
+  }
+  revalidatePath("/staff/notificaciones");
 }
 
 export async function sharedKioskLoginAction(formData: FormData) {

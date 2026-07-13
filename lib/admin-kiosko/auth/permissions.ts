@@ -47,7 +47,25 @@ export type AdminPermission =
   | "staff:period:lock"
   | "staff:payroll-variable:read"
   | "staff:payroll-variable:write"
-  | "staff:payroll-variable:export";
+  | "staff:payroll-variable:export"
+  | "staff:availability:read"
+  | "staff:availability:write"
+  | "staff:availability:approve"
+  | "staff:shift-change:read"
+  | "staff:shift-change:write"
+  | "staff:shift-change:approve"
+  | "staff:shift-change:execute"
+  | "staff:coverage:read"
+  | "staff:coverage:write"
+  | "staff:coverage:assign"
+  | "staff:shift-offer:read"
+  | "staff:shift-offer:write"
+  | "staff:shift-offer:respond"
+  | "staff:notification:read"
+  | "staff:notification:write"
+  | "staff:schedule-publication:read"
+  | "staff:schedule-publication:write"
+  | "staff:schedule-publication:publish";
 
 export const ownerPermissions: AdminPermission[] = [
   "admin:all",
@@ -86,6 +104,24 @@ export const ownerPermissions: AdminPermission[] = [
   "staff:payroll-variable:read",
   "staff:payroll-variable:write",
   "staff:payroll-variable:export",
+  "staff:availability:read",
+  "staff:availability:write",
+  "staff:availability:approve",
+  "staff:shift-change:read",
+  "staff:shift-change:write",
+  "staff:shift-change:approve",
+  "staff:shift-change:execute",
+  "staff:coverage:read",
+  "staff:coverage:write",
+  "staff:coverage:assign",
+  "staff:shift-offer:read",
+  "staff:shift-offer:write",
+  "staff:shift-offer:respond",
+  "staff:notification:read",
+  "staff:notification:write",
+  "staff:schedule-publication:read",
+  "staff:schedule-publication:write",
+  "staff:schedule-publication:publish",
 ];
 
 export const employeePermissions: AdminPermission[] = [

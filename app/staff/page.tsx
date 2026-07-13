@@ -58,6 +58,10 @@ export default async function StaffPage() {
             <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/documentos">Documentos</Link>
             <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/formacion">Formación</Link>
             <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/ausencias">Ausencias</Link>
+            <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/disponibilidad">Disponibilidad</Link>
+            <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/cambios">Cambios</Link>
+            <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/ofertas">Ofertas</Link>
+            <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/notificaciones">Notificaciones</Link>
             <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/firmas">Firmas</Link>
             <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/historial">Historial</Link>
           </nav>
