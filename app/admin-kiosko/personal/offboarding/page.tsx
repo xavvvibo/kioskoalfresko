@@ -1,0 +1,27 @@
+import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
+import { listStaffEmployees } from "@/lib/admin-kiosko/repositories/staff.repository";
+import { listProcessTasks, listStaffProcesses } from "@/lib/admin-kiosko/repositories/staff-process.repository";
+import { ProcessTaskList } from "@/components/staff/ProcessTaskList";
+import { AdminHeader } from "../../_components/AdminHeader";
+
+export default async function OffboardingAdminPage() {
+  await requireAdminPermission("staff:offboarding:read");
+  const [employees, processes, tasks] = await Promise.all([listStaffEmployees(), listStaffProcesses("offboarding"), listProcessTasks()]);
+  const employeeById = new Map((employees.ok ? employees.data : []).map((item) => [item.id, item.display_name]));
+  return (
+    <main className="min-h-screen bg-[#0d0d0d] text-white">
+      <AdminHeader title="Offboarding" description="Procesos de salida, revocación de accesos, devolución de material y cierre controlado." />
+      <section className="mx-auto grid max-w-6xl gap-5 px-4 py-8 sm:px-6">
+        <div className="grid gap-3 md:grid-cols-2">
+          {(processes.ok ? processes.data : []).map((process) => (
+            <article key={process.id} className="rounded-2xl border border-white/10 bg-[#151515] p-4">
+              <p className="font-black text-white">{employeeById.get(process.employee_id) || process.employee_id} · {process.status}</p>
+              <p className="mt-1 text-sm text-stone-300">{process.exit_reason || "salida"} · {process.completion_percent}% · fecha {process.planned_date || "--"}</p>
+            </article>
+          ))}
+        </div>
+        <ProcessTaskList tasks={tasks.ok ? tasks.data : []} />
+      </section>
+    </main>
+  );
+}

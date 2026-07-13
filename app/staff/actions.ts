@@ -19,6 +19,10 @@ import { requestAvailabilityException, saveRecurringAvailability, saveWorkPrefer
 import { submitShiftChangeRequest } from "@/lib/admin-kiosko/staff/shift-change.service";
 import { respondToShiftOffer } from "@/lib/admin-kiosko/staff/coverage.service";
 import { markEveryStaffNotificationRead, markStaffNotificationRead } from "@/lib/admin-kiosko/staff/notification.service";
+import { listProcessTasks } from "@/lib/admin-kiosko/repositories/staff-process.repository";
+import { completeProcessTask } from "@/lib/admin-kiosko/staff/process.service";
+import { listPolicyAssignments } from "@/lib/admin-kiosko/repositories/staff-compliance.repository";
+import { acknowledgePolicy } from "@/lib/admin-kiosko/staff/internal-policy.service";
 
 async function requireLinkedEmployee() {
   const session = await requireAdminSession("/staff");
@@ -205,6 +209,39 @@ export async function staffNotificationAction(formData: FormData) {
     });
   }
   revalidatePath("/staff/notificaciones");
+}
+
+export async function staffCompleteProcessTaskAction(formData: FormData) {
+  const { session, employee } = await requireLinkedEmployee();
+  const taskId = String(formData.get("taskId") || "");
+  const tasks = await listProcessTasks(undefined, employee.id);
+  if (!tasks.ok) return;
+  const task = tasks.data.find((item) => item.id === taskId && item.visible_to_employee);
+  if (!task) return;
+  await completeProcessTask({
+    actorUserId: session.id,
+    task,
+    evidence: { valid: true, text: String(formData.get("result") || "") },
+    result: String(formData.get("result") || "") || null,
+    approved: false,
+  });
+  revalidatePath("/staff/incorporacion");
+  revalidatePath("/staff/salida");
+}
+
+export async function staffAcknowledgePolicyAction(formData: FormData) {
+  const { session, employee } = await requireLinkedEmployee();
+  const assignmentId = String(formData.get("assignmentId") || "");
+  const assignments = await listPolicyAssignments(employee.id);
+  if (!assignments.ok) return;
+  const assignment = assignments.data.find((item) => item.id === assignmentId);
+  if (!assignment) return;
+  await acknowledgePolicy({
+    actorUserId: session.id,
+    assignment,
+    confirmedText: "Confirmo lectura y aceptación interna de la política mostrada.",
+  });
+  revalidatePath("/staff/politicas");
 }
 
 export async function sharedKioskLoginAction(formData: FormData) {

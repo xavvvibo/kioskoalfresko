@@ -65,7 +65,28 @@ export type AdminPermission =
   | "staff:notification:write"
   | "staff:schedule-publication:read"
   | "staff:schedule-publication:write"
-  | "staff:schedule-publication:publish";
+  | "staff:schedule-publication:publish"
+  | "staff:onboarding:read"
+  | "staff:onboarding:write"
+  | "staff:onboarding:manage"
+  | "staff:offboarding:read"
+  | "staff:offboarding:write"
+  | "staff:offboarding:manage"
+  | "staff:policy:publish"
+  | "staff:training:read"
+  | "staff:training:write"
+  | "staff:training:validate"
+  | "staff:prl:read"
+  | "staff:prl:write"
+  | "staff:prl:sensitive"
+  | "staff:equipment:read"
+  | "staff:equipment:write"
+  | "staff:access:read"
+  | "staff:access:write"
+  | "staff:checklist:read"
+  | "staff:checklist:write"
+  | "staff:checklist:supervise"
+  | "staff:compliance:read";
 
 export const ownerPermissions: AdminPermission[] = [
   "admin:all",
@@ -122,6 +143,27 @@ export const ownerPermissions: AdminPermission[] = [
   "staff:schedule-publication:read",
   "staff:schedule-publication:write",
   "staff:schedule-publication:publish",
+  "staff:onboarding:read",
+  "staff:onboarding:write",
+  "staff:onboarding:manage",
+  "staff:offboarding:read",
+  "staff:offboarding:write",
+  "staff:offboarding:manage",
+  "staff:policy:publish",
+  "staff:training:read",
+  "staff:training:write",
+  "staff:training:validate",
+  "staff:prl:read",
+  "staff:prl:write",
+  "staff:prl:sensitive",
+  "staff:equipment:read",
+  "staff:equipment:write",
+  "staff:access:read",
+  "staff:access:write",
+  "staff:checklist:read",
+  "staff:checklist:write",
+  "staff:checklist:supervise",
+  "staff:compliance:read",
 ];
 
 export const employeePermissions: AdminPermission[] = [
