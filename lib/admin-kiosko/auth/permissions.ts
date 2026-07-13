@@ -36,7 +36,18 @@ export type AdminPermission =
   | "staff:disciplinary:read"
   | "staff:disciplinary:write"
   | "staff:audit:read"
-  | "staff:signatures:manage";
+  | "staff:signatures:manage"
+  | "staff:absence:read"
+  | "staff:absence:write"
+  | "staff:absence:approve"
+  | "staff:balance:read"
+  | "staff:balance:adjust"
+  | "staff:policy:read"
+  | "staff:policy:write"
+  | "staff:period:lock"
+  | "staff:payroll-variable:read"
+  | "staff:payroll-variable:write"
+  | "staff:payroll-variable:export";
 
 export const ownerPermissions: AdminPermission[] = [
   "admin:all",
@@ -64,6 +75,17 @@ export const ownerPermissions: AdminPermission[] = [
   "staff:disciplinary:write",
   "staff:audit:read",
   "staff:signatures:manage",
+  "staff:absence:read",
+  "staff:absence:write",
+  "staff:absence:approve",
+  "staff:balance:read",
+  "staff:balance:adjust",
+  "staff:policy:read",
+  "staff:policy:write",
+  "staff:period:lock",
+  "staff:payroll-variable:read",
+  "staff:payroll-variable:write",
+  "staff:payroll-variable:export",
 ];
 
 export const employeePermissions: AdminPermission[] = [

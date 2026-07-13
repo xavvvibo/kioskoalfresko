@@ -14,6 +14,7 @@ import { verifyStaffPin } from "@/lib/admin-kiosko/staff/pin";
 import { getStaffDocumentById } from "@/lib/admin-kiosko/repositories/staff-records.repository";
 import { createSignedDocumentUrl } from "@/lib/admin-kiosko/staff/documents.service";
 import { registerHandwrittenSignature } from "@/lib/admin-kiosko/staff/signature.service";
+import { createEmployeeLeaveRequest } from "@/lib/admin-kiosko/staff/leave-request.service";
 
 async function requireLinkedEmployee() {
   const session = await requireAdminSession("/staff");
@@ -93,6 +94,23 @@ export async function staffSignDocumentAction(formData: FormData) {
   });
   revalidatePath("/staff/firmas");
   revalidatePath("/staff/documentos");
+}
+
+export async function staffCreateLeaveRequestAction(formData: FormData) {
+  const { session, employee } = await requireLinkedEmployee();
+  await createEmployeeLeaveRequest({
+    actorUserId: session.id,
+    employeeId: employee.id,
+    policyId: String(formData.get("policyId") || ""),
+    startsAt: String(formData.get("startsAt") || ""),
+    endsAt: String(formData.get("endsAt") || ""),
+    partialMode: String(formData.get("partialMode") || "full_day") as "full_day",
+    hours: Number(formData.get("hours") || 0) || null,
+    reason: String(formData.get("reason") || "") || null,
+    employeeNotes: String(formData.get("employeeNotes") || "") || null,
+    submit: formData.get("submit") === "on",
+  });
+  revalidatePath("/staff/ausencias");
 }
 
 export async function sharedKioskLoginAction(formData: FormData) {
