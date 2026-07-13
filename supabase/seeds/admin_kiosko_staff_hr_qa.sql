@@ -65,7 +65,7 @@ declare
   shift_change uuid := '10000000-0000-4000-8000-000000000901';
   vacancy_id uuid := '10000000-0000-4000-8000-000000000902';
   coverage_id uuid := '10000000-0000-4000-8000-000000000903';
-  offer_id uuid := '10000000-0000-4000-8000-000000000904';
+  v_offer_id uuid := '10000000-0000-4000-8000-000000000904';
   publication_id uuid := '10000000-0000-4000-8000-000000000905';
   onboarding_template uuid := '10000000-0000-4000-8000-000000001001';
   offboarding_template uuid := '10000000-0000-4000-8000-000000001002';
@@ -302,12 +302,12 @@ begin
   on conflict (id) do update set status = excluded.status, urgency = excluded.urgency;
 
   insert into public.admin_kiosko_staff_shift_offers (id, organization_id, shift_id, coverage_request_id, location_id, title, role_name, starts_at, ends_at, notes, deadline_at, status, priority, created_by, offer_version, idempotency_key)
-  values (offer_id, org_id, shift_open, coverage_id, loc_kiosko, 'QA oferta de turno', 'Servicio', ((current_date + 2)::timestamp + time '20:30') at time zone 'Europe/Madrid', ((current_date + 3)::timestamp + time '00:30') at time zone 'Europe/Madrid', 'Oferta interna QA', now() + interval '1 day', 'published', 'high', user_manager, 1, 'qa:shift-offer:open')
+  values (v_offer_id, org_id, shift_open, coverage_id, loc_kiosko, 'QA oferta de turno', 'Servicio', ((current_date + 2)::timestamp + time '20:30') at time zone 'Europe/Madrid', ((current_date + 3)::timestamp + time '00:30') at time zone 'Europe/Madrid', 'Oferta interna QA', now() + interval '1 day', 'published', 'high', user_manager, 1, 'qa:shift-offer:open')
   on conflict (idempotency_key) do update
   set status = excluded.status, deadline_at = excluded.deadline_at;
 
   insert into public.admin_kiosko_staff_shift_offer_recipients (id, offer_id, organization_id, employee_id, response, offer_version, shift_snapshot)
-  values ('10000000-0000-4000-8000-000000000906', offer_id, org_id, emp_multi, 'pending', 1, '{"qa":true}'::jsonb)
+  values ('10000000-0000-4000-8000-000000000906', v_offer_id, org_id, emp_multi, 'pending', 1, '{"qa":true}'::jsonb)
   on conflict (offer_id, employee_id) do update set response = excluded.response;
 
   insert into public.admin_kiosko_staff_notifications (id, organization_id, recipient_employee_id, notification_type, title, message, entity_type, entity_id, priority, read, archived, metadata, created_by, idempotency_key)
