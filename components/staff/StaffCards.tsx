@@ -6,7 +6,7 @@ import type {
   StaffTimeIncident,
   StaffWorkEntry,
 } from "@/lib/admin-kiosko/repositories/staff.repository";
-import { calculatePlannedMinutes, calculateWeeklyVariance, shiftDurationMinutes } from "@/lib/admin-kiosko/staff/time";
+import { calculatePlannedMinutes, calculateWeeklyVariance, isOpenClockEntry, shiftDurationMinutes } from "@/lib/admin-kiosko/staff/time";
 
 function formatDateTime(value: string | null) {
   if (!value) return "Pendiente";
@@ -87,7 +87,7 @@ export function AttendanceStatusBoard({
   employees: StaffEmployee[];
   entries: StaffWorkEntry[];
 }) {
-  const openByEmployee = new Set(entries.filter((entry) => entry.status === "open").map((entry) => entry.employee_id));
+  const openByEmployee = new Set(entries.filter(isOpenClockEntry).map((entry) => entry.employee_id));
   const completedToday = new Set(entries.filter((entry) => entry.clock_out_at).map((entry) => entry.employee_id));
 
   return (

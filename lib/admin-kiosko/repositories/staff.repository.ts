@@ -469,7 +469,7 @@ export async function patchStaffShift(id: string, payload: Partial<StaffShift>) 
 export async function getOpenWorkEntry(employeeId: string): Promise<DbResult<StaffWorkEntry | null>> {
   const result = await staffRequest<StaffWorkEntry[]>("admin_kiosko_staff_work_entries", {
     method: "GET",
-    query: `?select=*&employee_id=eq.${encodeURIComponent(employeeId)}&status=eq.open&clock_out_at=is.null&limit=1`,
+    query: `?select=*&employee_id=eq.${encodeURIComponent(employeeId)}&clock_out_at=is.null&order=clock_in_at.desc&limit=1`,
   });
   if (!result.ok) return result;
   return { ok: true, data: result.data[0] || null };

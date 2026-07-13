@@ -1,4 +1,5 @@
 import type { StaffEmployee, StaffWorkEntry, StaffBreakEntry } from "@/lib/admin-kiosko/repositories/staff.repository";
+import { isOpenClockEntry } from "@/lib/admin-kiosko/staff/time";
 import { ClockActionButton } from "./ClockActionButton";
 
 export function SharedKioskLogin({
@@ -32,6 +33,7 @@ export function SharedKioskClockPanel({
   openBreak: StaffBreakEntry | null;
   action: (formData: FormData) => Promise<void>;
 }) {
+  const hasOpenEntry = isOpenClockEntry(openEntry);
   return (
     <section className="mx-auto grid max-w-xl gap-4 rounded-[1.8rem] border border-white/10 bg-[#151515] p-5">
       <div>
@@ -41,10 +43,10 @@ export function SharedKioskClockPanel({
       <form action={action} className="grid gap-3">
         <input type="hidden" name="employeeId" value={employee.id} />
         <input name="pin" type="password" inputMode="numeric" autoComplete="one-time-code" placeholder="Confirma PIN para esta operación" required className="rounded-2xl border border-white/10 bg-white px-4 py-4 text-lg text-stone-950" />
-        <ClockActionButton name="intent" value="clock_in" disabled={Boolean(openEntry)}>Fichar entrada</ClockActionButton>
-        <ClockActionButton name="intent" value="start_break" variant="secondary" disabled={!openEntry || Boolean(openBreak)}>Iniciar pausa</ClockActionButton>
+        <ClockActionButton name="intent" value="clock_in" disabled={hasOpenEntry}>Fichar entrada</ClockActionButton>
+        <ClockActionButton name="intent" value="start_break" variant="secondary" disabled={!hasOpenEntry || Boolean(openBreak)}>Iniciar pausa</ClockActionButton>
         <ClockActionButton name="intent" value="end_break" variant="secondary" disabled={!openBreak}>Finalizar pausa</ClockActionButton>
-        <ClockActionButton name="intent" value="clock_out" variant="danger" disabled={!openEntry || Boolean(openBreak)}>Fichar salida</ClockActionButton>
+        <ClockActionButton name="intent" value="clock_out" variant="danger" disabled={!hasOpenEntry || Boolean(openBreak)}>Fichar salida</ClockActionButton>
       </form>
       <p className="text-center text-sm text-stone-300">La sesión se cierra automáticamente tras cada operación.</p>
     </section>

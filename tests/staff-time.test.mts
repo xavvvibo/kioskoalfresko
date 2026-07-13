@@ -9,6 +9,7 @@ import {
   detectShiftConflicts,
   filterByLocation,
   hasOpenBreak,
+  isOpenClockEntry,
   shiftDurationMinutes,
   toCsv,
   visiblePublishedShifts,
@@ -20,6 +21,27 @@ test("permite fichaje de entrada cuando no hay registro abierto", () => {
 
 test("bloquea doble fichaje de entrada", () => {
   assert.equal(canClockIn({ hasOpenEntry: true, hasOpenBreak: false }), false);
+});
+
+test("considera abierto cualquier fichaje iniciado sin salida aunque esté pending_review", () => {
+  const entry = {
+    clock_in_at: "2026-07-13T20:00:00.000Z",
+    clock_out_at: null,
+    status: "pending_review",
+  };
+  assert.equal(isOpenClockEntry(entry), true);
+  assert.equal(canClockIn({ hasOpenEntry: isOpenClockEntry(entry), hasOpenBreak: false }), false);
+  assert.equal(canStartBreak({ hasOpenEntry: isOpenClockEntry(entry), hasOpenBreak: false }), true);
+  assert.equal(canClockOut({ hasOpenEntry: isOpenClockEntry(entry), hasOpenBreak: false }), true);
+});
+
+test("no considera abierto un fichaje pending_review con salida registrada", () => {
+  const entry = {
+    clock_in_at: "2026-07-13T20:00:00.000Z",
+    clock_out_at: "2026-07-13T23:00:00.000Z",
+    status: "pending_review",
+  };
+  assert.equal(isOpenClockEntry(entry), false);
 });
 
 test("permite salida si hay registro abierto y sin pausa abierta", () => {

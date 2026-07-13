@@ -14,6 +14,13 @@ export type StaffWorkPeriod = {
   breaks?: StaffBreakPeriod[];
 };
 
+export type StaffClockEntryLike = {
+  clock_in_at?: string | Date | null;
+  clock_out_at?: string | Date | null;
+  clockInAt?: string | Date | null;
+  clockOutAt?: string | Date | null;
+};
+
 export type StaffShiftPeriod = {
   id?: string;
   employeeId?: string;
@@ -54,6 +61,13 @@ export function calculateWorkedSeconds(period: StaffWorkPeriod) {
 
 export function hasOpenBreak(breaks: StaffBreakPeriod[] = []) {
   return breaks.some((item) => !item.endedAt);
+}
+
+export function isOpenClockEntry(entry: StaffClockEntryLike | null | undefined) {
+  if (!entry) return false;
+  const startedAt = entry.clockInAt ?? entry.clock_in_at;
+  const endedAt = entry.clockOutAt ?? entry.clock_out_at;
+  return startedAt != null && endedAt == null;
 }
 
 export function canClockIn(state: ClockState) {
