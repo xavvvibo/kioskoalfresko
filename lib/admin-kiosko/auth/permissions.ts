@@ -27,7 +27,16 @@ export type AdminPermission =
   | "staff:shifts:publish"
   | "staff:time:review"
   | "staff:reports:export"
-  | "staff:contracts:manage";
+  | "staff:contracts:manage"
+  | "staff:read"
+  | "staff:write"
+  | "staff:sensitive:read"
+  | "staff:documents:read"
+  | "staff:documents:write"
+  | "staff:disciplinary:read"
+  | "staff:disciplinary:write"
+  | "staff:audit:read"
+  | "staff:signatures:manage";
 
 export const ownerPermissions: AdminPermission[] = [
   "admin:all",
@@ -46,6 +55,15 @@ export const ownerPermissions: AdminPermission[] = [
   "staff:time:review",
   "staff:reports:export",
   "staff:contracts:manage",
+  "staff:read",
+  "staff:write",
+  "staff:sensitive:read",
+  "staff:documents:read",
+  "staff:documents:write",
+  "staff:disciplinary:read",
+  "staff:disciplinary:write",
+  "staff:audit:read",
+  "staff:signatures:manage",
 ];
 
 export const employeePermissions: AdminPermission[] = [

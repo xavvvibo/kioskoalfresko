@@ -4,6 +4,7 @@ type DbResult<T = undefined> = { ok: true; data: T } | { ok: false; error: strin
 
 export type StaffLocation = {
   id: string;
+  organization_id?: string | null;
   name: string;
   slug: string;
   timezone: string;
@@ -17,6 +18,7 @@ export type StaffLocation = {
 export type StaffEmployeeStatus = "draft" | "active" | "inactive" | "terminated";
 export type StaffEmployee = {
   id: string;
+  organization_id?: string | null;
   auth_user_id: string | null;
   employee_code: string;
   first_name: string;
@@ -36,6 +38,7 @@ export type StaffEmployee = {
 
 export type StaffContract = {
   id: string;
+  organization_id?: string | null;
   employee_id: string;
   contract_type: string;
   start_date: string;
@@ -66,6 +69,7 @@ export type StaffShiftTemplate = {
 
 export type StaffShift = {
   id: string;
+  organization_id?: string | null;
   location_id: string;
   template_id: string | null;
   shift_date: string;
@@ -92,6 +96,7 @@ export type StaffShiftAssignment = {
 
 export type StaffWorkEntry = {
   id: string;
+  organization_id?: string | null;
   employee_id: string;
   shift_id: string | null;
   location_id: string | null;

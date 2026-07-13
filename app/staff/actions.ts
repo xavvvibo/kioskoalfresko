@@ -11,6 +11,9 @@ import {
 } from "@/lib/admin-kiosko/repositories/staff.repository";
 import { clockIn, clockOut, createTimeIncident, endBreak, startBreak } from "@/lib/admin-kiosko/staff/service";
 import { verifyStaffPin } from "@/lib/admin-kiosko/staff/pin";
+import { getStaffDocumentById } from "@/lib/admin-kiosko/repositories/staff-records.repository";
+import { createSignedDocumentUrl } from "@/lib/admin-kiosko/staff/documents.service";
+import { registerHandwrittenSignature } from "@/lib/admin-kiosko/staff/signature.service";
 
 async function requireLinkedEmployee() {
   const session = await requireAdminSession("/staff");
@@ -57,6 +60,39 @@ export async function staffIncidentAction(formData: FormData) {
     description,
   });
   revalidatePath("/staff/incidencias");
+}
+
+export async function staffDownloadDocumentAction(formData: FormData) {
+  const { session, employee } = await requireLinkedEmployee();
+  const documentId = String(formData.get("documentId") || "");
+  const document = await getStaffDocumentById(documentId);
+  if (!document.ok || !document.data || document.data.employee_id !== employee.id || !document.data.visible_to_employee) return;
+  const signed = await createSignedDocumentUrl({ actorUserId: session.id, document: document.data, expiresIn: 120 });
+  if (signed.ok) redirect(signed.data);
+}
+
+export async function staffSignDocumentAction(formData: FormData) {
+  const { session, employee } = await requireLinkedEmployee();
+  const documentId = String(formData.get("documentId") || "");
+  const document = await getStaffDocumentById(documentId);
+  if (!document.ok || !document.data || document.data.employee_id !== employee.id || !document.data.visible_to_employee) return;
+  const signatureImageDataUrl = String(formData.get("signatureImageDataUrl") || "");
+  const consent = formData.get("signatureConsent") === "on";
+  if (!signatureImageDataUrl || !consent) return;
+  await registerHandwrittenSignature({
+    actorUserId: session.id,
+    employeeId: employee.id,
+    signerName: employee.display_name,
+    signedEntityType: "document",
+    signedEntityId: document.data.id,
+    documentId: document.data.id,
+    documentVersion: document.data.version,
+    signatureImageDataUrl,
+    consentText: "Confirmo que la firma manuscrita representa mi conformidad con el contenido mostrado.",
+    displayedText: `${document.data.visible_name} · versión ${document.data.version}`,
+  });
+  revalidatePath("/staff/firmas");
+  revalidatePath("/staff/documentos");
 }
 
 export async function sharedKioskLoginAction(formData: FormData) {

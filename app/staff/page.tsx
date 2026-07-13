@@ -54,6 +54,12 @@ export default async function StaffPage() {
             <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/turnos">Mis turnos</Link>
             <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/fichajes">Mis fichajes</Link>
             <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/incidencias">Incidencia</Link>
+            <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/perfil">Perfil</Link>
+            <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/documentos">Documentos</Link>
+            <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/formacion">Formación</Link>
+            <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/ausencias">Ausencias</Link>
+            <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/firmas">Firmas</Link>
+            <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/historial">Historial</Link>
           </nav>
         </header>
         <TodayShiftCard shift={todayShift} />
