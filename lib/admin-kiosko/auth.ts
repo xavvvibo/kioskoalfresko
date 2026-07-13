@@ -132,7 +132,7 @@ export async function createAdminSession() {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
-    path: "/admin-kiosko",
+    path: "/",
     maxAge: ADMIN_COOKIE_MAX_AGE,
   });
 }
@@ -143,7 +143,7 @@ export async function createAdminUserSession(user: AdminUser) {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
-    path: "/admin-kiosko",
+    path: "/",
     maxAge: ADMIN_COOKIE_MAX_AGE,
   });
   await updateAdminUserLastLogin(user.id);
@@ -151,6 +151,13 @@ export async function createAdminUserSession(user: AdminUser) {
 
 export async function clearAdminSession() {
   const cookieStore = await cookies();
+  cookieStore.set(ADMIN_COOKIE_NAME, "", {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
   cookieStore.set(ADMIN_COOKIE_NAME, "", {
     httpOnly: true,
     sameSite: "strict",

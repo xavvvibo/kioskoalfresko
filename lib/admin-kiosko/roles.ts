@@ -2,7 +2,7 @@ import { getCurrentAdminSession, requireAdminSession } from "./auth";
 import { requireAdminRole } from "./auth/permissions";
 
 export type AdminRole = "owner" | "employee" | "inspector";
-export type AdminSection = "operativa" | "compras" | "produccion" | "inspeccion" | "configuracion" | "owner";
+export type AdminSection = "operativa" | "compras" | "produccion" | "inspeccion" | "configuracion" | "owner" | "personal";
 
 export async function getAdminRole(): Promise<AdminRole> {
   const session = await requireAdminSession();

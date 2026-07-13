@@ -58,6 +58,19 @@ const navGroups = [
     ],
   },
   {
+    label: "Personal",
+    section: "personal",
+    ownerOnly: true,
+    links: [
+      ["Resumen RRHH", "/admin-kiosko/personal"],
+      ["Empleados", "/admin-kiosko/personal/empleados"],
+      ["Turnos", "/admin-kiosko/personal/turnos"],
+      ["Fichajes", "/admin-kiosko/personal/fichajes"],
+      ["Incidencias", "/admin-kiosko/personal/incidencias"],
+      ["Informes", "/admin-kiosko/personal/informes"],
+    ],
+  },
+  {
     label: "Configuración",
     section: "configuracion",
     ownerOnly: true,
@@ -159,7 +172,7 @@ export async function AdminHeader({
           <input name="q" placeholder="Buscar producto, lote, proveedor, documento, equipo, incidencia o fecha" className="rounded-2xl border border-white/12 bg-white px-4 py-3 text-sm text-stone-950 outline-none focus:border-[#d94b2b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]" />
           <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">Buscar APPCC</button>
         </form> : null}
-        <nav className="mt-6 grid gap-3 rounded-[1.2rem] border border-white/10 bg-black/20 p-3 lg:grid-cols-5" aria-label="Navegación interna APPCC">
+        <nav className="mt-6 grid gap-3 rounded-[1.2rem] border border-white/10 bg-black/20 p-3 lg:grid-cols-6" aria-label="Navegación interna APPCC">
           {groups.map((group) => (
             <details key={group.label} className="rounded-2xl border border-white/10 bg-white/6 p-3" open>
               <summary className="cursor-pointer text-[11px] font-black uppercase tracking-[0.14em] text-[#f2c6bb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f2c6bb]">{group.label}</summary>

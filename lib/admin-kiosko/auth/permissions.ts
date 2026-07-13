@@ -20,7 +20,14 @@ export type AdminPermission =
   | "print:manage"
   | "labels:basic_print"
   | "reports:view"
-  | "settings:manage";
+  | "settings:manage"
+  | "staff:admin"
+  | "staff:hr"
+  | "staff:shifts:manage"
+  | "staff:shifts:publish"
+  | "staff:time:review"
+  | "staff:reports:export"
+  | "staff:contracts:manage";
 
 export const ownerPermissions: AdminPermission[] = [
   "admin:all",
@@ -32,6 +39,13 @@ export const ownerPermissions: AdminPermission[] = [
   "print:manage",
   "reports:view",
   "settings:manage",
+  "staff:admin",
+  "staff:hr",
+  "staff:shifts:manage",
+  "staff:shifts:publish",
+  "staff:time:review",
+  "staff:reports:export",
+  "staff:contracts:manage",
 ];
 
 export const employeePermissions: AdminPermission[] = [
