@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { test } from "node:test";
+
+if (existsSync(".env.local") && typeof process.loadEnvFile === "function") {
+  process.loadEnvFile(".env.local");
+}
 
 const enabled = process.env.STAFF_QA_INTEGRATION === "1";
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";

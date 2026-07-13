@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 import { randomBytes, scryptSync } from "node:crypto";
+import { existsSync } from "node:fs";
+
+if (existsSync(".env.local") && typeof process.loadEnvFile === "function") {
+  process.loadEnvFile(".env.local");
+}
 
 const args = new Set(process.argv.slice(2));
 const mode = args.has("--report") ? "report" : "check";
@@ -168,7 +173,7 @@ async function runChecks() {
     tableRows("admin_kiosko_staff_organizations", `?select=id,name,slug,active&slug=eq.${QA_ORG_SLUG}`),
     tableRows("admin_kiosko_staff_locations", `?select=id,name,slug,organization_id,active,allows_kiosk_clock&slug=in.(${QA_LOCATION_SLUGS.join(",")})`),
     tableRows("admin_kiosko_staff_employees", `?select=id,employee_code,display_name,status,organization_id,primary_location_id,auth_user_id,pin_hash&employee_code=like.${QA_EMPLOYEE_PREFIX}*`),
-    tableRows("admin_users", "?select=id,username,role,status&username=like.qa_%"),
+    tableRows("admin_users", "?select=id,username,role,status&username=like.qa_*"),
     tableRows("admin_kiosko_staff_employee_roles", "?select=id,employee_id,location_id,role,active"),
     tableRows("admin_kiosko_staff_contracts", "?select=id,employee_id,organization_id,active,start_date,end_date"),
     tableRows("admin_kiosko_staff_shifts", "?select=id,organization_id,location_id,status,published_at&order=shift_date.asc"),
