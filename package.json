@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "node --test --experimental-strip-types tests/*.test.mts",
+    "test:staff:integration": "node --test --experimental-strip-types tests/staff-qa.integration.mts",
     "print:smoke": "node scripts/admin-kiosko/print-smoke.mjs",
     "print:godex": "node scripts/godex-print-bridge.mjs",
     "print:godex:once": "node scripts/godex-print-bridge.mjs --once",
