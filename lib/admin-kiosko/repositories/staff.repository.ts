@@ -94,6 +94,24 @@ export type StaffShiftAssignment = {
   updated_at: string;
 };
 
+export type StaffEmployeeRole = {
+  id: string;
+  employee_id: string;
+  location_id: string | null;
+  role: "staff_employee" | "staff_shift_lead" | "staff_location_manager" | "staff_hr" | "admin";
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StaffEmployeeAuthorizedLocation = {
+  employee_id: string;
+  location_id: string;
+  organization_id: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
 export type StaffWorkEntry = {
   id: string;
   organization_id?: string | null;
@@ -247,6 +265,33 @@ export async function getStaffEmployeeByAuthUserId(authUserId: string): Promise<
   });
   if (!result.ok) return result;
   return { ok: true, data: result.data[0] || null };
+}
+
+export async function listStaffEmployeeRoles(employeeId?: string) {
+  const filter = employeeId ? `&employee_id=eq.${encodeURIComponent(employeeId)}` : "";
+  return staffRequest<StaffEmployeeRole[]>("admin_kiosko_staff_employee_roles", {
+    method: "GET",
+    query: `?select=*${filter}&active=eq.true&order=created_at.desc`,
+  });
+}
+
+export async function listStaffAuthorizedLocations(employeeId?: string) {
+  const filter = employeeId ? `&employee_id=eq.${encodeURIComponent(employeeId)}` : "";
+  return staffRequest<StaffEmployeeAuthorizedLocation[]>("admin_kiosko_staff_employee_authorized_locations", {
+    method: "GET",
+    query: `?select=*${filter}&order=created_at.desc`,
+  });
+}
+
+export async function updateStaffEmployeeAuthUser(input: { employeeId: string; authUserId: string | null }) {
+  const result = await staffRequest<StaffEmployee[]>("admin_kiosko_staff_employees", {
+    method: "PATCH",
+    query: `?id=eq.${encodeURIComponent(input.employeeId)}`,
+    body: JSON.stringify({ auth_user_id: input.authUserId }),
+    headers: { Prefer: "return=representation" },
+  });
+  if (!result.ok) return result;
+  return { ok: true as const, data: result.data[0] };
 }
 
 export async function createStaffEmployee(input: {

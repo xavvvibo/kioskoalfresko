@@ -1,15 +1,12 @@
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getStaffEmployeeByAuthUserId } from "@/lib/admin-kiosko/repositories/staff.repository";
 import { listTrainingAssignments } from "@/lib/admin-kiosko/repositories/staff-records.repository";
 import { getTrainingAlert } from "@/lib/admin-kiosko/staff/training.service";
+import { getCurrentStaffEmployeeForPage } from "../_lib/current-employee";
 
 export default async function StaffTrainingPage() {
-  const session = await requireAdminSession("/staff/formacion");
-  if (!session.id) return <Empty text="Accede con un usuario nominal vinculado a empleado." />;
-  const employee = await getStaffEmployeeByAuthUserId(session.id);
-  if (!employee.ok || !employee.data) return <Empty text={employee.ok ? "No hay empleado vinculado." : employee.error} />;
-  const training = await listTrainingAssignments(employee.data.id);
+  const current = await getCurrentStaffEmployeeForPage();
+  if (!current.ok) return <Empty text={current.error} />;
+  const training = await listTrainingAssignments(current.employee.id);
   return (
     <main className="min-h-screen bg-[#0d0d0d] px-4 py-6 text-white">
       <div className="mx-auto grid max-w-4xl gap-5">

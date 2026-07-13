@@ -1,14 +1,12 @@
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getStaffEmployeeByAuthUserId, listPublishedShiftsForEmployee } from "@/lib/admin-kiosko/repositories/staff.repository";
+import { listPublishedShiftsForEmployee } from "@/lib/admin-kiosko/repositories/staff.repository";
 import { UpcomingShiftsList } from "@/components/staff/StaffCards";
+import { getCurrentStaffEmployeeForPage } from "../_lib/current-employee";
 
 export default async function StaffShiftsPage() {
-  const session = await requireAdminSession("/staff/turnos");
-  if (!session.id) return <Empty text="Accede con un usuario nominal vinculado a empleado." />;
-  const employee = await getStaffEmployeeByAuthUserId(session.id);
-  if (!employee.ok || !employee.data) return <Empty text={employee.ok ? "No hay empleado vinculado." : employee.error} />;
-  const shifts = await listPublishedShiftsForEmployee(employee.data.id);
+  const current = await getCurrentStaffEmployeeForPage();
+  if (!current.ok) return <Empty text={current.error} />;
+  const shifts = await listPublishedShiftsForEmployee(current.employee.id);
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] px-4 py-6 text-white">

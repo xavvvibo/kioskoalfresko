@@ -3,7 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
+import { requireEmployeeAccess, requireStaffPermission } from "@/lib/admin-kiosko/auth/staff-actor";
+import { listAdminUsers } from "@/lib/admin-kiosko/repositories/admin-users.repository";
 import { getStaffDocumentById } from "@/lib/admin-kiosko/repositories/staff-records.repository";
+import {
+  getStaffEmployeeByAuthUserId,
+  getStaffEmployeeById,
+  updateStaffEmployeeAuthUser,
+  writeStaffAuditLog,
+} from "@/lib/admin-kiosko/repositories/staff.repository";
 import { createAbsenceRequest } from "@/lib/admin-kiosko/staff/absence.service";
 import { createDisciplinaryCaseService } from "@/lib/admin-kiosko/staff/disciplinary.service";
 import { archiveEmployeeDocument, createSignedDocumentUrl, uploadEmployeeDocument } from "@/lib/admin-kiosko/staff/documents.service";
@@ -11,11 +19,12 @@ import { updateEmployeePrivateProfile } from "@/lib/admin-kiosko/staff/profile.s
 import { assignTrainingToEmployee, createTrainingCatalogItemService } from "@/lib/admin-kiosko/staff/training.service";
 
 export async function updateEmployeePrivateProfileAction(formData: FormData) {
-  const session = await requireAdminPermission("staff:write");
+  const actor = await requireStaffPermission("staff:write");
   const employeeId = String(formData.get("employeeId") || "");
   if (!employeeId) return;
+  await requireEmployeeAccess(actor, employeeId);
   await updateEmployeePrivateProfile({
-    actorUserId: session.id,
+    actorUserId: actor.adminUserId,
     employeeId,
     payload: {
       preferred_name: String(formData.get("preferredName") || "") || null,
@@ -52,12 +61,13 @@ export async function updateEmployeePrivateProfileAction(formData: FormData) {
 }
 
 export async function uploadEmployeeDocumentAction(formData: FormData) {
-  const session = await requireAdminPermission("staff:documents:write");
+  const actor = await requireStaffPermission("staff:documents:write");
   const employeeId = String(formData.get("employeeId") || "");
   const file = formData.get("file");
   if (!employeeId || !(file instanceof File) || !file.size) return;
+  await requireEmployeeAccess(actor, employeeId);
   await uploadEmployeeDocument({
-    actorUserId: session.id,
+    actorUserId: actor.adminUserId,
     employeeId,
     file,
     category: String(formData.get("category") || "other"),
@@ -73,19 +83,21 @@ export async function uploadEmployeeDocumentAction(formData: FormData) {
 }
 
 export async function archiveEmployeeDocumentAction(formData: FormData) {
-  const session = await requireAdminPermission("staff:documents:write");
+  const actor = await requireStaffPermission("staff:documents:write");
   const employeeId = String(formData.get("employeeId") || "");
   const documentId = String(formData.get("documentId") || "");
-  if (documentId) await archiveEmployeeDocument({ actorUserId: session.id, documentId });
+  if (employeeId) await requireEmployeeAccess(actor, employeeId);
+  if (documentId) await archiveEmployeeDocument({ actorUserId: actor.adminUserId, documentId });
   revalidatePath(`/admin-kiosko/personal/empleados/${employeeId}`);
 }
 
 export async function downloadEmployeeDocumentAction(formData: FormData) {
-  const session = await requireAdminPermission("staff:documents:read");
+  const actor = await requireStaffPermission("staff:documents:read");
   const documentId = String(formData.get("documentId") || "");
   const document = await getStaffDocumentById(documentId);
   if (!document.ok || !document.data) return;
-  const signed = await createSignedDocumentUrl({ actorUserId: session.id, document: document.data, expiresIn: 120 });
+  await requireEmployeeAccess(actor, document.data.employee_id);
+  const signed = await createSignedDocumentUrl({ actorUserId: actor.adminUserId, document: document.data, expiresIn: 120 });
   if (signed.ok) redirect(signed.data);
 }
 
@@ -103,10 +115,11 @@ export async function createTrainingAction(formData: FormData) {
 }
 
 export async function assignTrainingAction(formData: FormData) {
-  const session = await requireAdminPermission("staff:write");
+  const actor = await requireStaffPermission("staff:write");
   const employeeId = String(formData.get("employeeId") || "");
+  await requireEmployeeAccess(actor, employeeId);
   await assignTrainingToEmployee({
-    actorUserId: session.id,
+    actorUserId: actor.adminUserId,
     employeeId,
     trainingId: String(formData.get("trainingId") || "") || null,
     status: String(formData.get("status") || "pending") as "pending",
@@ -119,10 +132,11 @@ export async function assignTrainingAction(formData: FormData) {
 }
 
 export async function createAbsenceAction(formData: FormData) {
-  const session = await requireAdminPermission("staff:write");
+  const actor = await requireStaffPermission("staff:write");
   const employeeId = String(formData.get("employeeId") || "");
+  await requireEmployeeAccess(actor, employeeId);
   await createAbsenceRequest({
-    actorUserId: session.id,
+    actorUserId: actor.adminUserId,
     employeeId,
     absenceType: String(formData.get("absenceType") || "other"),
     startsAt: String(formData.get("startsAt") || ""),
@@ -135,10 +149,11 @@ export async function createAbsenceAction(formData: FormData) {
 }
 
 export async function createDisciplinaryCaseAction(formData: FormData) {
-  const session = await requireAdminPermission("staff:disciplinary:write");
+  const actor = await requireStaffPermission("staff:disciplinary:write");
   const employeeId = String(formData.get("employeeId") || "");
+  await requireEmployeeAccess(actor, employeeId);
   await createDisciplinaryCaseService({
-    actorUserId: session.id,
+    actorUserId: actor.adminUserId,
     employeeId,
     caseType: String(formData.get("caseType") || "other_communication"),
     title: String(formData.get("title") || ""),
@@ -148,5 +163,56 @@ export async function createDisciplinaryCaseAction(formData: FormData) {
     visibleToEmployee: formData.get("visibleToEmployee") === "on",
     signatureRequired: formData.get("signatureRequired") === "on",
   });
+  revalidatePath(`/admin-kiosko/personal/empleados/${employeeId}`);
+}
+
+export async function linkEmployeeAdminUserAction(formData: FormData) {
+  const session = await requireAdminPermission("staff:identity:write");
+  const employeeId = String(formData.get("employeeId") || "");
+  const adminUserId = String(formData.get("adminUserId") || "");
+  if (!employeeId || !adminUserId) return;
+
+  const [employee, existingLink, users] = await Promise.all([
+    getStaffEmployeeById(employeeId),
+    getStaffEmployeeByAuthUserId(adminUserId),
+    listAdminUsers(),
+  ]);
+  if (!employee.ok || !employee.data) return;
+  if (!users.ok || !users.data.some((user) => user.id === adminUserId && user.status === "active")) return;
+  if (existingLink.ok && existingLink.data && existingLink.data.id !== employeeId) return;
+
+  const updated = await updateStaffEmployeeAuthUser({ employeeId, authUserId: adminUserId });
+  if (updated.ok) {
+    await writeStaffAuditLog({
+      actorUserId: session.id,
+      entityType: "staff_identity_link",
+      entityId: employeeId,
+      action: "identity_link",
+      beforeData: { linked: Boolean(employee.data.auth_user_id) },
+      afterData: { linked: true },
+      metadata: { adminUserChanged: true },
+    });
+  }
+  revalidatePath(`/admin-kiosko/personal/empleados/${employeeId}`);
+}
+
+export async function unlinkEmployeeAdminUserAction(formData: FormData) {
+  const session = await requireAdminPermission("staff:identity:write");
+  const employeeId = String(formData.get("employeeId") || "");
+  if (!employeeId) return;
+  const employee = await getStaffEmployeeById(employeeId);
+  if (!employee.ok || !employee.data) return;
+
+  const updated = await updateStaffEmployeeAuthUser({ employeeId, authUserId: null });
+  if (updated.ok) {
+    await writeStaffAuditLog({
+      actorUserId: session.id,
+      entityType: "staff_identity_link",
+      entityId: employeeId,
+      action: "identity_unlink",
+      beforeData: { linked: Boolean(employee.data.auth_user_id) },
+      afterData: { linked: false },
+    });
+  }
   revalidatePath(`/admin-kiosko/personal/empleados/${employeeId}`);
 }

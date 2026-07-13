@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import {
+  requireEmployeeAccess,
+  requireLocationAccess,
+  requireStaffPermission,
+} from "@/lib/admin-kiosko/auth/staff-actor";
+import {
   createStaffContract,
   createStaffEmployee,
   createStaffShift,
@@ -65,7 +70,7 @@ export async function createStaffEmployeeAction(formData: FormData) {
     status: "active",
     hireDate: String(formData.get("hireDate") || "") || null,
     primaryLocationId: String(formData.get("primaryLocationId") || "") || null,
-    authUserId: String(formData.get("authUserId") || "") || null,
+    authUserId: null,
   });
   if (result.ok) {
     await writeStaffAuditLog({
@@ -80,9 +85,10 @@ export async function createStaffEmployeeAction(formData: FormData) {
 }
 
 export async function createStaffContractAction(formData: FormData) {
-  const session = await requireAdminPermission("staff:contracts:manage");
+  const actor = await requireStaffPermission("staff:contracts:manage");
   const employeeId = String(formData.get("employeeId") || "");
   if (!employeeId) return;
+  await requireEmployeeAccess(actor, employeeId);
   const result = await createStaffContract({
     employeeId,
     contractType: String(formData.get("contractType") || "indefinido"),
@@ -95,10 +101,10 @@ export async function createStaffContractAction(formData: FormData) {
   });
   if (result.ok) {
     await writeStaffAuditLog({
-      actorUserId: session.id,
       entityType: "staff_contract",
       entityId: result.data.id,
       action: "contract_create",
+      actorUserId: actor.adminUserId,
       afterData: { ...result.data, salary_reference: result.data.salary_reference ? "[restricted]" : null },
     });
   }
@@ -106,7 +112,11 @@ export async function createStaffContractAction(formData: FormData) {
 }
 
 export async function createStaffShiftAction(formData: FormData) {
-  const session = await requireAdminPermission("staff:shifts:manage");
+  const actor = await requireStaffPermission("staff:shifts:manage");
+  const locationId = String(formData.get("locationId") || "");
+  const employeeId = String(formData.get("employeeId") || "") || null;
+  requireLocationAccess(actor, locationId);
+  if (employeeId) await requireEmployeeAccess(actor, employeeId);
   const shiftDate = String(formData.get("shiftDate") || "");
   const startsAt = madridDateTimeToIso(shiftDate, String(formData.get("startsAt") || ""));
   let endsAt = madridDateTimeToIso(shiftDate, String(formData.get("endsAt") || ""));
@@ -116,8 +126,8 @@ export async function createStaffShiftAction(formData: FormData) {
     endsAt = endDate.toISOString();
   }
   const result = await createStaffShift({
-    locationId: String(formData.get("locationId") || ""),
-    employeeId: String(formData.get("employeeId") || "") || null,
+    locationId,
+    employeeId,
     shiftDate,
     startsAt,
     endsAt,
@@ -126,7 +136,7 @@ export async function createStaffShiftAction(formData: FormData) {
   });
   if (result.ok) {
     await writeStaffAuditLog({
-      actorUserId: session.id,
+      actorUserId: actor.adminUserId,
       entityType: "staff_shift",
       entityId: result.data.id,
       action: "shift_create",

@@ -1,21 +1,19 @@
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getStaffEmployeeByAuthUserId } from "@/lib/admin-kiosko/repositories/staff.repository";
 import { listStaffAbsences } from "@/lib/admin-kiosko/repositories/staff-records.repository";
 import { listLeaveBalancePeriods, listLeavePolicies, listLeaveRequests } from "@/lib/admin-kiosko/repositories/staff-leave.repository";
 import { calculateProjectedBalance } from "@/lib/admin-kiosko/staff/leave-rules";
 import { staffCreateLeaveRequestAction } from "../actions";
+import { getCurrentStaffEmployeeForPage } from "../_lib/current-employee";
 
 export default async function StaffAbsencesPage() {
-  const session = await requireAdminSession("/staff/ausencias");
-  if (!session.id) return <Empty text="Accede con un usuario nominal vinculado a empleado." />;
-  const employee = await getStaffEmployeeByAuthUserId(session.id);
-  if (!employee.ok || !employee.data) return <Empty text={employee.ok ? "No hay empleado vinculado." : employee.error} />;
+  const current = await getCurrentStaffEmployeeForPage();
+  if (!current.ok) return <Empty text={current.error} />;
+  const employee = current.employee;
   const [absences, policies, periods, requests] = await Promise.all([
-    listStaffAbsences(employee.data.id, true),
-    listLeavePolicies(employee.data.organization_id || undefined, true),
-    listLeaveBalancePeriods(employee.data.id),
-    listLeaveRequests({ employeeId: employee.data.id }),
+    listStaffAbsences(employee.id, true),
+    listLeavePolicies(employee.organization_id || undefined, true),
+    listLeaveBalancePeriods(employee.id),
+    listLeaveRequests({ employeeId: employee.id }),
   ]);
   const policyById = new Map((policies.ok ? policies.data : []).map((policy) => [policy.id, policy]));
   return (

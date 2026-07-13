@@ -1,16 +1,13 @@
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getStaffEmployeeByAuthUserId } from "@/lib/admin-kiosko/repositories/staff.repository";
 import { listStaffDocuments, listStaffSignatures } from "@/lib/admin-kiosko/repositories/staff-records.repository";
 import { SignatureCanvas } from "@/components/staff/SignatureCanvas";
 import { staffSignDocumentAction } from "../actions";
+import { getCurrentStaffEmployeeForPage } from "../_lib/current-employee";
 
 export default async function StaffSignaturesPage() {
-  const session = await requireAdminSession("/staff/firmas");
-  if (!session.id) return <Empty text="Accede con un usuario nominal vinculado a empleado." />;
-  const employee = await getStaffEmployeeByAuthUserId(session.id);
-  if (!employee.ok || !employee.data) return <Empty text={employee.ok ? "No hay empleado vinculado." : employee.error} />;
-  const [documents, signatures] = await Promise.all([listStaffDocuments(employee.data.id, false), listStaffSignatures(employee.data.id)]);
+  const current = await getCurrentStaffEmployeeForPage();
+  if (!current.ok) return <Empty text={current.error} />;
+  const [documents, signatures] = await Promise.all([listStaffDocuments(current.employee.id, false), listStaffSignatures(current.employee.id)]);
   const pending = documents.ok ? documents.data.filter((document) => document.signature_status === "pending" && document.visible_to_employee) : [];
   return (
     <main className="min-h-screen bg-[#0d0d0d] px-4 py-6 text-white">

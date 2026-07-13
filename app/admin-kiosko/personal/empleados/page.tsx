@@ -25,7 +25,6 @@ export default async function StaffEmployeesPage() {
             <option value="">Centro principal</option>
             {locations.ok ? locations.data.map((location) => <option key={location.id} value={location.id}>{location.name}</option>) : null}
           </select>
-          <input name="authUserId" placeholder="ID admin_user vinculado (opcional)" className="rounded-2xl border border-white/10 bg-white px-4 py-3 text-stone-950 md:col-span-2" />
           <button className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] md:col-span-2">Crear empleado</button>
         </form>
 

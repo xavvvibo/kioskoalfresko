@@ -163,6 +163,7 @@ async function runChecks() {
     tasks,
     documents,
     notifications,
+    policies,
   ] = await Promise.all([
     tableRows("admin_kiosko_staff_organizations", `?select=id,name,slug,active&slug=eq.${QA_ORG_SLUG}`),
     tableRows("admin_kiosko_staff_locations", `?select=id,name,slug,organization_id,active,allows_kiosk_clock&slug=in.(${QA_LOCATION_SLUGS.join(",")})`),
@@ -177,6 +178,7 @@ async function runChecks() {
     tableRows("admin_kiosko_staff_process_tasks", "?select=id,process_id,employee_id,status,title"),
     tableRows("admin_kiosko_staff_documents", "?select=id,employee_id,private_path,status"),
     tableRows("admin_kiosko_staff_notifications", "?select=id,recipient_employee_id,notification_type,read,archived"),
+    tableRows("pg_policies", "?select=policyname,tablename,roles,qual&schemaname=eq.public&tablename=like.admin_kiosko_staff_%").catch((error) => ({ error: error.message, data: [] })),
   ]);
 
   const problems = [];
@@ -195,6 +197,13 @@ async function runChecks() {
   const missingOrg = employees.filter((employee) => !employee.organization_id);
   const missingLocation = employees.filter((employee) => !employee.primary_location_id || !locationIds.has(employee.primary_location_id));
   const missingAuthUser = activeEmployees.filter((employee) => !employee.auth_user_id || !userIds.has(employee.auth_user_id));
+  const linkedToMissingUser = activeEmployees.filter((employee) => employee.auth_user_id && !userIds.has(employee.auth_user_id));
+  const inactiveWithAuthUser = employees.filter((employee) => employee.status !== "active" && employee.auth_user_id);
+  const linkCounts = new Map();
+  for (const employee of employees) {
+    if (employee.auth_user_id) linkCounts.set(employee.auth_user_id, (linkCounts.get(employee.auth_user_id) || 0) + 1);
+  }
+  const duplicateLinks = [...linkCounts.values()].filter((count) => count > 1).length;
   const missingPin = activeEmployees.filter((employee) => !employee.pin_hash);
   const missingRole = activeEmployees.filter((employee) => !roles.some((role) => role.employee_id === employee.id && role.active));
   const orphanAssignments = assignments.filter((assignment) => !shiftIds.has(assignment.shift_id) || !employeeIds.has(assignment.employee_id));
@@ -202,6 +211,12 @@ async function runChecks() {
   const processesWithoutTasks = processes.filter((process) => !tasks.some((task) => task.process_id === process.id));
   const invalidDocumentPaths = documents.filter((document) => document.private_path.startsWith("/") || document.private_path.includes(".."));
   const notificationsWithoutRecipient = notifications.filter((notification) => !employeeIds.has(notification.recipient_employee_id));
+  const directAuthPolicies = Array.isArray(policies)
+    ? policies.filter((policy) => {
+      const roles = Array.isArray(policy.roles) ? policy.roles : [policy.roles || ""];
+      return roles.includes("authenticated") && String(policy.qual || "").includes("auth.uid");
+    })
+    : [];
   const bucketOk = await bucketExists(DOCUMENT_BUCKET);
 
   if (!bucketOk) problems.push(issue("warning", "Bucket privado no accesible", DOCUMENT_BUCKET));
@@ -209,6 +224,10 @@ async function runChecks() {
   for (const employee of missingOrg) problems.push(issue("critical", "Empleado sin organización", `${employee.employee_code} · ${employee.display_name}`));
   for (const employee of missingLocation) problems.push(issue("critical", "Empleado sin centro QA válido", `${employee.employee_code} · ${employee.display_name}`));
   for (const employee of missingAuthUser) problems.push(issue("warning", "Empleado activo sin usuario interno vinculado", `${employee.employee_code} · ${employee.display_name}`));
+  for (const employee of linkedToMissingUser) problems.push(issue("critical", "Empleado vinculado a usuario interno inexistente", `${employee.employee_code} · ${employee.display_name}`));
+  if (duplicateLinks) problems.push(issue("critical", "Usuarios internos vinculados a múltiples empleados", `${duplicateLinks} vínculo(s) duplicado(s)`));
+  for (const employee of inactiveWithAuthUser) problems.push(issue("warning", "Empleado inactivo mantiene usuario vinculado", `${employee.employee_code} · ${employee.display_name}`));
+  if (directAuthPolicies.length) problems.push(issue("warning", "Políticas RRHH directas basadas en auth.uid()", `${directAuthPolicies.length} política(s). Aplicar admin_kiosko_staff_hr_auth_rls_fix.sql tras revisión.`));
   for (const employee of missingPin) problems.push(issue("warning", "Empleado activo sin pin_hash para kiosk", `${employee.employee_code} · ${employee.display_name}`));
   for (const employee of missingRole) problems.push(issue("warning", "Empleado activo sin rol RRHH", `${employee.employee_code} · ${employee.display_name}`));
   for (const assignment of orphanAssignments) problems.push(issue("critical", "Asignación huérfana", assignment.id));
@@ -235,6 +254,9 @@ async function runChecks() {
       tasks: tasks.length,
       documents: documents.length,
       notifications: notifications.length,
+      identityStrategy: "server-side-internal-cookie",
+      duplicateIdentityLinks: duplicateLinks,
+      directAuthUidPolicies: directAuthPolicies.length,
     },
     tableStatus,
     issues: problems,

@@ -1,15 +1,12 @@
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getStaffEmployeeByAuthUserId } from "@/lib/admin-kiosko/repositories/staff.repository";
 import { listStaffDocuments } from "@/lib/admin-kiosko/repositories/staff-records.repository";
 import { staffDownloadDocumentAction } from "../actions";
+import { getCurrentStaffEmployeeForPage } from "../_lib/current-employee";
 
 export default async function StaffDocumentsPage() {
-  const session = await requireAdminSession("/staff/documentos");
-  if (!session.id) return <Empty text="Accede con un usuario nominal vinculado a empleado." />;
-  const employee = await getStaffEmployeeByAuthUserId(session.id);
-  if (!employee.ok || !employee.data) return <Empty text={employee.ok ? "No hay empleado vinculado." : employee.error} />;
-  const documents = await listStaffDocuments(employee.data.id, false);
+  const current = await getCurrentStaffEmployeeForPage();
+  if (!current.ok) return <Empty text={current.error} />;
+  const documents = await listStaffDocuments(current.employee.id, false);
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] px-4 py-6 text-white">

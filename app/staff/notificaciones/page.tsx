@@ -1,16 +1,13 @@
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getStaffEmployeeByAuthUserId } from "@/lib/admin-kiosko/repositories/staff.repository";
 import { listNotifications } from "@/lib/admin-kiosko/repositories/staff-notifications.repository";
 import { NotificationsPanel } from "@/components/staff/NotificationsPanel";
 import { staffNotificationAction } from "../actions";
+import { getCurrentStaffEmployeeForPage } from "../_lib/current-employee";
 
 export default async function StaffNotificationsPage() {
-  const session = await requireAdminSession("/staff/notificaciones");
-  if (!session.id) return <Empty text="Accede con un usuario nominal vinculado a empleado." />;
-  const employee = await getStaffEmployeeByAuthUserId(session.id);
-  if (!employee.ok || !employee.data) return <Empty text={employee.ok ? "No hay empleado vinculado." : employee.error} />;
-  const notifications = await listNotifications(employee.data.id);
+  const current = await getCurrentStaffEmployeeForPage();
+  if (!current.ok) return <Empty text={current.error} />;
+  const notifications = await listNotifications(current.employee.id);
   return (
     <main className="min-h-screen bg-[#0d0d0d] px-4 py-6 text-white">
       <div className="mx-auto grid max-w-5xl gap-5">

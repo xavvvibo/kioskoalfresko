@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getCurrentAdminSession, requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { getCurrentAdminSession } from "@/lib/admin-kiosko/auth";
+import { requireStaffEmployeeActor } from "@/lib/admin-kiosko/auth/staff-actor";
 import {
   getOpenWorkEntry,
-  getStaffEmployeeByAuthUserId,
   getStaffEmployeeById,
   listOpenBreaks,
 } from "@/lib/admin-kiosko/repositories/staff.repository";
@@ -25,20 +25,15 @@ import { listPolicyAssignments } from "@/lib/admin-kiosko/repositories/staff-com
 import { acknowledgePolicy } from "@/lib/admin-kiosko/staff/internal-policy.service";
 
 async function requireLinkedEmployee() {
-  const session = await requireAdminSession("/staff");
-  if (!session.id) {
-    throw new Error("El acceso legacy no está vinculado a un empleado.");
-  }
-  const employee = await getStaffEmployeeByAuthUserId(session.id);
-  if (!employee.ok) throw new Error(employee.error);
-  if (!employee.data) throw new Error("No hay empleado vinculado a este usuario.");
-  return { session, employee: employee.data };
+  const actor = await requireStaffEmployeeActor();
+  if (!actor.employee) throw new Error("No hay empleado vinculado a este usuario.");
+  return { actor, employee: actor.employee };
 }
 
 export async function staffClockAction(formData: FormData) {
-  const { session, employee } = await requireLinkedEmployee();
+  const { actor, employee } = await requireLinkedEmployee();
   const intent = String(formData.get("intent") || "");
-  const actorUserId = session.id;
+  const actorUserId = actor.adminUserId;
   const actorEmployeeId = employee.id;
 
   if (intent === "clock_in") {
@@ -56,13 +51,13 @@ export async function staffClockAction(formData: FormData) {
 }
 
 export async function staffIncidentAction(formData: FormData) {
-  const { session, employee } = await requireLinkedEmployee();
+  const { actor, employee } = await requireLinkedEmployee();
   const incidentType = String(formData.get("incidentType") || "other") as Parameters<typeof createTimeIncident>[0]["incidentType"];
   const description = String(formData.get("description") || "").trim();
   if (description.length < 8) return;
 
   await createTimeIncident({
-    actorUserId: session.id,
+    actorUserId: actor.adminUserId,
     actorEmployeeId: employee.id,
     employeeId: employee.id,
     incidentType,
@@ -72,16 +67,16 @@ export async function staffIncidentAction(formData: FormData) {
 }
 
 export async function staffDownloadDocumentAction(formData: FormData) {
-  const { session, employee } = await requireLinkedEmployee();
+  const { actor, employee } = await requireLinkedEmployee();
   const documentId = String(formData.get("documentId") || "");
   const document = await getStaffDocumentById(documentId);
   if (!document.ok || !document.data || document.data.employee_id !== employee.id || !document.data.visible_to_employee) return;
-  const signed = await createSignedDocumentUrl({ actorUserId: session.id, document: document.data, expiresIn: 120 });
+  const signed = await createSignedDocumentUrl({ actorUserId: actor.adminUserId, document: document.data, expiresIn: 120 });
   if (signed.ok) redirect(signed.data);
 }
 
 export async function staffSignDocumentAction(formData: FormData) {
-  const { session, employee } = await requireLinkedEmployee();
+  const { actor, employee } = await requireLinkedEmployee();
   const documentId = String(formData.get("documentId") || "");
   const document = await getStaffDocumentById(documentId);
   if (!document.ok || !document.data || document.data.employee_id !== employee.id || !document.data.visible_to_employee) return;
@@ -89,7 +84,7 @@ export async function staffSignDocumentAction(formData: FormData) {
   const consent = formData.get("signatureConsent") === "on";
   if (!signatureImageDataUrl || !consent) return;
   await registerHandwrittenSignature({
-    actorUserId: session.id,
+    actorUserId: actor.adminUserId,
     employeeId: employee.id,
     signerName: employee.display_name,
     signedEntityType: "document",
@@ -105,9 +100,9 @@ export async function staffSignDocumentAction(formData: FormData) {
 }
 
 export async function staffCreateLeaveRequestAction(formData: FormData) {
-  const { session, employee } = await requireLinkedEmployee();
+  const { actor, employee } = await requireLinkedEmployee();
   await createEmployeeLeaveRequest({
-    actorUserId: session.id,
+    actorUserId: actor.adminUserId,
     employeeId: employee.id,
     policyId: String(formData.get("policyId") || ""),
     startsAt: String(formData.get("startsAt") || ""),
@@ -127,11 +122,11 @@ function formDateTimeToIso(value: FormDataEntryValue | null) {
 }
 
 export async function staffAvailabilityAction(formData: FormData) {
-  const { session, employee } = await requireLinkedEmployee();
+  const { actor, employee } = await requireLinkedEmployee();
   const intent = String(formData.get("intent") || "");
   if (intent === "recurring_availability") {
     await saveRecurringAvailability({
-      actorUserId: session.id,
+      actorUserId: actor.adminUserId,
       employeeId: employee.id,
       weekday: Number(formData.get("weekday") || 0),
       availabilityType: String(formData.get("availabilityType") || "available") as "available",
@@ -145,7 +140,7 @@ export async function staffAvailabilityAction(formData: FormData) {
   }
   if (intent === "availability_exception") {
     await requestAvailabilityException({
-      actorUserId: session.id,
+      actorUserId: actor.adminUserId,
       employeeId: employee.id,
       startsAt: formDateTimeToIso(formData.get("startsAt")),
       endsAt: formDateTimeToIso(formData.get("endsAt")),
@@ -156,7 +151,7 @@ export async function staffAvailabilityAction(formData: FormData) {
   }
   if (intent === "work_preferences") {
     await saveWorkPreferences({
-      actorUserId: session.id,
+      actorUserId: actor.adminUserId,
       employeeId: employee.id,
       preferredShiftParts: String(formData.get("preferredShiftParts") || "").split(",").map((item) => item.trim()).filter(Boolean),
       preferredFreeWeekdays: String(formData.get("preferredFreeWeekdays") || "").split(",").map((item) => Number(item.trim())).filter((item) => Number.isInteger(item) && item >= 0 && item <= 6),
@@ -171,9 +166,9 @@ export async function staffAvailabilityAction(formData: FormData) {
 }
 
 export async function staffShiftChangeAction(formData: FormData) {
-  const { session, employee } = await requireLinkedEmployee();
+  const { actor, employee } = await requireLinkedEmployee();
   await submitShiftChangeRequest({
-    actorUserId: session.id,
+    actorUserId: actor.adminUserId,
     employeeId: employee.id,
     originalShiftId: String(formData.get("originalShiftId") || ""),
     requestType: String(formData.get("requestType") || "release") as "release",
@@ -185,9 +180,9 @@ export async function staffShiftChangeAction(formData: FormData) {
 }
 
 export async function staffOfferResponseAction(formData: FormData) {
-  const { session, employee } = await requireLinkedEmployee();
+  const { actor, employee } = await requireLinkedEmployee();
   await respondToShiftOffer({
-    actorUserId: session.id,
+    actorUserId: actor.adminUserId,
     employeeId: employee.id,
     offerId: String(formData.get("offerId") || ""),
     response: String(formData.get("response") || "declined") as "declined",
@@ -197,13 +192,13 @@ export async function staffOfferResponseAction(formData: FormData) {
 }
 
 export async function staffNotificationAction(formData: FormData) {
-  const { session, employee } = await requireLinkedEmployee();
+  const { actor, employee } = await requireLinkedEmployee();
   const intent = String(formData.get("intent") || "");
   if (intent === "read_all") {
-    await markEveryStaffNotificationRead({ actorUserId: session.id, employeeId: employee.id });
+    await markEveryStaffNotificationRead({ actorUserId: actor.adminUserId, employeeId: employee.id });
   } else {
     await markStaffNotificationRead({
-      actorUserId: session.id,
+      actorUserId: actor.adminUserId,
       employeeId: employee.id,
       notificationId: String(formData.get("notificationId") || ""),
     });
@@ -212,14 +207,14 @@ export async function staffNotificationAction(formData: FormData) {
 }
 
 export async function staffCompleteProcessTaskAction(formData: FormData) {
-  const { session, employee } = await requireLinkedEmployee();
+  const { actor, employee } = await requireLinkedEmployee();
   const taskId = String(formData.get("taskId") || "");
   const tasks = await listProcessTasks(undefined, employee.id);
   if (!tasks.ok) return;
   const task = tasks.data.find((item) => item.id === taskId && item.visible_to_employee);
   if (!task) return;
   await completeProcessTask({
-    actorUserId: session.id,
+    actorUserId: actor.adminUserId,
     task,
     evidence: { valid: true, text: String(formData.get("result") || "") },
     result: String(formData.get("result") || "") || null,
@@ -230,14 +225,14 @@ export async function staffCompleteProcessTaskAction(formData: FormData) {
 }
 
 export async function staffAcknowledgePolicyAction(formData: FormData) {
-  const { session, employee } = await requireLinkedEmployee();
+  const { actor, employee } = await requireLinkedEmployee();
   const assignmentId = String(formData.get("assignmentId") || "");
   const assignments = await listPolicyAssignments(employee.id);
   if (!assignments.ok) return;
   const assignment = assignments.data.find((item) => item.id === assignmentId);
   if (!assignment) return;
   await acknowledgePolicy({
-    actorUserId: session.id,
+    actorUserId: actor.adminUserId,
     assignment,
     confirmedText: "Confirmo lectura y aceptación interna de la política mostrada.",
   });
@@ -256,9 +251,10 @@ export async function sharedKioskLoginAction(formData: FormData) {
 
 export async function sharedKioskClockAction(formData: FormData) {
   const employeeId = String(formData.get("employeeId") || "");
+  const pin = String(formData.get("pin") || "");
   const intent = String(formData.get("intent") || "");
   const employee = await getStaffEmployeeById(employeeId);
-  if (!employee.ok || !employee.data || employee.data.status !== "active") redirect("/staff/kiosk?error=1");
+  if (!employee.ok || !employee.data || employee.data.status !== "active" || !verifyStaffPin(pin, employee.data.pin_hash)) redirect("/staff/kiosk?error=1");
 
   if (intent === "clock_in") {
     await clockIn({ actorEmployeeId: employee.data.id, employee: employee.data, source: "shared_kiosk" });

@@ -1,15 +1,14 @@
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getStaffEmployeeByAuthUserId, listStaffContracts } from "@/lib/admin-kiosko/repositories/staff.repository";
+import { listStaffContracts } from "@/lib/admin-kiosko/repositories/staff.repository";
 import { getStaffPrivateProfile } from "@/lib/admin-kiosko/repositories/staff-records.repository";
 import { maskDni, maskIban, maskSocialSecurity } from "@/lib/admin-kiosko/staff/sensitive";
+import { getCurrentStaffEmployeeForPage } from "../_lib/current-employee";
 
 export default async function StaffProfilePage() {
-  const session = await requireAdminSession("/staff/perfil");
-  if (!session.id) return <Empty text="Accede con un usuario nominal vinculado a empleado." />;
-  const employee = await getStaffEmployeeByAuthUserId(session.id);
-  if (!employee.ok || !employee.data) return <Empty text={employee.ok ? "No hay empleado vinculado." : employee.error} />;
-  const [profile, contracts] = await Promise.all([getStaffPrivateProfile(employee.data.id), listStaffContracts(employee.data.id)]);
+  const current = await getCurrentStaffEmployeeForPage();
+  if (!current.ok) return <Empty text={current.error} />;
+  const employee = current.employee;
+  const [profile, contracts] = await Promise.all([getStaffPrivateProfile(employee.id), listStaffContracts(employee.id)]);
   const activeContract = contracts.ok ? contracts.data.find((contract) => contract.active) : null;
   const data = profile.ok ? profile.data : null;
 
@@ -19,10 +18,10 @@ export default async function StaffProfilePage() {
         <Link href="/staff" className="text-sm font-bold text-[#f2c6bb]">Volver</Link>
         <h1 className="text-4xl font-black uppercase tracking-[-0.05em]">Mi perfil</h1>
         <section className="grid gap-3 md:grid-cols-2">
-          <Card label="Nombre" value={employee.data.display_name} />
-          <Card label="Código" value={employee.data.employee_code} />
-          <Card label="Email" value={employee.data.email} />
-          <Card label="Teléfono" value={employee.data.phone} />
+          <Card label="Nombre" value={employee.display_name} />
+          <Card label="Código" value={employee.employee_code} />
+          <Card label="Email" value={employee.email} />
+          <Card label="Teléfono" value={employee.phone} />
           <Card label="DNI/NIE" value={maskDni(data?.dni_nie)} />
           <Card label="NSS" value={maskSocialSecurity(data?.social_security_number)} />
           <Card label="IBAN" value={maskIban(data?.iban)} />

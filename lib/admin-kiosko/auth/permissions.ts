@@ -22,6 +22,8 @@ export type AdminPermission =
   | "reports:view"
   | "settings:manage"
   | "staff:admin"
+  | "staff:identity:read"
+  | "staff:identity:write"
   | "staff:hr"
   | "staff:shifts:manage"
   | "staff:shifts:publish"
@@ -99,6 +101,8 @@ export const ownerPermissions: AdminPermission[] = [
   "reports:view",
   "settings:manage",
   "staff:admin",
+  "staff:identity:read",
+  "staff:identity:write",
   "staff:hr",
   "staff:shifts:manage",
   "staff:shifts:publish",

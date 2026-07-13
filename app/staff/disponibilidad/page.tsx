@@ -1,19 +1,17 @@
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getStaffEmployeeByAuthUserId } from "@/lib/admin-kiosko/repositories/staff.repository";
 import { getWorkPreference, listAvailabilityExceptions, listRecurringAvailability } from "@/lib/admin-kiosko/repositories/staff-availability.repository";
 import { AvailabilityEditor } from "@/components/staff/AvailabilityEditor";
 import { staffAvailabilityAction } from "../actions";
+import { getCurrentStaffEmployeeForPage } from "../_lib/current-employee";
 
 export default async function StaffAvailabilityPage() {
-  const session = await requireAdminSession("/staff/disponibilidad");
-  if (!session.id) return <Empty text="Accede con un usuario nominal vinculado a empleado." />;
-  const employee = await getStaffEmployeeByAuthUserId(session.id);
-  if (!employee.ok || !employee.data) return <Empty text={employee.ok ? "No hay empleado vinculado." : employee.error} />;
+  const current = await getCurrentStaffEmployeeForPage();
+  if (!current.ok) return <Empty text={current.error} />;
+  const employee = current.employee;
   const [availability, exceptions, preference] = await Promise.all([
-    listRecurringAvailability(employee.data.id),
-    listAvailabilityExceptions(employee.data.id),
-    getWorkPreference(employee.data.id),
+    listRecurringAvailability(employee.id),
+    listAvailabilityExceptions(employee.id),
+    getWorkPreference(employee.id),
   ]);
   return (
     <main className="min-h-screen bg-[#0d0d0d] px-4 py-6 text-white">

@@ -136,6 +136,7 @@ export default async function StaffQaPage() {
     organizations,
     locations,
     employees,
+    adminUsers,
     contracts,
     shifts,
     assignments,
@@ -146,10 +147,12 @@ export default async function StaffQaPage() {
     checklistIssues,
     notifications,
     auditRows,
+    rlsPolicies,
   ] = await Promise.all([
     rest<Array<{ id: string; active: boolean }>>("admin_kiosko_staff_organizations", "?select=id,active"),
     rest<Array<{ id: string; organization_id: string | null; active: boolean }>>("admin_kiosko_staff_locations", "?select=id,organization_id,active"),
     rest<Array<{ id: string; organization_id: string | null; primary_location_id: string | null; auth_user_id: string | null; pin_hash: string | null; status: string }>>("admin_kiosko_staff_employees", "?select=id,organization_id,primary_location_id,auth_user_id,pin_hash,status"),
+    rest<Array<{ id: string; status: string; role: string }>>("admin_users", "?select=id,status,role"),
     rest<Array<{ id: string; employee_id: string; active: boolean }>>("admin_kiosko_staff_contracts", "?select=id,employee_id,active"),
     rest<Array<{ id: string; organization_id: string | null; location_id: string | null; status: string; published_at: string | null }>>("admin_kiosko_staff_shifts", `?select=id,organization_id,location_id,status,published_at&shift_date=gte.${today}`),
     rest<Array<{ id: string; shift_id: string; employee_id: string }>>("admin_kiosko_staff_shift_assignments", "?select=id,shift_id,employee_id"),
@@ -160,11 +163,13 @@ export default async function StaffQaPage() {
     rest<Array<{ id: string; status: string }>>("admin_kiosko_staff_checklist_issues", "?select=id,status"),
     rest<Array<{ id: string; recipient_employee_id: string; read: boolean; archived: boolean }>>("admin_kiosko_staff_notifications", "?select=id,recipient_employee_id,read,archived"),
     rest<Array<{ id: string; action: string; created_at: string }>>("admin_kiosko_staff_audit_log", "?select=id,action,created_at&order=created_at.desc&limit=8"),
+    rest<Array<{ policyname: string; tablename: string; roles: string[] | string | null; qual: string | null }>>("pg_policies", "?select=policyname,tablename,roles,qual&schemaname=eq.public&tablename=like.admin_kiosko_staff_%"),
   ]);
 
   const bucketOk = await checkBucket();
   const tableFailures = tableChecks.filter((check) => !check.result.ok);
   const employeeRows = employees.ok ? employees.data : [];
+  const userRows = adminUsers.ok ? adminUsers.data : [];
   const activeEmployees = employeeRows.filter((employee) => employee.status === "active");
   const contractRows = contracts.ok ? contracts.data : [];
   const shiftRows = shifts.ok ? shifts.data : [];
@@ -174,23 +179,38 @@ export default async function StaffQaPage() {
   const checklistRunRows = checklistRuns.ok ? checklistRuns.data : [];
   const notificationRows = notifications.ok ? notifications.data : [];
   const employeeIds = ids(employeeRows);
+  const userIds = ids(userRows);
   const shiftIds = ids(shiftRows);
   const processIds = ids(processRows);
 
   const employeesWithoutContract = activeEmployees.filter((employee) => !contractRows.some((contract) => contract.employee_id === employee.id && contract.active));
   const employeesWithoutUser = activeEmployees.filter((employee) => !employee.auth_user_id);
+  const employeesWithMissingUser = activeEmployees.filter((employee) => employee.auth_user_id && !userIds.has(employee.auth_user_id));
+  const inactiveLinkedEmployees = employeeRows.filter((employee) => employee.status !== "active" && employee.auth_user_id);
+  const linkedUserCounts = new Map<string, number>();
+  for (const employee of employeeRows) {
+    if (employee.auth_user_id) linkedUserCounts.set(employee.auth_user_id, (linkedUserCounts.get(employee.auth_user_id) || 0) + 1);
+  }
+  const duplicatedLinks = Array.from(linkedUserCounts.values()).filter((count) => count > 1).length;
   const employeesWithoutPin = activeEmployees.filter((employee) => !employee.pin_hash);
   const orphanAssignments = assignmentRows.filter((assignment) => !shiftIds.has(assignment.shift_id) || !employeeIds.has(assignment.employee_id));
   const processesWithoutTasks = processRows.filter((process) => !processTaskRows.some((task) => task.process_id === process.id));
   const orphanTasks = processTaskRows.filter((task) => !processIds.has(task.process_id));
   const overdueChecklists = checklistRunRows.filter((run) => run.due_at && new Date(run.due_at) < new Date() && ["pending", "available", "in_progress"].includes(run.status));
   const invalidNotifications = notificationRows.filter((notification) => !employeeIds.has(notification.recipient_employee_id));
+  const directAuthPolicies = rlsPolicies.ok
+    ? rlsPolicies.data.filter((policy) => {
+      const roles = Array.isArray(policy.roles) ? policy.roles : [policy.roles || ""];
+      return roles.includes("authenticated") && (policy.qual || "").includes("auth.uid");
+    })
+    : [];
   const openIssues = checklistIssues.ok ? checklistIssues.data.filter((issue) => issue.status !== "resolved" && issue.status !== "dismissed") : [];
   const criticalAlerts = [
     ...tableFailures.map((failure) => `Tabla no accesible: ${failure.table}`),
     ...orphanAssignments.map((assignment) => `Asignación huérfana: ${assignment.id}`),
     ...orphanTasks.map((task) => `Tarea de proceso huérfana: ${task.id}`),
     ...invalidNotifications.map((notification) => `Notificación sin destinatario válido: ${notification.id}`),
+    ...employeesWithMissingUser.map(() => "Empleado vinculado a usuario interno inexistente"),
   ];
 
   return (
@@ -199,12 +219,17 @@ export default async function StaffQaPage() {
       <section className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6">
         <div className="grid gap-3 md:grid-cols-4">
           {metric("Conexión", tableFailures.length ? "Revisar" : "OK", tableFailures.length ? "critical" : "ok")}
+          {metric("Estrategia identidad", "Server-side")}
+          {metric("RLS", directAuthPolicies.length ? "Revisar" : "Cerrado", directAuthPolicies.length ? "warn" : "ok")}
           {metric("Bucket privado", bucketOk ? "OK" : "No accesible", bucketOk ? "ok" : "warn")}
+          {metric("Usuarios internos", userRows.length)}
           {metric("Organizaciones", organizations.ok ? organizations.data.length : 0)}
           {metric("Centros", locations.ok ? locations.data.length : 0)}
           {metric("Empleados activos", activeEmployees.length)}
           {metric("Sin contrato", employeesWithoutContract.length, employeesWithoutContract.length ? "critical" : "ok")}
           {metric("Sin usuario", employeesWithoutUser.length, employeesWithoutUser.length ? "warn" : "ok")}
+          {metric("Vínculos duplicados", duplicatedLinks, duplicatedLinks ? "critical" : "ok")}
+          {metric("Inactivos con vínculo", inactiveLinkedEmployees.length, inactiveLinkedEmployees.length ? "warn" : "ok")}
           {metric("Sin PIN", employeesWithoutPin.length, employeesWithoutPin.length ? "warn" : "ok")}
           {metric("Turnos futuros", shiftRows.length)}
           {metric("Turnos publicados", shiftRows.filter((shift) => shift.status === "published").length)}
@@ -230,6 +255,15 @@ export default async function StaffQaPage() {
         </section>
 
         <section className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-white/10 bg-[#151515] p-5">
+            <h2 className="text-xl font-black uppercase tracking-[-0.03em]">Identidad y RLS</h2>
+            <div className="mt-4 grid gap-2 text-sm text-stone-200">
+              <p className="rounded-xl border border-white/10 bg-black/20 p-3">Identidad activa: cookie interna `admin_kiosko_session` → `admin_users.id` → empleado vinculado.</p>
+              <p className="rounded-xl border border-white/10 bg-black/20 p-3">Autorización: server-side con `service_role` encapsulado en repositorios.</p>
+              <p className="rounded-xl border border-white/10 bg-black/20 p-3">Políticas directas `authenticated/auth.uid()`: {rlsPolicies.ok ? directAuthPolicies.length : "no verificable desde PostgREST"}</p>
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-white/10 bg-[#151515] p-5">
             <h2 className="text-xl font-black uppercase tracking-[-0.03em]">Alertas críticas</h2>
             {criticalAlerts.length ? (

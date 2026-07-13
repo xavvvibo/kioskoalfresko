@@ -40,6 +40,7 @@ export function SharedKioskClockPanel({
       </div>
       <form action={action} className="grid gap-3">
         <input type="hidden" name="employeeId" value={employee.id} />
+        <input name="pin" type="password" inputMode="numeric" autoComplete="one-time-code" placeholder="Confirma PIN para esta operación" required className="rounded-2xl border border-white/10 bg-white px-4 py-4 text-lg text-stone-950" />
         <ClockActionButton name="intent" value="clock_in" disabled={Boolean(openEntry)}>Fichar entrada</ClockActionButton>
         <ClockActionButton name="intent" value="start_break" variant="secondary" disabled={!openEntry || Boolean(openBreak)}>Iniciar pausa</ClockActionButton>
         <ClockActionButton name="intent" value="end_break" variant="secondary" disabled={!openBreak}>Finalizar pausa</ClockActionButton>

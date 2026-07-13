@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
+import { isStaffAuthError, requireStaffEmployeeActor } from "@/lib/admin-kiosko/auth/staff-actor";
 import {
   getOpenWorkEntry,
-  getStaffEmployeeByAuthUserId,
   listOpenBreaks,
   listPublishedShiftsForEmployee,
   listStaffContracts,
@@ -19,20 +18,25 @@ export const metadata: Metadata = {
 };
 
 export default async function StaffPage() {
-  const session = await requireAdminSession("/staff");
-  if (!session.id) {
-    return <StaffEmptyState title="Acceso legacy no vinculado" text="Entra con un usuario nominal vinculado a un empleado para usar el portal." />;
+  let actor;
+  try {
+    actor = await requireStaffEmployeeActor();
+  } catch (error) {
+    return (
+      <StaffEmptyState
+        title={isStaffAuthError(error) && error.code === "staff_employee_inactive" ? "Perfil no activo" : "Usuario no vinculado"}
+        text={isStaffAuthError(error) ? error.message : "Tu usuario no está vinculado a un perfil de empleado. Contacta con administración."}
+      />
+    );
   }
-
-  const employee = await getStaffEmployeeByAuthUserId(session.id);
-  if (!employee.ok) return <StaffEmptyState title="Módulo no disponible" text={employee.error} />;
-  if (!employee.data) return <StaffEmptyState title="Empleado no vinculado" text="RRHH debe vincular tu usuario interno a una ficha de empleado." />;
+  const employee = actor.employee;
+  if (!employee) return <StaffEmptyState title="Usuario no vinculado" text="Tu usuario no está vinculado a un perfil de empleado. Contacta con administración." />;
 
   const [openEntry, shifts, entries, contracts] = await Promise.all([
-    getOpenWorkEntry(employee.data.id),
-    listPublishedShiftsForEmployee(employee.data.id),
-    listWorkEntriesForEmployee(employee.data.id),
-    listStaffContracts(employee.data.id),
+    getOpenWorkEntry(employee.id),
+    listPublishedShiftsForEmployee(employee.id),
+    listWorkEntriesForEmployee(employee.id),
+    listStaffContracts(employee.id),
   ]);
   const open = openEntry.ok ? openEntry.data : null;
   const openBreaks = open ? await listOpenBreaks(open.id) : null;
@@ -48,7 +52,7 @@ export default async function StaffPage() {
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d94b2b]">Portal empleado</p>
-            <h1 className="mt-2 text-4xl font-black uppercase tracking-[-0.05em] text-white">{employee.data.display_name}</h1>
+            <h1 className="mt-2 text-4xl font-black uppercase tracking-[-0.05em] text-white">{employee.display_name}</h1>
           </div>
           <nav className="flex flex-wrap gap-2 text-xs font-black uppercase tracking-[0.12em]">
             <Link className="rounded-full border border-white/10 bg-white/8 px-4 py-2" href="/staff/turnos">Mis turnos</Link>

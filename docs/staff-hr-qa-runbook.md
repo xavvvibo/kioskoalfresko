@@ -94,10 +94,13 @@ admin_users.id -> admin_kiosko_staff_employees.auth_user_id
 
 La sesión se guarda en la cookie `admin_kiosko_session`. Un empleado entra en `/staff` si su usuario interno está activo y existe un empleado activo vinculado a ese `admin_users.id`.
 
-Punto crítico: las políticas RLS SQL de empleado usan `auth.uid()`. Eso solo protege accesos directos con Supabase Auth si el JWT tiene como subject el mismo UUID guardado en `auth_user_id`. La aplicación actual usa `SUPABASE_SERVICE_ROLE_KEY` en servidor y aplica autorización en acciones/repositorios. Por tanto:
+Arquitectura vigente tras el hardening:
 
-- `/staff` funcional depende de `admin_users.id`, no de `auth.uid()`.
-- RLS directo para clientes Supabase autenticados no debe considerarse validado hasta alinear `auth.uid()` con el usuario interno o migrar el portal a Supabase Auth.
+- `/staff` depende de `admin_users.id`, no de `auth.uid()`.
+- `auth_user_id` es un nombre legacy que referencia `admin_users.id`.
+- RLS debe bloquear acceso directo `anon/authenticated`.
+- La autorización real se hace server-side con `resolveCurrentStaffActor()`.
+- El service role se usa únicamente en repositorios server-side después de resolver actor/permisos.
 
 ## Comprobaciones SQL
 
@@ -325,7 +328,30 @@ Kiosk compartido:
 
 ## Validación RLS
 
-Las políticas SQL están activadas, pero usan `auth.uid()`. Para validar RLS directo necesitas una sesión Supabase Auth cuyo `auth.uid()` coincida con `admin_kiosko_staff_employees.auth_user_id`. Si usas únicamente auth interno `admin_users`, valida autorización en servidor y no declares RLS de cliente como superado.
+La estrategia elegida es server-side. Después de aplicar:
+
+```text
+/Users/xavibocanegra/kioskoalfresko/supabase/admin_kiosko_staff_hr_auth_rls_fix.sql
+```
+
+la afirmación esperada es:
+
+```text
+RLS bloquea acceso directo y la autorización real se hace server-side.
+```
+
+Comprobación orientativa:
+
+```sql
+select tablename, policyname, roles, qual
+from pg_policies
+where schemaname = 'public'
+  and tablename like 'admin_kiosko_staff_%'
+  and roles::text like '%authenticated%'
+  and coalesce(qual, '') like '%auth.uid%';
+```
+
+Debe devolver cero filas tras aplicar la migración correctiva.
 
 ## Tests opcionales de integración
 
@@ -339,7 +365,8 @@ STAFF_QA_INTEGRATION=1 npm run test:staff:integration
 ## Errores conocidos
 
 - La constraint de `admin_kiosko_staff_notifications.notification_type` contiene los tipos de fase 3. Los tipos nuevos documentados en fase 4 deben añadirse en una migración futura antes de usarlos en seed o UI.
-- RLS directo de empleado depende de `auth.uid()` y no de la cookie interna.
+- Antes de aplicar la migración correctiva, pueden existir políticas legacy basadas en `auth.uid()`.
+- No hay rate limit persistente de PIN para kiosk.
 - El seed crea usuarios QA sin contraseña para no versionar credenciales. Define una contraseña temporal de QA fuera del repositorio si quieres probar login nominal.
 
 ## Rollback

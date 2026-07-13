@@ -1,13 +1,11 @@
 import Link from "next/link";
-import { requireAdminSession } from "@/lib/admin-kiosko/auth";
-import { getStaffEmployeeByAuthUserId, listWorkEntriesForEmployee } from "@/lib/admin-kiosko/repositories/staff.repository";
+import { listWorkEntriesForEmployee } from "@/lib/admin-kiosko/repositories/staff.repository";
+import { getCurrentStaffEmployeeForPage } from "../_lib/current-employee";
 
 export default async function StaffEntriesPage() {
-  const session = await requireAdminSession("/staff/fichajes");
-  if (!session.id) return <Empty text="Accede con un usuario nominal vinculado a empleado." />;
-  const employee = await getStaffEmployeeByAuthUserId(session.id);
-  if (!employee.ok || !employee.data) return <Empty text={employee.ok ? "No hay empleado vinculado." : employee.error} />;
-  const entries = await listWorkEntriesForEmployee(employee.data.id);
+  const current = await getCurrentStaffEmployeeForPage();
+  if (!current.ok) return <Empty text={current.error} />;
+  const entries = await listWorkEntriesForEmployee(current.employee.id);
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] px-4 py-6 text-white">
