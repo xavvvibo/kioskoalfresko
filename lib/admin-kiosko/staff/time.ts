@@ -19,6 +19,7 @@ export type StaffClockEntryLike = {
   clock_out_at?: string | Date | null;
   clockInAt?: string | Date | null;
   clockOutAt?: string | Date | null;
+  status?: StaffWorkEntryStatus;
 };
 
 export type StaffShiftPeriod = {
@@ -68,6 +69,11 @@ export function isOpenClockEntry(entry: StaffClockEntryLike | null | undefined) 
   const startedAt = entry.clockInAt ?? entry.clock_in_at;
   const endedAt = entry.clockOutAt ?? entry.clock_out_at;
   return startedAt != null && endedAt == null;
+}
+
+export function resolveClosedClockEntryStatus(entry: StaffClockEntryLike, workedSeconds: number): StaffWorkEntryStatus {
+  if (entry.status === "approved" || entry.status === "locked") return entry.status;
+  return workedSeconds > 0 ? "completed" : "pending_review";
 }
 
 export function canClockIn(state: ClockState) {

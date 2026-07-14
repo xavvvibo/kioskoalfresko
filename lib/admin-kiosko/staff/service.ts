@@ -25,6 +25,7 @@ import {
   calculatePlannedMinutes,
   calculateWeeklyVariance,
   detectShiftConflicts,
+  resolveClosedClockEntryStatus,
   secondsBetween,
   toCsv,
 } from "./time";
@@ -192,7 +193,7 @@ export async function clockOut(input: {
     clock_out_source: input.source,
     clock_out_device: input.device || null,
     worked_seconds: workedSeconds,
-    status: openEntry.data.status === "pending_review" ? "pending_review" : "completed",
+    status: resolveClosedClockEntryStatus(openEntry.data, workedSeconds),
   });
   if (!patched.ok) return patched;
 

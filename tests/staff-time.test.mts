@@ -10,6 +10,7 @@ import {
   filterByLocation,
   hasOpenBreak,
   isOpenClockEntry,
+  resolveClosedClockEntryStatus,
   shiftDurationMinutes,
   toCsv,
   visiblePublishedShifts,
@@ -27,7 +28,7 @@ test("considera abierto cualquier fichaje iniciado sin salida aunque esté pendi
   const entry = {
     clock_in_at: "2026-07-13T20:00:00.000Z",
     clock_out_at: null,
-    status: "pending_review",
+    status: "pending_review" as const,
   };
   assert.equal(isOpenClockEntry(entry), true);
   assert.equal(canClockIn({ hasOpenEntry: isOpenClockEntry(entry), hasOpenBreak: false }), false);
@@ -39,9 +40,25 @@ test("no considera abierto un fichaje pending_review con salida registrada", () 
   const entry = {
     clock_in_at: "2026-07-13T20:00:00.000Z",
     clock_out_at: "2026-07-13T23:00:00.000Z",
-    status: "pending_review",
+    status: "pending_review" as const,
   };
   assert.equal(isOpenClockEntry(entry), false);
+});
+
+test("cierra automáticamente como completed un fichaje pending_review válido", () => {
+  assert.equal(resolveClosedClockEntryStatus({
+    clock_in_at: "2026-07-13T20:00:00.000Z",
+    clock_out_at: "2026-07-13T23:00:00.000Z",
+    status: "pending_review",
+  }, 10_800), "completed");
+});
+
+test("mantiene pending_review si el cierre no tiene duración efectiva positiva", () => {
+  assert.equal(resolveClosedClockEntryStatus({
+    clock_in_at: "2026-07-13T20:00:00.000Z",
+    clock_out_at: "2026-07-13T20:00:00.000Z",
+    status: "pending_review",
+  }, 0), "pending_review");
 });
 
 test("permite salida si hay registro abierto y sin pausa abierta", () => {
