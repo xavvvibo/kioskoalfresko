@@ -1,9 +1,13 @@
 export type ParsedInternalQr =
-  | { ok: true; kind: "prep_batch"; qrValue: string; batchCode: string }
-  | { ok: false; qrValue: string; error: "invalid_format" | "missing_batch_code" };
+  | { ok: true; kind: "prep_batch"; qrValue: string; identifier: string; identifierType: "id" | "batch_code"; batchCode?: string; batchId?: string }
+  | { ok: false; qrValue: string; error: "invalid_format" | "missing_identifier" };
 
 const PREP_BATCH_PREFIX = "ERP:prep_batch:";
 const QR_ROUTE_MARKER = "/admin-kiosko/qr/";
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
 
 function decodeRepeated(value: string) {
   let decoded = value.trim();
@@ -49,10 +53,14 @@ export function parseInternalQrValue(value: string): ParsedInternalQr {
     return { ok: false, qrValue, error: "invalid_format" };
   }
 
-  const batchCode = qrValue.slice(PREP_BATCH_PREFIX.length).trim();
-  if (!batchCode) {
-    return { ok: false, qrValue, error: "missing_batch_code" };
+  const identifier = qrValue.slice(PREP_BATCH_PREFIX.length).trim();
+  if (!identifier) {
+    return { ok: false, qrValue, error: "missing_identifier" };
   }
 
-  return { ok: true, kind: "prep_batch", qrValue, batchCode };
+  if (isUuid(identifier)) {
+    return { ok: true, kind: "prep_batch", qrValue, identifier, identifierType: "id", batchId: identifier };
+  }
+
+  return { ok: true, kind: "prep_batch", qrValue, identifier, identifierType: "batch_code", batchCode: identifier };
 }

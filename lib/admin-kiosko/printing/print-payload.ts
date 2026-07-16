@@ -32,6 +32,7 @@ export type IngredientLabelBasicData = {
 
 export type PrepLabelBasicData = {
   prepName: string;
+  productionBatchId?: string;
   productionDateTime?: string;
   expiryDateTime?: string;
   shelfLifeDays?: number;
@@ -253,15 +254,21 @@ function appBaseUrl() {
     || "https://kioskoalfresko.es";
 }
 
-export function buildPreparationTraceabilityQrUrl(input: { batchCode?: unknown; qrValue?: unknown; baseUrl?: unknown }) {
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+export function buildPreparationTraceabilityQrUrl(input: { productionBatchId?: unknown; batchCode?: unknown; qrValue?: unknown; baseUrl?: unknown }) {
   const explicitUrl = normalizeAbsoluteHttpsUrl(input.qrValue, 240);
   if (explicitUrl) return explicitUrl;
 
+  const productionBatchId = sanitizeLabelText(input.productionBatchId, 80).replace(/[\r\n]/g, "").trim();
   const batchCode = sanitizeLabelText(input.batchCode, 80).replace(/[\r\n]/g, "").trim();
-  if (!batchCode) return undefined;
+  const canonicalId = isUuid(productionBatchId) ? productionBatchId : batchCode;
+  if (!canonicalId) return undefined;
 
   const baseUrl = normalizeAbsoluteHttpsUrl(input.baseUrl, 180) || appBaseUrl();
-  const internalValue = `ERP:prep_batch:${batchCode}`;
+  const internalValue = `ERP:prep_batch:${canonicalId}`;
   return `${baseUrl.replace(/\/+$/, "")}/admin-kiosko/qr/${encodeURIComponent(internalValue)}`;
 }
 
@@ -413,6 +420,7 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
   if (lengthError) return { ok: false, error: lengthError };
 
   const prepName = sanitizeLabelText(input.data.prepName);
+  const productionBatchId = sanitizeLabelText(input.data.productionBatchId, 80) || undefined;
   const productionDateTime = parseDateTimeInput(input.data.productionDateTime)
     || parseDateTimeInput(input.data.productionDate)
     || new Date();
@@ -427,7 +435,7 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
     : undefined;
   const unit = sanitizeLabelText(input.data.unit, 20) || undefined;
   const qrUrl = normalizeAbsoluteHttpsUrl(input.data.qrUrl, 240)
-    || buildPreparationTraceabilityQrUrl({ batchCode, qrValue: input.data.qrValue });
+    || buildPreparationTraceabilityQrUrl({ productionBatchId, batchCode, qrValue: input.data.qrValue });
   const qrValue = qrUrl;
   const includeQr = input.template === "prep_label_professional"
     ? batchCode ? input.data.includeQr !== false && input.data.includeQr !== "false" : false
@@ -471,6 +479,7 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
       template,
       data: {
         prepName,
+        productionBatchId,
         productionDateTime: productionDateTime.toISOString(),
         expiryDateTime: expiryDateTime.toISOString(),
         shelfLifeDays,

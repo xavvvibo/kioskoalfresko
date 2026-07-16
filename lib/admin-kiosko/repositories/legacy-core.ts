@@ -680,6 +680,17 @@ export type ProductionBatchInput = {
   source_document_id?: string;
 };
 
+export type ManualPreparationBatchInput = {
+  batch_code: string;
+  prep_name: string;
+  production_date: string;
+  production_time?: string;
+  expiry_date: string;
+  responsible?: string;
+  storage_condition?: string;
+  observations?: string;
+};
+
 export type ProductionMovementInput = {
   batch_id: string;
   movement_date: string;
@@ -2809,7 +2820,7 @@ export async function getProductionBatchByBatchCode(batchCode: string): Promise<
   if (!hasRequiredText(batchCode)) return { ok: true, data: null };
   const result = await getRows<ProductionBatch>(
     "admin_production_batches",
-    `?select=${productionBatchSelect}&batch_code=eq.${encodeURIComponent(batchCode.trim())}&limit=1`,
+    `?select=${productionBatchSelect}&batch_code=ilike.${encodeURIComponent(batchCode.trim())}&limit=1`,
   );
   if (!result.ok) return result;
   const batch = result.data[0];
@@ -3010,6 +3021,73 @@ export async function createProductionBatch(data: ProductionBatchInput): Promise
   }
 
   return { ok: true, data: { id: batch.id, batch_code: batch.batch_code, warnings } };
+}
+
+export async function createManualPreparationBatch(data: ManualPreparationBatchInput): Promise<DbResult<{ id: string; batch_code: string }>> {
+  const batchCode = (cleanText(data.batch_code) || "").toUpperCase();
+  const prepName = cleanText(data.prep_name) || "";
+  const productionDate = cleanText(data.production_date) || "";
+  const expiryDate = cleanText(data.expiry_date) || "";
+
+  if (!batchCode || !prepName || !productionDate || !expiryDate) {
+    return { ok: false, error: "Preparación, lote, elaboración y caducidad son obligatorios para crear trazabilidad." };
+  }
+
+  const existing = await getProductionBatchByBatchCode(batchCode);
+  if (!existing.ok) return existing;
+  if (existing.data) {
+    return { ok: true, data: { id: existing.data.id, batch_code: existing.data.batch_code || batchCode } };
+  }
+
+  const inserted = await insertRecordReturning<{ id: string; batch_code: string }>("admin_production_batches", {
+    production_date: productionDate,
+    production_time: cleanText(data.production_time),
+    responsible: cleanText(data.responsible),
+    batch_code: batchCode,
+    source_supplier: "Producción interna",
+    source_product: "Preparación manual",
+    source_batch_number: "",
+    input_quantity: null,
+    input_unit: "",
+    output_product: prepName,
+    output_quantity: 1,
+    output_unit: "lote",
+    unit_weight: null,
+    storage_state: cleanText(data.storage_condition) || "Refrigerado 0-4 C",
+    expiry_date: expiryDate,
+    observations: cleanText(data.observations) || "Preparación creada desde impresión de etiquetas APPCC.",
+    source_document_id: null,
+    source: "admin-kiosko-prep-label",
+  }, "id,batch_code");
+
+  if (!inserted.ok) return inserted;
+  const batch = inserted.data[0];
+  if (!batch) return { ok: false, error: "No se pudo recuperar la preparación creada." };
+
+  await insertRecord("admin_production_movements", {
+    batch_id: batch.id,
+    movement_date: productionDate,
+    movement_time: cleanText(data.production_time),
+    movement_type: "produccion",
+    quantity: 1,
+    unit: "lote",
+    from_state: "preparación",
+    to_state: cleanText(data.storage_condition) || "Refrigerado 0-4 C",
+    reason: "Preparación manual etiquetada",
+    responsible: cleanText(data.responsible),
+    observations: cleanText(data.observations),
+  });
+
+  await createLabelRecord({
+    model: "Elaboración",
+    product: prepName,
+    batch: batch.batch_code,
+    elaboration_date: productionDate,
+    best_before_date: expiryDate,
+    responsible: cleanText(data.responsible),
+  });
+
+  return { ok: true, data: { id: batch.id, batch_code: batch.batch_code } };
 }
 
 export async function createProductionMovement(data: ProductionMovementInput) {

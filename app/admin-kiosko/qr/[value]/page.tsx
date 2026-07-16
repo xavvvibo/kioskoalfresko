@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
-import { getProductionBatchByBatchCode } from "@/lib/admin-kiosko/database";
+import { getProductionBatchByBatchCode, getProductionBatchById } from "@/lib/admin-kiosko/database";
 import { parseInternalQrValue } from "@/lib/admin-kiosko/qr/resolve-qr";
 import { AdminHeader } from "../../_components/AdminHeader";
 
@@ -51,11 +51,11 @@ export default async function InternalQrResolverPage({
     );
   }
 
-  if (!parsed.ok && parsed.error === "missing_batch_code") {
+  if (!parsed.ok && parsed.error === "missing_identifier") {
     return (
       <ErrorPanel
-        title="Lote no informado"
-        detail="El QR indica un lote de subelaboracion, pero no contiene codigo de lote."
+        title="Identificador no informado"
+        detail="El QR indica un lote de subelaboracion, pero no contiene identificador resoluble."
         qrValue={parsed.qrValue}
       />
     );
@@ -71,8 +71,10 @@ export default async function InternalQrResolverPage({
     );
   }
 
-  const { batchCode, qrValue } = parsed;
-  const result = await getProductionBatchByBatchCode(batchCode);
+  const { identifier, identifierType, qrValue } = parsed;
+  const result = identifierType === "id"
+    ? await getProductionBatchById(identifier)
+    : await getProductionBatchByBatchCode(identifier);
   if (!result.ok) {
     return (
       <ErrorPanel
@@ -87,7 +89,9 @@ export default async function InternalQrResolverPage({
     return (
       <ErrorPanel
         title="Lote no encontrado"
-        detail={`QR valido en formato, pero lote no encontrado: ${batchCode}`}
+        detail={identifierType === "id"
+          ? `QR valido en formato, pero la preparacion no existe o no esta disponible: ${identifier}`
+          : `QR valido en formato antiguo, pero lote no encontrado: ${identifier}`}
         qrValue={qrValue}
       />
     );

@@ -10,6 +10,7 @@ import { scaleTechnicalRecipe } from "../production/recipe-scaling";
 import type { ProductionPreview, RecipeAllergen, RecipeStep, TechnicalRecipe } from "../production/contracts";
 import {
   createInternalRecipe,
+  createManualPreparationBatch,
   createProductionBatch,
   createProductionMovement,
   getInternalRecipes,
@@ -27,6 +28,7 @@ type DbResult<T = undefined> = { ok: true; data: T } | { ok: false; error: strin
 
 export {
   createInternalRecipe,
+  createManualPreparationBatch,
   createProductionBatch,
   createProductionMovement,
   getInternalRecipes,

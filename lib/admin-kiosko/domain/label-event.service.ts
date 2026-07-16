@@ -39,6 +39,7 @@ type ProductionBatchLabelInput = {
 type PrepLabelInput = {
   template?: PrintLabelTemplate;
   prepName: string;
+  productionBatchId?: string;
   productionDateTime?: string;
   expiryDateTime?: string;
   shelfLifeDays?: number;
@@ -138,6 +139,7 @@ export const labelEventService = {
         template: "prep_label_professional",
         data: {
           prepName: input.prepName,
+          productionBatchId: input.productionBatchId,
           productionDateTime: dateTimeFromDateAndTime(input.productionDate, input.productionTime),
           expiryDateTime: dateTimeFromDateAndTime(input.expiryDate, input.productionTime),
           batchCode: input.batchCode,
@@ -146,7 +148,7 @@ export const labelEventService = {
           brandName: "KIOSKO ALFRESKO",
           quantity: input.quantity,
           unit: input.unit,
-          qrValue: buildPreparationTraceabilityQrUrl({ batchCode: input.batchCode }),
+          qrValue: buildPreparationTraceabilityQrUrl({ productionBatchId: input.productionBatchId, batchCode: input.batchCode }),
           includeQr: true,
         },
         metadata: {
@@ -213,6 +215,7 @@ export const labelEventService = {
         template: input.template || "prep_label_professional",
         data: {
           prepName: input.prepName,
+          productionBatchId: input.productionBatchId,
           productionDateTime: input.productionDateTime,
           expiryDateTime: input.expiryDateTime,
           shelfLifeDays: input.shelfLifeDays,
@@ -228,7 +231,7 @@ export const labelEventService = {
           requestedBy: input.requestedBy || "admin-kiosko",
           module: "prep",
           sourceType: "prep_batch",
-          sourceId: input.batchCode,
+          sourceId: input.productionBatchId || input.batchCode,
           createdFrom: "erp_event",
           reason: input.reason,
           batchCode: input.batchCode,

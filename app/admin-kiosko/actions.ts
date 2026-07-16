@@ -38,6 +38,7 @@ import {
   createInventoryProduct,
   createInternalRecipe,
   createLabelRecord,
+  createManualPreparationBatch,
   createProductionBatch,
   createProductionMovement,
   registerBatchConsumption as registerBatchConsumptionRecord,
@@ -2012,6 +2013,21 @@ function printPrepErrorMessage(error: string) {
   return "No se pudo enviar la etiqueta de preparacion. Revisa los datos y vuelve a intentarlo.";
 }
 
+function prepDateTimeParts(value: string) {
+  const raw = value.trim();
+  if (!raw) return { date: "", time: "" };
+
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2}))?/);
+  if (match) return { date: match[1], time: match[2] || "" };
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return { date: "", time: "" };
+  return {
+    date: parsed.toISOString().slice(0, 10),
+    time: parsed.toISOString().slice(11, 16),
+  };
+}
+
 export async function printPrepLabelAction(_previousState: PrepPrintState, formData: FormData): Promise<PrepPrintState> {
   await requireAdminPermission("labels:basic_print");
 
@@ -2029,13 +2045,35 @@ export async function printPrepLabelAction(_previousState: PrepPrintState, formD
     return { ok: false, message: "Indica el nombre de la preparacion." };
   }
 
+  const productionParts = prepDateTimeParts(productionDateTime);
+  const expiryParts = prepDateTimeParts(expiryDateTime);
+  if (!productionParts.date || !expiryParts.date) {
+    return { ok: false, message: "Indica fecha y hora de elaboracion y caducidad validas." };
+  }
+
+  const preparationBatch = await createManualPreparationBatch({
+    batch_code: batchCode,
+    prep_name: prepName,
+    production_date: productionParts.date,
+    production_time: productionParts.time,
+    expiry_date: expiryParts.date,
+    responsible: responsibleName || undefined,
+    storage_condition: storageCondition,
+    observations: "Preparación creada desde impresión manual de etiqueta APPCC.",
+  });
+
+  if (!preparationBatch.ok) {
+    return { ok: false, message: `No se pudo crear la preparación trazable: ${preparationBatch.error}` };
+  }
+
   const printResult = await labelEventService.requestPrepManualLabel({
     template,
     prepName,
+    productionBatchId: preparationBatch.data.id,
     productionDateTime: productionDateTime || undefined,
     expiryDateTime: expiryDateTime || undefined,
     shelfLifeDays,
-    batchCode,
+    batchCode: preparationBatch.data.batch_code,
     responsibleName: responsibleName || undefined,
     storageCondition,
     requestedBy: text(formData, "requestedBy") || "admin-kiosko",
@@ -2052,9 +2090,9 @@ export async function printPrepLabelAction(_previousState: PrepPrintState, formD
     printerKey: printResult.data.printer_key,
     template: typeof printResult.data.payload.template === "string" ? printResult.data.payload.template : undefined,
     sourceType: "prep_batch",
-    sourceId: batchCode,
+    sourceId: preparationBatch.data.id,
     reason: "print_prep_label",
-    correlationId: batchCode,
+    correlationId: preparationBatch.data.id,
   });
 
   revalidatePath("/admin-kiosko/etiquetas-prep");

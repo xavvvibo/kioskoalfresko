@@ -1,6 +1,7 @@
 import { getBatchConsumptionsFromBatch, type BatchConsumption } from "../repositories/batch-consumption.repository";
 import type { PrintJob, PrintJobPayload } from "../repositories/print-jobs.repository";
 import type { ProductionBatch as LegacyProductionBatch, ProductionMovement } from "../repositories/legacy-core";
+import { buildPreparationTraceabilityQrUrl } from "../printing/print-payload";
 
 export const PRODUCTION_BATCH_STATUSES = [
   "ACTIVE",
@@ -360,7 +361,7 @@ export function buildProductionBatchTraceability(batch: LegacyProductionBatch, m
     notes: batch.observations || "",
     quantity: batch.output_quantity,
     unit: batch.output_unit || "ud",
-    qrValue: batchCode ? `ERP:prep_batch:${batchCode}` : "",
+    qrValue: buildPreparationTraceabilityQrUrl({ productionBatchId: batch.id, batchCode }) || "",
     remainingLifeLabel: getRemainingLifeLabel(expiryDateTime, now),
     ingredientsUsed: mapIngredientsUsed(batch),
     printJobs,
