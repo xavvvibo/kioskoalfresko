@@ -116,3 +116,30 @@ test("prep action persists the preparation before creating the print job", () =>
   assert.ok(printIndex > guardIndex);
   assert.match(actions.slice(printIndex, printIndex + 700), /productionBatchId: preparationBatch\.data\.id/);
 });
+
+test("prep action does not create a print job when persistence fails", () => {
+  const actions = fs.readFileSync(new URL("../app/admin-kiosko/actions.ts", import.meta.url), "utf8");
+  const guardIndex = actions.indexOf("if (!preparationBatch.ok)");
+  const printIndex = actions.indexOf("const printResult = await labelEventService.requestPrepManualLabel");
+  const failureBlock = actions.slice(guardIndex, printIndex);
+
+  assert.ok(guardIndex > -1);
+  assert.ok(printIndex > guardIndex);
+  assert.match(failureBlock, /return \{ ok: false, message: `No se pudo crear la preparación trazable:/);
+});
+
+test("prep label decision builds the QR from the persisted production batch UUID", () => {
+  const service = fs.readFileSync(new URL("../lib/admin-kiosko/domain/label-event.service.ts", import.meta.url), "utf8");
+  const decideStart = service.indexOf("decidePrepCreated(input: PrepLabelInput)");
+  const requestStart = service.indexOf("async requestPrepCreatedLabel", decideStart);
+  const prepDecision = service.slice(decideStart, requestStart);
+
+  assert.ok(decideStart > -1);
+  assert.ok(requestStart > decideStart);
+  assert.match(
+    prepDecision,
+    /qrValue: buildPreparationTraceabilityQrUrl\(\{ productionBatchId: input\.productionBatchId, batchCode: input\.batchCode \}\)/,
+  );
+  assert.match(prepDecision, /productionBatchId: input\.productionBatchId/);
+  assert.match(prepDecision, /sourceId: input\.productionBatchId \|\| input\.batchCode/);
+});

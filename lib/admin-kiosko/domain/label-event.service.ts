@@ -223,7 +223,7 @@ export const labelEventService = {
           responsibleName: input.responsibleName,
           storageCondition: input.storageCondition || "Refrigerado 0-4 C",
           brandName: "KIOSKO ALFRESKO",
-          qrValue: buildPreparationTraceabilityQrUrl({ batchCode: input.batchCode }),
+          qrValue: buildPreparationTraceabilityQrUrl({ productionBatchId: input.productionBatchId, batchCode: input.batchCode }),
           includeQr: true,
           copies: input.copies,
         },

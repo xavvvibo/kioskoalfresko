@@ -2085,6 +2085,16 @@ export async function printPrepLabelAction(_previousState: PrepPrintState, formD
     return { ok: false, message: printPrepErrorMessage(printResult.error) };
   }
 
+  const printPayload = printResult.data.payload;
+  const rawCommand = typeof printPayload.raw_command === "string" ? printPayload.raw_command : "";
+  console.info("[admin-kiosko:prep-label]", {
+    batchCode: preparationBatch.data.batch_code,
+    productionBatchId: preparationBatch.data.id,
+    qrIdentity: `ERP:prep_batch:${preparationBatch.data.id}`,
+    printJobId: printResult.data.id,
+    rawCommandBytes: Buffer.byteLength(rawCommand, "utf8"),
+  });
+
   await emitPrintJobCreatedEvent({
     printJobId: printResult.data.id,
     printerKey: printResult.data.printer_key,
