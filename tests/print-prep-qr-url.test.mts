@@ -9,6 +9,7 @@ import {
 } from "../lib/admin-kiosko/printing/print-payload.ts";
 import { generateLabelCommand } from "../lib/admin-kiosko/printing/label-command.ts";
 import { parseNativeQrCommand } from "../lib/admin-kiosko/printing/godex-80x50-ezpl.mjs";
+import { buildTraceabilityQrLinks } from "../lib/admin-kiosko/qr/qr-links.ts";
 import { parseInternalQrValue } from "../lib/admin-kiosko/qr/resolve-qr.ts";
 
 const batchCode = "PD-160726-7300";
@@ -29,6 +30,28 @@ test("buildPreparationTraceabilityQrUrl creates a canonical UUID HTTPS URL", () 
 
 test("buildPreparationTraceabilityQrUrl keeps legacy batch fallback", () => {
   assert.equal(buildPreparationTraceabilityQrUrl({ batchCode }), legacyUrl);
+});
+
+test("traceability QR links do not wrap an absolute URL inside another QR route", () => {
+  const links = buildTraceabilityQrLinks({ qrValue: expectedUrl, baseUrl: "https://kioskoalfresko.es" });
+
+  assert.equal(links.qrValue, expectedUrl);
+  assert.equal(links.qrUrl, expectedUrl);
+  assert.equal(links.qrRoute, "/admin-kiosko/qr/ERP%3Aprep_batch%3A8a5e2b02-9f52-4f91-8ed0-7a8df90b5b7a");
+  assert.equal(links.missingBaseUrl, false);
+  assert.doesNotMatch(links.qrRoute, /https%3A%2F%2F/);
+});
+
+test("traceability QR links wrap an internal value exactly once", () => {
+  const links = buildTraceabilityQrLinks({
+    qrValue: `ERP:prep_batch:${productionBatchId}`,
+    baseUrl: "https://kioskoalfresko.es/",
+  });
+
+  assert.equal(links.qrRoute, "/admin-kiosko/qr/ERP%3Aprep_batch%3A8a5e2b02-9f52-4f91-8ed0-7a8df90b5b7a");
+  assert.equal(links.qrUrl, expectedUrl);
+  assert.equal(links.isAbsolute, false);
+  assert.equal(links.missingBaseUrl, false);
 });
 
 test("prep print payload uses the HTTPS URL as QR value", () => {

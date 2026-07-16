@@ -10,6 +10,7 @@ import {
   type ProductionBatchStatus,
   type ProductionBatchTimelineEvent,
 } from "@/lib/admin-kiosko/domain/production-batch";
+import { buildTraceabilityQrLinks } from "@/lib/admin-kiosko/qr/qr-links";
 import { AdminHeader } from "../../../_components/AdminHeader";
 
 export const metadata: Metadata = {
@@ -54,7 +55,7 @@ function shortDateTime(value?: string | null) {
 }
 
 function configuredAppBaseUrl() {
-  return (process.env.NEXT_PUBLIC_APP_BASE_URL || "").trim().replace(/\/+$/, "");
+  return (process.env.NEXT_PUBLIC_APP_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || "").trim().replace(/\/+$/, "");
 }
 
 function todayMadrid() {
@@ -131,9 +132,11 @@ export default async function ProductionBatchDetailPage({
     ? jobsResult.data.filter((job) => printJobMatchesProductionBatch(job, batch.id, batchCode))
     : [];
   const productionBatch = buildProductionBatchTraceability(batch, printJobs);
-  const appBaseUrl = configuredAppBaseUrl();
-  const qrRoute = productionBatch.qrValue ? `/admin-kiosko/qr/${encodeURIComponent(productionBatch.qrValue)}` : "";
-  const qrUrl = appBaseUrl && qrRoute ? `${appBaseUrl}${qrRoute}` : "";
+  const qrLinks = buildTraceabilityQrLinks({
+    qrValue: productionBatch.qrValue,
+    baseUrl: configuredAppBaseUrl(),
+  });
+  const { qrRoute, qrUrl } = qrLinks;
   const latestPrintJob = [...productionBatch.printJobs]
     .sort((a, b) => (b.printedAt || b.createdAt).localeCompare(a.printedAt || a.createdAt))[0];
   const currentDate = todayMadrid();
@@ -234,14 +237,14 @@ export default async function ProductionBatchDetailPage({
                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-stone-400">qrUrl</p>
                     <a href={qrUrl} className="mt-1 block break-all font-mono text-sm font-black text-[#f2c6bb] underline decoration-[#f2c6bb]/40 underline-offset-4">{qrUrl}</a>
                   </div>
-                ) : (
+                ) : qrLinks.missingBaseUrl ? (
                   <p className="rounded-xl border border-amber-300/50 bg-amber-100/10 px-3 py-2 text-xs font-semibold text-amber-100">
-                    NEXT_PUBLIC_APP_BASE_URL no configurada; el QR fisico codificara solo el valor interno.
+                    NEXT_PUBLIC_APP_BASE_URL o NEXT_PUBLIC_SITE_URL no configurada; el QR fisico codificara solo el valor interno.
                   </p>
-                )}
+                ) : null}
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Link href={qrRoute} className="rounded-full border border-white/15 bg-white/8 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Abrir ruta QR</Link>
+                {qrRoute ? <Link href={qrRoute} className="rounded-full border border-white/15 bg-white/8 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Abrir ruta QR</Link> : null}
                 {qrUrl ? <a href={qrUrl} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Abrir qrUrl</a> : null}
               </div>
               <p className="mt-3 text-xs text-stone-300">La ruta QR requiere sesion admin.</p>
