@@ -54,6 +54,16 @@ test("traceability QR links wrap an internal value exactly once", () => {
   assert.equal(links.missingBaseUrl, false);
 });
 
+test("production batch detail hides QR diagnostics behind the debug flag", () => {
+  const page = fs.readFileSync(new URL("../app/admin-kiosko/produccion/lotes/[id]/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /function qrDebugEnabled\(\)/);
+  assert.match(page, /process\.env\.NODE_ENV !== "production"/);
+  assert.match(page, /process\.env\.ENABLE_QR_DEBUG === "true"/);
+  assert.match(page, /\{showQrDebug && productionBatch\.qrValue \? \(/);
+  assert.doesNotMatch(page, /\{productionBatch\.qrValue \? \(/);
+});
+
 test("prep print payload uses the HTTPS URL as QR value", () => {
   const validated = validatePrintLabelInput({
     printerKey: "kiosko_godex_g500",

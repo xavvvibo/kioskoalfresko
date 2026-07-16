@@ -58,6 +58,10 @@ function configuredAppBaseUrl() {
   return (process.env.NEXT_PUBLIC_APP_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || "").trim().replace(/\/+$/, "");
 }
 
+function qrDebugEnabled() {
+  return process.env.NODE_ENV !== "production" || process.env.ENABLE_QR_DEBUG === "true";
+}
+
 function todayMadrid() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Madrid",
@@ -137,6 +141,7 @@ export default async function ProductionBatchDetailPage({
     baseUrl: configuredAppBaseUrl(),
   });
   const { qrRoute, qrUrl } = qrLinks;
+  const showQrDebug = qrDebugEnabled();
   const latestPrintJob = [...productionBatch.printJobs]
     .sort((a, b) => (b.printedAt || b.createdAt).localeCompare(a.printedAt || a.createdAt))[0];
   const currentDate = todayMadrid();
@@ -154,7 +159,7 @@ export default async function ProductionBatchDetailPage({
       value: productionBatch.printJobs.some((job) => job.status === "printed") ? "Enviado a impresora" : "No consta envio",
       ok: productionBatch.printJobs.some((job) => job.status === "printed"),
     },
-    { label: "QR resuelve a esta ficha", value: qrRoute || "-", ok: Boolean(qrRoute) },
+    ...(showQrDebug ? [{ label: "QR resuelve a esta ficha", value: qrRoute || "-", ok: Boolean(qrRoute) }] : []),
   ];
 
   return (
@@ -220,7 +225,7 @@ export default async function ProductionBatchDetailPage({
             </div>
           ) : null}
 
-          {productionBatch.qrValue ? (
+          {showQrDebug && productionBatch.qrValue ? (
             <div className="mt-5 rounded-[1.2rem] border border-white/10 bg-white/6 p-4">
               <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#f2c6bb]">QR interno preparado</p>
               <div className="mt-3 grid gap-3">
@@ -242,10 +247,6 @@ export default async function ProductionBatchDetailPage({
                     NEXT_PUBLIC_APP_BASE_URL o NEXT_PUBLIC_SITE_URL no configurada; el QR fisico codificara solo el valor interno.
                   </p>
                 ) : null}
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {qrRoute ? <Link href={qrRoute} className="rounded-full border border-white/15 bg-white/8 px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Abrir ruta QR</Link> : null}
-                {qrUrl ? <a href={qrUrl} className="rounded-full border border-[#d94b2b] bg-[#d94b2b] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white">Abrir qrUrl</a> : null}
               </div>
               <p className="mt-3 text-xs text-stone-300">La ruta QR requiere sesion admin.</p>
             </div>
