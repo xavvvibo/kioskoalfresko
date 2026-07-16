@@ -120,7 +120,7 @@ export async function sendRawToTcpPrinter(rawCommand, host, port = 9100, timeout
   const debugTcp = process.env.PRINT_DEBUG_TCP === "true";
 
   if (!host) {
-    throw new Error("Falta GODEX_PRINTER_HOST para transporte tcp_9100.");
+    throw new Error("Falta GODEX_HOST para transporte tcp_9100.");
   }
   if (!Number.isFinite(printerPort) || printerPort <= 0) {
     throw new Error(`Puerto TCP invalido para Godex: ${port}`);

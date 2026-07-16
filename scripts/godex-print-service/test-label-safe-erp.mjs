@@ -12,8 +12,8 @@ function logError(message, meta = {}) {
 
 await loadGodexEnv();
 
-const host = process.env.GODEX_PRINTER_HOST || "192.168.1.37";
-const port = Number(process.env.GODEX_PRINTER_PORT || 9100);
+const host = process.env.GODEX_HOST || process.env.GODEX_PRINTER_HOST || "";
+const port = Number(process.env.GODEX_PORT || process.env.GODEX_PRINTER_PORT || 9100);
 const timeoutMs = Number(process.env.GODEX_TCP_TIMEOUT_MS || 5000);
 const timestamp = new Intl.DateTimeFormat("es-ES", {
   timeZone: "Europe/Madrid",

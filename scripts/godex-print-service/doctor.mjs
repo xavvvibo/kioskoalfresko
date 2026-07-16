@@ -12,8 +12,8 @@ const config = {
   token: process.env.ERP_API_TOKEN || "",
   printerKey: process.env.PRINTER_KEY || "kiosko_godex_g500",
   transport: process.env.GODEX_PRINT_TRANSPORT || "tcp_9100",
-  host: process.env.GODEX_PRINTER_HOST || "192.168.1.37",
-  port: Number(process.env.GODEX_PRINTER_PORT || 9100),
+  host: process.env.GODEX_HOST || process.env.GODEX_PRINTER_HOST || "",
+  port: Number(process.env.GODEX_PORT || process.env.GODEX_PRINTER_PORT || 9100),
   timeoutMs: Number(process.env.GODEX_TCP_TIMEOUT_MS || 5000),
   maxJobBytes: Number(process.env.GODEX_MAX_JOB_BYTES || 24576),
   maxCopies: Number(process.env.GODEX_MAX_COPIES || 8),
@@ -99,8 +99,8 @@ addCheck("ERP_API_URL", config.erpApiUrl ? "OK" : "ERROR", config.erpApiUrl || "
 addCheck("ERP_API_TOKEN", config.token ? "OK" : "ERROR", config.token ? "Configurado" : "Falta ERP_API_TOKEN");
 addCheck("PRINTER_KEY", config.printerKey ? "OK" : "ERROR", config.printerKey || "Falta PRINTER_KEY");
 addCheck("GODEX_PRINT_TRANSPORT", config.transport === "tcp_9100" ? "OK" : "ERROR", config.transport);
-addCheck("GODEX_PRINTER_HOST", config.host ? "OK" : "ERROR", config.host || "Falta GODEX_PRINTER_HOST");
-addCheck("GODEX_PRINTER_PORT", config.port === 9100 ? "OK" : "WARN", String(config.port));
+addCheck("GODEX_HOST", config.host ? "OK" : "ERROR", config.host || "Falta GODEX_HOST");
+addCheck("GODEX_PORT", config.port === 9100 ? "OK" : "WARN", String(config.port));
 addCheck("GODEX_MAX_JOB_BYTES", config.maxJobBytes > 0 && config.maxJobBytes <= 65536 ? "OK" : "WARN", String(config.maxJobBytes));
 addCheck("GODEX_MAX_COPIES", config.maxCopies >= 1 && config.maxCopies <= 8 ? "OK" : "WARN", String(config.maxCopies));
 addCheck("Journal dir", "OK", config.journalDir);
