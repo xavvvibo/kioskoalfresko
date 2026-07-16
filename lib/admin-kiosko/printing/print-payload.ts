@@ -1,4 +1,4 @@
-import { cleanLabelText } from "@/lib/admin-kiosko/printing/prep-label-utils";
+import { cleanLabelText } from "./prep-label-utils.ts";
 
 export const DEFAULT_GODEX_G500_PRINTER_KEY = "kiosko_godex_g500";
 
@@ -234,11 +234,35 @@ function parseCopies(value: unknown) {
   return Number.isFinite(parsed) ? Math.max(1, Math.min(8, Math.round(parsed))) : undefined;
 }
 
-function buildInternalQrUrl(qrValue?: string) {
-  const baseUrl = sanitizeLabelText(process.env.NEXT_PUBLIC_APP_BASE_URL, 180).replace(/\/+$/, "");
-  const value = sanitizeLabelText(qrValue, 240);
-  if (!baseUrl || !value) return undefined;
-  return `${baseUrl}/admin-kiosko/qr/${encodeURIComponent(value)}`;
+function normalizeAbsoluteHttpsUrl(value: unknown, maxLength = 240) {
+  const raw = cleanText(value).replace(/[\r\n\t]/g, "").trim();
+  if (!raw || raw.length > maxLength) return undefined;
+
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "https:" || !url.hostname) return undefined;
+    return url.toString().slice(0, maxLength);
+  } catch {
+    return undefined;
+  }
+}
+
+function appBaseUrl() {
+  return normalizeAbsoluteHttpsUrl(process.env.NEXT_PUBLIC_APP_BASE_URL, 180)
+    || normalizeAbsoluteHttpsUrl(process.env.NEXT_PUBLIC_SITE_URL, 180)
+    || "https://kioskoalfresko.es";
+}
+
+export function buildPreparationTraceabilityQrUrl(input: { batchCode?: unknown; qrValue?: unknown; baseUrl?: unknown }) {
+  const explicitUrl = normalizeAbsoluteHttpsUrl(input.qrValue, 240);
+  if (explicitUrl) return explicitUrl;
+
+  const batchCode = sanitizeLabelText(input.batchCode, 80).replace(/[\r\n]/g, "").trim();
+  if (!batchCode) return undefined;
+
+  const baseUrl = normalizeAbsoluteHttpsUrl(input.baseUrl, 180) || appBaseUrl();
+  const internalValue = `ERP:prep_batch:${batchCode}`;
+  return `${baseUrl.replace(/\/+$/, "")}/admin-kiosko/qr/${encodeURIComponent(internalValue)}`;
 }
 
 function normalizedMetadata(value: unknown): PrintJobMetadata {
@@ -402,9 +426,9 @@ export function validatePrintLabelInput(input: unknown): PrintInputValidation {
     ? input.data.quantity
     : undefined;
   const unit = sanitizeLabelText(input.data.unit, 20) || undefined;
-  const qrValue = sanitizeLabelText(input.data.qrValue, 180)
-    || (batchCode ? `ERP:prep_batch:${batchCode}` : undefined);
-  const qrUrl = sanitizeLabelText(input.data.qrUrl, 240) || buildInternalQrUrl(qrValue);
+  const qrUrl = normalizeAbsoluteHttpsUrl(input.data.qrUrl, 240)
+    || buildPreparationTraceabilityQrUrl({ batchCode, qrValue: input.data.qrValue });
+  const qrValue = qrUrl;
   const includeQr = input.template === "prep_label_professional"
     ? batchCode ? input.data.includeQr !== false && input.data.includeQr !== "false" : false
     : booleanFromInput(input.data.includeQr);

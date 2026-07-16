@@ -61,7 +61,7 @@ test("prep professional label omits empty fields and keeps traceability", () => 
 });
 
 test("prep professional QR uses native EZPL W command without GW bitmap", () => {
-  const qrValue = "ERP:prep_batch:GM-070726-001";
+  const qrValue = "https://kioskoalfresko.es/admin-kiosko/qr/ERP%3Aprep_batch%3AGM-070726-001";
   const ezpl = buildGodex80x50PrepProfessionalEzpl({
     prepName: "Guacamole",
     productionDateTime: "2026-07-07T10:00:00.000Z",
@@ -79,6 +79,8 @@ test("prep professional QR uses native EZPL W command without GW bitmap", () => 
   assert.notEqual(qrLineIndex, -1);
   assert.equal(lines[qrLineIndex], `W360,150,3,2,M,8,5,${Buffer.byteLength(qrValue, "utf8")},0`);
   assert.equal(lines[qrLineIndex + 1], qrValue);
+  assert.match(lines[qrLineIndex + 1], /^https:\/\//);
+  assert.doesNotMatch(lines[qrLineIndex + 1], /^ERP:/);
   assert.deepEqual(parseNativeQrCommand(lines, qrLineIndex), {
     x: 360,
     y: 150,
@@ -96,7 +98,7 @@ test("prep professional QR uses native EZPL W command without GW bitmap", () => 
 });
 
 test("native QR sanitization preserves colon and length", () => {
-  const qrValue = "ERP:prep_batch:GM-070726-001";
+  const qrValue = "https://kioskoalfresko.es/admin-kiosko/qr/ERP%3Aprep_batch%3AGM-070726-001";
   const ezpl = buildGodex80x50PrepProfessionalEzpl({
     prepName: "Guacamole",
     batchCode: "GM-070726-001",
@@ -110,7 +112,8 @@ test("native QR sanitization preserves colon and length", () => {
   assert.ok(parsed);
   assert.equal(parsed.value, `${qrValue} bad cmd`);
   assert.equal(parsed.length, Buffer.byteLength(parsed.value, "utf8"));
-  assert.match(parsed.value, /^ERP:prep_batch:/);
+  assert.match(parsed.value, /^https:\/\//);
+  assert.doesNotMatch(parsed.value, /^ERP:/);
 });
 
 test("native QR byte mode preserves full ERP URL payload", () => {
@@ -128,7 +131,22 @@ test("native QR byte mode preserves full ERP URL payload", () => {
   assert.equal(lines[qrLineIndex], `W360,150,3,2,M,8,5,${Buffer.byteLength(qrValue, "utf8")},0`);
   assert.equal(lines[qrLineIndex + 1], qrValue);
   assert.match(ezpl, /prep_batch/);
+  assert.doesNotMatch(lines[qrLineIndex + 1], /\r|\n|^\{|\}$/);
+  assert.doesNotMatch(lines[qrLineIndex + 1], /^ERP:/);
   assert.doesNotMatch(ezpl, /PREPGBATCH/);
+});
+
+test("prep professional QR ignores raw internal ERP identifiers", () => {
+  const ezpl = buildGodex80x50PrepProfessionalEzpl({
+    prepName: "Pico de gallo",
+    batchCode: "PD-160726-7300",
+    qrValue: "ERP:prep_batch:PD-160726-7300",
+    includeQr: true,
+  });
+
+  assert.equal(isValidGodex80x50Ezpl(ezpl), true);
+  assert.doesNotMatch(ezpl, /^W360,150,3,2,M,8,5,/m);
+  assert.doesNotMatch(ezpl, /^ERP:prep_batch:/m);
 });
 
 test("prep professional label is 80x50, CRLF terminated and QR ready", () => {

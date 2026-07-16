@@ -62,7 +62,7 @@ export default async function PrepLabelsPage() {
               expiryDate="07/07/26 12:30"
               responsible="J. Bocanegra"
               storage="Refrigerado 0-4 C"
-              trace="ERP:prep_batch:GM-050726-0017"
+              trace="https://kioskoalfresko.es/admin-kiosko/qr/ERP%3Aprep_batch%3AGM-050726-0017"
               observations="Refrigerado 0-4 C"
             />
           </div>
@@ -72,7 +72,7 @@ export default async function PrepLabelsPage() {
 GUACAMOLE
 ────────────────────────────────
 ELAB: 05/07/26 12:30          [QR interno]
-CAD: 07/07/26 12:30           ERP:prep_batch:GM-050726-0017
+CAD: 07/07/26 12:30           https://kioskoalfresko.es/...
 RESPONSABLE: J. Bocanegra
 CONSERVACION: Refrigerado 0-4 C
 ────────────────────────────────

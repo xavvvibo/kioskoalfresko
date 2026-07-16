@@ -34,7 +34,8 @@ export function Label80x50Preview({
     ["Cantidad", cleanPreviewValue(quantity)],
   ].filter(([, value]) => value);
   const batchText = cleanPreviewValue(batch);
-  const traceText = cleanPreviewValue(trace) || (batchText ? `ERP:prep_batch:${batchText}` : "");
+  const traceText = cleanPreviewValue(trace)
+    || (batchText ? `https://kioskoalfresko.es/admin-kiosko/qr/ERP%3Aprep_batch%3A${encodeURIComponent(batchText)}` : "");
   const noteText = cleanPreviewValue(observations) || cleanPreviewValue(storage);
 
   return (

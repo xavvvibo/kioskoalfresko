@@ -153,8 +153,8 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
         <input type="hidden" name="includeQr" value="true" />
         <span className="mt-1 h-4 w-4 rounded-full border border-emerald-300 bg-emerald-100" />
         <span>
-          <span className="block font-semibold">Incluir QR interno</span>
-          <span className="mt-1 block text-xs">Activo por defecto. Codifica ERP:prep_batch:{visibleBatchCode || "LOTE"}.</span>
+          <span className="block font-semibold">Incluir QR de trazabilidad</span>
+          <span className="mt-1 block text-xs">Activo por defecto. Codifica una URL HTTPS absoluta a la ficha interna.</span>
         </span>
       </label>
 
@@ -167,7 +167,7 @@ export function PrepLabelForm({ defaultProductionDateTime, defaultExpiryDateTime
           expiryDate="fecha/hora caducidad"
           responsible="responsable"
           storage="conservacion"
-          trace={visibleBatchCode ? `ERP:prep_batch:${visibleBatchCode}` : ""}
+          trace={visibleBatchCode ? `https://kioskoalfresko.es/admin-kiosko/qr/ERP%3Aprep_batch%3A${encodeURIComponent(visibleBatchCode)}` : ""}
           observations="conservacion"
         />
       </div>

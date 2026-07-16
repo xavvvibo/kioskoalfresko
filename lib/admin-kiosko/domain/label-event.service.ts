@@ -6,6 +6,7 @@ import {
   type PrintJob,
   type PrintLabelTemplate,
 } from "@/lib/admin-kiosko/printing/print-service";
+import { buildPreparationTraceabilityQrUrl } from "@/lib/admin-kiosko/printing/print-payload";
 import { getPrintJobsByProductionBatch, getRecentPrintJobs } from "@/lib/admin-kiosko/repositories/print-jobs.repository";
 import type { AdminKioskoDomainEvent } from "./events";
 import {
@@ -145,7 +146,7 @@ export const labelEventService = {
           brandName: "KIOSKO ALFRESKO",
           quantity: input.quantity,
           unit: input.unit,
-          qrValue: `ERP:prep_batch:${input.batchCode}`,
+          qrValue: buildPreparationTraceabilityQrUrl({ batchCode: input.batchCode }),
           includeQr: true,
         },
         metadata: {
@@ -219,7 +220,7 @@ export const labelEventService = {
           responsibleName: input.responsibleName,
           storageCondition: input.storageCondition || "Refrigerado 0-4 C",
           brandName: "KIOSKO ALFRESKO",
-          qrValue: `ERP:prep_batch:${input.batchCode}`,
+          qrValue: buildPreparationTraceabilityQrUrl({ batchCode: input.batchCode }),
           includeQr: true,
           copies: input.copies,
         },
@@ -365,7 +366,7 @@ export const labelEventService = {
           responsibleName: input.responsible,
           storageCondition: input.supplier || "APPCC interno",
           brandName: "KIOSKO ALFRESKO",
-          qrValue: `ERP:prep_batch:${input.batch}`,
+          qrValue: buildPreparationTraceabilityQrUrl({ batchCode: input.batch }),
           includeQr: true,
           copies: input.copies,
         },

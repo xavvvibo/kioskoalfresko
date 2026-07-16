@@ -4,7 +4,7 @@ import {
   isValidGodex80x50Ezpl,
   normalizeGodexEzplCrlf,
 } from "./godex-80x50-ezpl.mjs";
-import { sanitizeLabelText } from "./print-payload";
+import { sanitizeLabelText } from "./print-payload.ts";
 
 export type LabelCommandPayload = {
   nombre_producto?: string;
