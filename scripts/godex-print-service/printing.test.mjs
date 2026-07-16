@@ -7,9 +7,10 @@ import {
   buildGodex80x50SafeErpTestEzpl,
   cleanLabelText,
   isValidGodex80x50Ezpl,
+  normalizeGodexEzplCrlf,
   parseNativeQrCommand,
 } from "../../lib/admin-kiosko/printing/godex-80x50-ezpl.mjs";
-import { processBridgeJob, startupQueueDecision } from "./bridge-core.mjs";
+import { processBridgeJob, resolveBridgeRawCommand, startupQueueDecision } from "./bridge-core.mjs";
 
 test("renders valid EZPL with escaped spanish characters", () => {
   const ezpl = buildGodex80x50LabelEzpl({
@@ -33,13 +34,13 @@ test("clamps copies to the operational maximum", () => {
 });
 
 test("safe ERP physical test is one copy and clearly non-food", () => {
-  const ezpl = buildGodex80x50SafeErpTestEzpl({ host: "192.168.1.37", timestamp: "07/07/26 16:30:00" });
+  const ezpl = buildGodex80x50SafeErpTestEzpl({ host: "<IP_DE_LA_GODEX>", timestamp: "07/07/26 16:30:00" });
 
   assert.equal(isValidGodex80x50Ezpl(ezpl), true);
   assert.match(ezpl, /\^P1/);
   assert.match(ezpl, /PRUEBA ERP/);
   assert.match(ezpl, /NO USAR/);
-  assert.match(ezpl, /GODEX 192.168.1.37/);
+  assert.match(ezpl, /GODEX <IP_DE_LA_GODEX>/);
 });
 
 test("prep professional label omits empty fields and keeps traceability", () => {
@@ -130,8 +131,62 @@ test("native QR byte mode preserves full ERP URL payload", () => {
   assert.doesNotMatch(ezpl, /PREPGBATCH/);
 });
 
+test("prep professional label is 80x50, CRLF terminated and QR ready", () => {
+  const qrValue = "https://kioskoalfresko.es/admin-kiosko/trazabilidad/prep/GM-070726-001";
+  const ezpl = buildGodex80x50PrepProfessionalEzpl({
+    prepName: "Guacamole APPCC",
+    productionDateTime: "2026-07-07T10:00:00.000Z",
+    expiryDateTime: "2026-07-09T10:00:00.000Z",
+    batchCode: "GM-070726-001",
+    responsibleName: "QA Manager",
+    storageCondition: "Refrigerado 0-4 C",
+    qrValue,
+    includeQr: true,
+  });
+
+  assert.equal(isValidGodex80x50Ezpl(ezpl), true);
+  assert.match(ezpl, /^\^Q50,3\r\n\^W80\r\n/);
+  assert.match(ezpl, /\r\n\^L\r\n/);
+  assert.match(ezpl, /W360,150,3,2,M,8,5,/);
+  assert.match(ezpl, new RegExp(qrValue.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.equal(ezpl.endsWith("E\r\n"), true);
+  assert.doesNotMatch(ezpl, /[^\r]\n|\r[^\n]/);
+});
+
+test("EZPL validation rejects unsafe commands and excessive copies", () => {
+  const valid = buildGodex80x50LabelEzpl({ title: "TEST", line1: "OK", line2: "OK", copies: 1 });
+
+  assert.equal(isValidGodex80x50Ezpl(valid), true);
+  assert.equal(isValidGodex80x50Ezpl(valid.replace("^P1", "^P9")), false);
+  assert.equal(isValidGodex80x50Ezpl(valid.replace(/^AA,/m, "^X,")), false);
+});
+
+test("normalizeGodexEzplCrlf enforces CRLF terminators", () => {
+  const normalized = normalizeGodexEzplCrlf("^Q50,3\n^W80\n^P1\n^L\nAA,1,1,1,1,1,0,TEST\nE");
+
+  assert.equal(normalized, "^Q50,3\r\n^W80\r\n^P1\r\n^L\r\nAA,1,1,1,1,1,0,TEST\r\nE\r\n");
+});
+
 test("cleanLabelText removes control characters and command delimiters", () => {
   assert.equal(cleanLabelText("Línea\t^bad~cmd, ñ"), "Linea bad cmd n");
+});
+
+test("prep print job stores complete raw_command for the bridge", () => {
+  const service = fs.readFileSync(new URL("../../lib/admin-kiosko/printing/print-service.ts", import.meta.url), "utf8");
+  const labelCommand = fs.readFileSync(new URL("../../lib/admin-kiosko/printing/label-command.ts", import.meta.url), "utf8");
+
+  assert.match(service, /raw_command:\s*generated\.command/);
+  assert.match(labelCommand, /buildGodex80x50PrepProfessionalEzpl/);
+  assert.match(labelCommand, /normalizeGodexEzplCrlf/);
+});
+
+test("prep label page does not check localhost bridge health", () => {
+  const page = fs.readFileSync(new URL("../../app/admin-kiosko/etiquetas-prep/page.tsx", import.meta.url), "utf8");
+  const actions = fs.readFileSync(new URL("../../app/admin-kiosko/actions.ts", import.meta.url), "utf8");
+
+  assert.doesNotMatch(page, /LocalBridgeStatus|Bridge local no disponible|127\.0\.0\.1|localhost:8787/);
+  assert.match(page, /cola Supabase/);
+  assert.match(actions, /Etiqueta enviada a la cola de impresión/);
 });
 
 test("server actions do not connect directly to the private printer IP", () => {
@@ -176,6 +231,49 @@ function mockJob(overrides = {}) {
   };
 }
 
+test("bridge resolves raw_command first and keeps legacy fallback available", () => {
+  const raw = "^Q50,3\r\n^W80\r\n^P1\r\n^L\r\nAA,1,1,1,1,1,0,RAW\r\nE\r\n";
+  const fallback = "^Q50,3\r\n^W80\r\n^P1\r\n^L\r\nAA,1,1,1,1,1,0,FALLBACK\r\nE\r\n";
+
+  assert.equal(resolveBridgeRawCommand(mockJob({ raw_command: raw }), {
+    buildFallbackCommand: () => fallback,
+  }), raw);
+  assert.equal(resolveBridgeRawCommand(mockJob({ raw_command: "", payload_json: { title: "Legacy" } }), {
+    buildFallbackCommand: () => fallback,
+  }), fallback);
+});
+
+test("standalone Windows bridge keeps legacy fallback behind raw_command", () => {
+  const bridge = fs.readFileSync(new URL("../godex-print-bridge.mjs", import.meta.url), "utf8");
+
+  assert.match(bridge, /payload\.raw_command/);
+  assert.match(bridge, /return normalizeEzplCrlf\(payload\.raw_command\)/);
+  assert.match(bridge, /buildLegacyFallbackEzpl\(payload\)/);
+  assert.match(bridge, /process\.env\.GODEX_HOST/);
+  assert.doesNotMatch(bridge, /DEFAULT_PRINTER_HOST = "192\.168\./);
+});
+
+test("bridge prints the resolved fallback command for legacy jobs", async () => {
+  const printed = [];
+  const fallback = "^Q50,3\r\n^W80\r\n^P1\r\n^L\r\nAA,1,1,1,1,1,0,FALLBACK\r\nE\r\n";
+  const result = await processBridgeJob(mockJob({ raw_command: "" }), {
+    markSending: async () => undefined,
+    printRaw: async (rawCommand) => printed.push(rawCommand),
+    markSentUnconfirmed: async () => undefined,
+    markPrinted: async () => undefined,
+    markError: async () => undefined,
+  }, {
+    transport: "tcp_9100",
+    host: "<IP_DE_LA_GODEX>",
+    port: 9100,
+    isValidEzpl: (rawCommand) => rawCommand === fallback,
+    buildFallbackCommand: () => fallback,
+  });
+
+  assert.equal(result.status, "printed");
+  assert.deepEqual(printed, [fallback]);
+});
+
 test("bridge marks printed after TCP accepted and ERP ACK succeeds", async () => {
   const calls = [];
   const result = await processBridgeJob(mockJob(), {
@@ -187,7 +285,7 @@ test("bridge marks printed after TCP accepted and ERP ACK succeeds", async () =>
     markError: async () => calls.push("error"),
   }, {
     transport: "tcp_9100",
-    host: "192.168.1.37",
+    host: "<IP_DE_LA_GODEX>",
     port: 9100,
     isValidEzpl: () => true,
   });
@@ -210,7 +308,7 @@ test("bridge leaves sent_unconfirmed after TCP accepted and printed ACK fails", 
     markError: async () => calls.push("error"),
   }, {
     transport: "tcp_9100",
-    host: "192.168.1.37",
+    host: "<IP_DE_LA_GODEX>",
     port: 9100,
     isValidEzpl: () => true,
   });
@@ -233,7 +331,7 @@ test("bridge marks error only when TCP fails before acceptance", async () => {
     markError: async () => calls.push("error"),
   }, {
     transport: "tcp_9100",
-    host: "192.168.1.37",
+    host: "<IP_DE_LA_GODEX>",
     port: 9100,
     isValidEzpl: () => true,
   });
@@ -256,7 +354,7 @@ test("bridge does not open TCP if sending transition fails", async () => {
     markError: async () => calls.push("error"),
   }, {
     transport: "tcp_9100",
-    host: "192.168.1.37",
+    host: "<IP_DE_LA_GODEX>",
     port: 9100,
     isValidEzpl: () => true,
   });

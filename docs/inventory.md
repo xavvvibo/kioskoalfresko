@@ -199,13 +199,13 @@ Para `POLLO CONTRAMUSLO MARINADO`, la etiqueta debe priorizar:
 Arquitectura operativa:
 
 ```text
-Admin web / casa -> Supabase print_jobs -> bridge local en kiosko -> GoDEX 192.168.1.36:9100
+Admin web / casa -> Supabase print_jobs -> bridge local en kiosko -> GoDEX <IP_DE_LA_GODEX>:9100
 ```
 
 Reglas de seguridad:
 
 - No abrir el puerto RAW `9100` a internet.
-- No hacer port forwarding del router hacia `192.168.1.36`.
+- No hacer port forwarding del router hacia `<IP_DE_LA_GODEX>`.
 - El `SUPABASE_SERVICE_ROLE_KEY` solo se usa en el bridge local del kiosko, nunca en cliente web.
 - La web interna solo encola `print_jobs` tras las validaciones APPCC del flujo correspondiente.
 - El bridge no imprime trabajos ya `printed`, `error` o `cancelled`.
@@ -254,8 +254,8 @@ Variables esperadas en `.env.local` del kiosko:
 NEXT_PUBLIC_SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
 PRINTER_KEY=kiosko_godex_g500
-GODEX_PRINTER_HOST=192.168.1.36
-GODEX_PRINTER_PORT=9100
+GODEX_HOST=<IP_DE_LA_GODEX>
+GODEX_PORT=9100
 GODEX_PRINTER_KEY=kiosko_godex_g500
 GODEX_MIN_JOB_CREATED_AT=2026-07-09T09:00:00+02:00
 GODEX_SOCKET_SETTLE_MS=1200
@@ -288,7 +288,7 @@ Copiar al PC Windows por USB/Drive, por ejemplo a:
 C:\godex-print-bridge
 ```
 
-El PC Windows debe estar en la misma red local que la GoDEX `192.168.1.36:9100`. No abrir `9100` a internet y no hacer port forwarding.
+El PC Windows debe estar en la misma red local que la GoDEX `<IP_DE_LA_GODEX>:9100`. No abrir `9100` a internet y no hacer port forwarding.
 
 Contenido del paquete:
 
@@ -304,7 +304,7 @@ En el PC Windows:
 
 1. Instalar Node.js LTS.
 2. Copiar `.env.example` a `.env.local`.
-3. Rellenar `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GODEX_PRINTER_HOST=192.168.1.36`, `GODEX_PRINTER_PORT=9100`, `GODEX_PRINTER_KEY=kiosko_godex_g500`, `GODEX_SOCKET_SETTLE_MS=1200`, `GODEX_BETWEEN_JOBS_MS=2000` y `GODEX_TCP_TIMEOUT_MS=10000`.
+3. Rellenar `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GODEX_HOST=<IP_DE_LA_GODEX>`, `GODEX_PORT=9100`, `GODEX_PRINTER_KEY=kiosko_godex_g500`, `GODEX_SOCKET_SETTLE_MS=1200`, `GODEX_BETWEEN_JOBS_MS=2000` y `GODEX_TCP_TIMEOUT_MS=10000`.
 4. Probar sin imprimir:
 
 ```powershell

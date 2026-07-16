@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { AdminHeader } from "../_components/AdminHeader";
 import { Label80x50Preview } from "../_components/Label80x50Preview";
-import { LocalBridgeStatus } from "../_components/LocalBridgeStatus";
 import { PrepLabelForm } from "./PrepLabelForm";
 
 export const metadata: Metadata = {
@@ -43,11 +42,9 @@ export default async function PrepLabelsPage() {
           <p className="text-xs font-black uppercase tracking-[0.14em] text-[#d94b2b]">Inspeccion</p>
           <h1 className="mt-1 text-2xl font-black text-stone-950">Etiquetas de preparacion</h1>
           <p className="mt-2 text-sm text-stone-600">
-            Impresion directa a GoDEX G500 para subelaboraciones. La etiqueta imprime nombre, elaboracion y caducidad.
+            Envia trabajos a la cola Supabase para que el bridge Windows los imprima en la GoDEX G500. No requiere conexion HTTP local desde el navegador.
           </p>
         </div>
-
-        <LocalBridgeStatus />
 
         <PrepLabelForm
           defaultProductionDateTime={madridDateTimeInput()}

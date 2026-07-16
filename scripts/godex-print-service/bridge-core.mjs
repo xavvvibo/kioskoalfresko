@@ -24,8 +24,15 @@ export function startupQueueDecision(summary, options = {}) {
   };
 }
 
+export function resolveBridgeRawCommand(job, options = {}) {
+  if (typeof job.raw_command === "string" && job.raw_command.trim()) return job.raw_command;
+  if (typeof options.buildFallbackCommand === "function") return options.buildFallbackCommand(job);
+  return "";
+}
+
 export async function processBridgeJob(job, handlers, options = {}) {
-  const bytes = typeof job.raw_command === "string" ? Buffer.byteLength(job.raw_command, "utf8") : 0;
+  const rawCommand = resolveBridgeRawCommand(job, options);
+  const bytes = typeof rawCommand === "string" ? Buffer.byteLength(rawCommand, "utf8") : 0;
   const transportMeta = {
     bytes,
     transport: options.transport,
@@ -38,7 +45,7 @@ export async function processBridgeJob(job, handlers, options = {}) {
     await handlers.markError(job.id, message);
     return { ok: false, status: "error", phase: "before_tcp_validation_failed", error: message, ...transportMeta };
   }
-  if (!options.isValidEzpl(job.raw_command)) {
+  if (!options.isValidEzpl(rawCommand)) {
     const message = "Invalid or empty EZPL payload";
     await handlers.markError(job.id, message);
     return { ok: false, status: "error", phase: "before_tcp_validation_failed", error: message, ...transportMeta };
@@ -57,7 +64,7 @@ export async function processBridgeJob(job, handlers, options = {}) {
   }
 
   try {
-    await handlers.printRaw(job.raw_command, options);
+    await handlers.printRaw(rawCommand, options);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await handlers.markError(job.id, message);

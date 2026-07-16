@@ -20,8 +20,8 @@ const envExample = `# Copiar este archivo a .env.local en el PC Windows del kios
 # No guardar claves reales en el repositorio.
 NEXT_PUBLIC_SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
-GODEX_PRINTER_HOST=192.168.1.36
-GODEX_PRINTER_PORT=9100
+GODEX_HOST=
+GODEX_PORT=9100
 GODEX_PRINTER_KEY=kiosko_godex_g500
 GODEX_MIN_JOB_CREATED_AT=2026-07-09T09:00:00+02:00
 GODEX_SOCKET_SETTLE_MS=1200
@@ -36,7 +36,7 @@ Bridge local para ejecutar en el PC Windows del kiosko, en la misma LAN que la G
 Arquitectura:
 
 \`\`\`text
-Admin web / casa -> Supabase print_jobs -> bridge local Windows -> GoDEX 192.168.1.36:9100
+Admin web / casa -> Supabase print_jobs -> bridge local Windows -> GoDEX TCP RAW
 \`\`\`
 
 ## Seguridad
@@ -63,8 +63,8 @@ C:\\godex-print-bridge
 \`\`\`text
 NEXT_PUBLIC_SUPABASE_URL=https://...
 SUPABASE_SERVICE_ROLE_KEY=...
-GODEX_PRINTER_HOST=192.168.1.36
-GODEX_PRINTER_PORT=9100
+GODEX_HOST=<IP_DE_LA_GODEX>
+GODEX_PORT=9100
 GODEX_PRINTER_KEY=kiosko_godex_g500
 GODEX_MIN_JOB_CREATED_AT=2026-07-09T09:00:00+02:00
 GODEX_SOCKET_SETTLE_MS=1200
@@ -156,7 +156,7 @@ node godex-print-bridge.mjs --once --since "2026-07-09T09:00:00+02:00" --batch F
 
 ## Flujo APPCC
 
-Las validaciones APPCC ocurren antes, en el ERP, al crear \`print_jobs\`. Este bridge no crea etiquetas ni relaja validaciones: solo imprime trabajos ya encolados manualmente desde el panel interno.
+Las validaciones APPCC y la generacion del EZPL 80x50 ocurren antes, en el ERP, al crear \`print_jobs\`. El payload debe traer \`raw_command\` con el EZPL completo y terminado en CRLF. Este bridge imprime ese comando tal cual por TCP RAW. Durante la retirada del flujo antiguo, mantiene fallback limitado desde \`payload.title\`, \`payload.line1\` y \`payload.line2\` si no existe \`raw_command\`.
 
 ## Estado printed
 
@@ -186,7 +186,7 @@ $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument ('-NoProfi
 $Trigger = New-ScheduledTaskTrigger -AtLogOn
 $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Days 30) -MultipleInstances IgnoreNew
 
-Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Description "Bridge local Kiosko Alfresko: Supabase print_jobs -> GoDEX 192.168.1.36:9100" -Force
+Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Description "Bridge local Kiosko Alfresko: Supabase print_jobs -> GoDEX TCP RAW" -Force
 
 Write-Host "Tarea programada instalada: $TaskName"
 Write-Host "Carpeta: $PSScriptRoot"

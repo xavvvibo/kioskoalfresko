@@ -2060,7 +2060,7 @@ export async function printPrepLabelAction(_previousState: PrepPrintState, formD
   revalidatePath("/admin-kiosko/etiquetas-prep");
   return {
     ok: true,
-    message: "Etiqueta de preparacion enviada a GoDEX.",
+    message: "Etiqueta enviada a la cola de impresión.",
     jobId: printResult.data.id,
     status: printResult.data.status,
   };

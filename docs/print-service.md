@@ -11,7 +11,7 @@ ERP backend -> public.print_jobs -> API publica ERP -> bridge kiosco -> TCP RAW 
 Datos finales validados:
 
 - `printer_key`: `kiosko_godex_g500`
-- IP GoDEX G500: `192.168.1.37`
+- IP GoDEX G500: `<IP_DE_LA_GODEX>`
 - Puerto RAW: `9100`
 - Transporte: `tcp_9100`
 - Etiqueta fisica: `80x50 mm`
@@ -27,8 +27,8 @@ ERP_API_URL=https://kioskoalfresko.es
 ERP_API_TOKEN=...
 PRINTER_KEY=kiosko_godex_g500
 GODEX_PRINT_TRANSPORT=tcp_9100
-GODEX_PRINTER_HOST=192.168.1.37
-GODEX_PRINTER_PORT=9100
+GODEX_HOST=<IP_DE_LA_GODEX>
+GODEX_PORT=9100
 ```
 
 Variables opcionales del bridge:
@@ -45,12 +45,12 @@ GODEX_DRY_RUN=false
 DRY_RUN_MARK_PRINTED=false
 ```
 
-Variables antiguas no validas:
+Alias temporales para instalaciones antiguas:
 
 - `GODEX_HOST`
 - `GODEX_PORT`
 
-Si aparecen en el PC del kiosco, eliminarlas. El caso validado que fallo fue un bridge antiguo con `GODEX_HOST=192.168.1.35`.
+El bridge actual prefiere `GODEX_HOST` y `GODEX_PORT` para evitar IPs embebidas en el codigo.
 
 Variables backend del ERP:
 
@@ -80,7 +80,7 @@ El instalador:
 
 - ejecuta `npm install`;
 - copia `.env.example` a `.env.local` si no existe;
-- verifica conectividad TCP con `192.168.1.37:9100`;
+- verifica conectividad TCP con `<IP_DE_LA_GODEX>:9100`;
 - registra `KioskoGodexBridge` con NSSM;
 - configura reinicio automatico;
 - arranca el servicio;
@@ -141,7 +141,7 @@ ERP crea print_job con raw_command EZPL
   -> bridge llama GET /api/print-jobs/pending?printer_key=kiosko_godex_g500
   -> API reclama job
   -> bridge valida EZPL
-  -> bridge envia por TCP 192.168.1.37:9100
+  -> bridge envia por TCP <IP_DE_LA_GODEX>:9100
   -> bridge marca transporte aceptado (`printed`) o error
 ```
 
@@ -769,7 +769,7 @@ El modo historico por spooler Windows ya no forma parte de la configuracion de p
 Configuracion validada en red:
 
 ```text
-IP impresora: 192.168.1.37
+IP impresora: <IP_DE_LA_GODEX>
 Puerto RAW: 9100
 PC bridge Windows: 192.168.1.39
 Etiqueta fisica: 80x50 mm
@@ -779,8 +779,8 @@ Variables `.env.local` para TCP/IP:
 
 ```env
 GODEX_PRINT_TRANSPORT=tcp_9100
-GODEX_PRINTER_HOST=192.168.1.37
-GODEX_PRINTER_PORT=9100
+GODEX_HOST=<IP_DE_LA_GODEX>
+GODEX_PORT=9100
 GODEX_TCP_TIMEOUT_MS=5000
 PRINT_DEBUG_EZPL=true
 ```
@@ -800,7 +800,7 @@ Comandos de prueba en Windows:
 npm run godex:test-label:tcp
 ```
 
-Ese comando envia una etiqueta EZPL de prueba directamente a `GODEX_PRINTER_HOST:GODEX_PRINTER_PORT`. No usa Supabase, no reclama `print_jobs` y no marca nada como `printed`.
+Ese comando envia una etiqueta EZPL de prueba directamente a `GODEX_HOST:GODEX_PORT`. No usa Supabase, no reclama `print_jobs` y no marca nada como `printed`.
 
 Prueba minima si TCP conecta pero no sale etiqueta fisica:
 
@@ -841,7 +841,7 @@ Este endpoint crea un `print_job` real con:
 
 Diferencia de diagnostico:
 
-- TCP directo: `npm run godex:test-label:tcp` envia EZPL directo a `192.168.1.37:9100`, sin Supabase ni cola.
+- TCP directo: `npm run godex:test-label:tcp` envia EZPL directo a `<IP_DE_LA_GODEX>:9100`, sin Supabase ni cola.
 - Test real por cola: `POST /api/print-jobs/test-godex-real-path` crea un job en Supabase, el bridge lo reclama y envia el mismo EZPL.
 - Templates reales: `prep_label_basic`, `prep_label_professional`, `ingredient_label_basic`, `product_label_basic` y `test_label` pasan por el generador comun GoDEX 80x50.
 
@@ -903,8 +903,8 @@ Invalid or empty EZPL payload
 Troubleshooting TCP/IP:
 
 ```powershell
-ping 192.168.1.37
-Test-NetConnection 192.168.1.37 -Port 9100
+ping <IP_DE_LA_GODEX>
+Test-NetConnection <IP_DE_LA_GODEX> -Port 9100
 ```
 
 Si `TcpTestSucceeded = False`:

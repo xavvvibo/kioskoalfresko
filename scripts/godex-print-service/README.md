@@ -9,11 +9,15 @@ ERP_API_URL=https://kioskoalfresko.es
 ERP_API_TOKEN=change-me-internal-print-token
 PRINTER_KEY=kiosko_godex_g500
 GODEX_PRINT_TRANSPORT=tcp_9100
-GODEX_PRINTER_HOST=192.168.1.37
-GODEX_PRINTER_PORT=9100
+GODEX_HOST=<IP_DE_LA_GODEX>
+GODEX_PORT=9100
 ```
 
 El bridge carga automaticamente `.env` y `.env.local`.
+
+El ERP genera el EZPL definitivo 80x50 en `print_jobs.payload.raw_command`.
+El bridge imprime ese comando directamente por TCP RAW y mantiene `payload.title`,
+`payload.line1` y `payload.line2` solo como fallback temporal para trabajos antiguos.
 
 Arranque manual:
 

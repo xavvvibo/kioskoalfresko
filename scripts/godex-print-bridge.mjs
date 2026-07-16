@@ -36,7 +36,7 @@ await loadEnvFile(path.join(cwd, ".env"), cwdAllowedKeys);
 
 const BRIDGE_STARTED_AT = new Date();
 const DEFAULT_PRINTER_KEY = "kiosko_godex_g500";
-const DEFAULT_PRINTER_HOST = "192.168.1.36";
+const DEFAULT_PRINTER_HOST = "";
 const DEFAULT_PRINTER_PORT = 9100;
 const DEFAULT_POLL_MS = 4000;
 const DEFAULT_TCP_TIMEOUT_MS = 10000;
@@ -53,11 +53,23 @@ function ezplLines(ezpl) {
     .filter(Boolean);
 }
 
+function normalizeEzplCrlf(ezpl) {
+  return `${String(ezpl || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n")
+    .replace(/\n+$/g, "")
+    .replace(/\n/g, "\r\n")}\r\n`;
+}
+
 function isValidGodex80x50Ezpl(ezpl) {
   const lines = ezplLines(ezpl);
   if (!lines.length) return false;
   const copiesLine = lines.find((line) => line.startsWith("^P"));
   const copies = copiesLine ? Number(copiesLine.slice(2).trim()) : 1;
+  const allowedCommand = /^(?:\^Q\d+,\d+|\^W\d+|\^H\d+|\^S\d+|\^C\d+|\^R\d+|~Q[+-]?\d+|\^O\d+|\^D\d+|\^P\d+|\^L|AA,\d+,\d+,\d+,\d+,\d+,\d+,[\x20-\x7E]*|Lo,\d+,\d+,\d+,\d+,\d+|W\d+,\d+,\d+,\d+,[A-Z],\d+,\d+,\d+,\d+|GW,\d+,\d+,\d+,\d+,[A-F0-9]+|E|[^^~][\x20-\x7E]*)$/;
   return Number.isFinite(copies)
     && copies >= 1
     && copies <= 8
@@ -65,7 +77,8 @@ function isValidGodex80x50Ezpl(ezpl) {
     && lines.some((line) => line.startsWith("^W"))
     && lines.some((line) => line === "^L")
     && lines[lines.length - 1] === "E"
-    && /^[\x09\x0A\x0D\x20-\x7E]*$/.test(String(ezpl || ""));
+    && /^[\x09\x0A\x0D\x20-\x7E]*$/.test(String(ezpl || ""))
+    && lines.every((line) => allowedCommand.test(line));
 }
 
 function summarizeGodexEzpl(ezpl) {
@@ -198,8 +211,8 @@ const config = {
   supabaseUrl: (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, ""),
   serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
   printerKey: process.env.GODEX_PRINTER_KEY || process.env.PRINTER_KEY || DEFAULT_PRINTER_KEY,
-  printerHost: process.env.GODEX_PRINTER_HOST || process.env.GODEX_BRIDGE_PRINTER_HOST || DEFAULT_PRINTER_HOST,
-  printerPort: Number(process.env.GODEX_PRINTER_PORT || process.env.GODEX_BRIDGE_PRINTER_PORT || DEFAULT_PRINTER_PORT),
+  printerHost: process.env.GODEX_HOST || process.env.GODEX_PRINTER_HOST || process.env.GODEX_BRIDGE_PRINTER_HOST || DEFAULT_PRINTER_HOST,
+  printerPort: Number(process.env.GODEX_PORT || process.env.GODEX_PRINTER_PORT || process.env.GODEX_BRIDGE_PRINTER_PORT || DEFAULT_PRINTER_PORT),
   pollIntervalMs: Math.max(3000, Math.min(5000, Number(process.env.GODEX_BRIDGE_POLL_MS || DEFAULT_POLL_MS))),
   tcpTimeoutMs: Math.max(1000, Number(process.env.GODEX_TCP_TIMEOUT_MS || DEFAULT_TCP_TIMEOUT_MS)),
   socketSettleMs: Math.max(0, Number(process.env.GODEX_SOCKET_SETTLE_MS || DEFAULT_SOCKET_SETTLE_MS)),
@@ -233,8 +246,8 @@ function assertConfig() {
   if (!config.supabaseUrl) missing.push("SUPABASE_URL o NEXT_PUBLIC_SUPABASE_URL");
   if (!config.serviceRoleKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
   if (!config.printerKey) missing.push("GODEX_PRINTER_KEY");
-  if (!config.printerHost) missing.push("GODEX_PRINTER_HOST");
-  if (!Number.isFinite(config.printerPort) || config.printerPort <= 0) missing.push("GODEX_PRINTER_PORT");
+  if (!config.printerHost) missing.push("GODEX_HOST");
+  if (!Number.isFinite(config.printerPort) || config.printerPort <= 0) missing.push("GODEX_PORT");
   if (Number.isNaN(new Date(config.since).getTime())) missing.push("--since con fecha ISO valida");
   if (missing.length) throw new Error(`Faltan variables/configuracion: ${missing.join(", ")}`);
 }
@@ -290,7 +303,52 @@ function matchesOptionalFilters(job) {
 
 function rawCommandForJob(job) {
   const { payload } = metadata(job);
-  return typeof payload.raw_command === "string" ? payload.raw_command : "";
+  if (typeof payload.raw_command === "string" && payload.raw_command.trim()) {
+    return normalizeEzplCrlf(payload.raw_command);
+  }
+  return buildLegacyFallbackEzpl(payload);
+}
+
+function cleanLabelText(value, maxLength = 36) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\^~\r\n\t]/g, " ")
+    .replace(/[^\x20-\x7E]/g, " ")
+    .replace(/,/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function safeCopies(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(1, Math.min(8, Math.round(parsed))) : 1;
+}
+
+function buildLegacyFallbackEzpl(payload) {
+  const title = cleanLabelText(payload?.title, 24);
+  const line1 = cleanLabelText(payload?.line1, 34);
+  const line2 = cleanLabelText(payload?.line2, 34);
+  if (!title && !line1 && !line2) return "";
+
+  return normalizeEzplCrlf([
+    "^Q50,3",
+    "^W80",
+    "^H10",
+    "^S4",
+    "^C1",
+    "^R0",
+    "~Q+0",
+    "^O0",
+    "^D0",
+    `^P${safeCopies(payload?.copies)}`,
+    "^L",
+    `AA,30,34,1,2,2,0,${title || "ETIQUETA"}`,
+    `AA,30,112,1,1,1,0,${line1 || "-"}`,
+    `AA,30,160,1,1,1,0,${line2 || "-"}`,
+    "E",
+  ].join("\r\n"));
 }
 
 async function listQueuedJobs() {

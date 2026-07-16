@@ -15,8 +15,8 @@ const config = {
   token: process.env.ERP_API_TOKEN || "",
   printerKey: process.env.PRINTER_KEY || "kiosko_godex_g500",
   transport: process.env.GODEX_PRINT_TRANSPORT || GODEX_PRINT_TRANSPORTS.TCP_9100,
-  printerHost: process.env.GODEX_PRINTER_HOST || "",
-  printerPort: Number(process.env.GODEX_PRINTER_PORT || 9100),
+  printerHost: process.env.GODEX_HOST || process.env.GODEX_PRINTER_HOST || "",
+  printerPort: Number(process.env.GODEX_PORT || process.env.GODEX_PRINTER_PORT || 9100),
   tcpTimeoutMs: Number(process.env.GODEX_TCP_TIMEOUT_MS || 5000),
   printDebugEzpl: process.env.PRINT_DEBUG_EZPL === "true",
   pollIntervalMs: Math.max(500, Number(process.env.POLL_INTERVAL_MS || 2000)),
@@ -53,8 +53,8 @@ function assertConfig() {
   if (config.transport !== GODEX_PRINT_TRANSPORTS.TCP_9100) {
     throw new Error(`GODEX_PRINT_TRANSPORT no soportado: ${config.transport}`);
   }
-  if (config.transport === GODEX_PRINT_TRANSPORTS.TCP_9100 && !config.printerHost) missing.push("GODEX_PRINTER_HOST");
-  if (config.transport === GODEX_PRINT_TRANSPORTS.TCP_9100 && (!Number.isFinite(config.printerPort) || config.printerPort <= 0)) missing.push("GODEX_PRINTER_PORT");
+  if (config.transport === GODEX_PRINT_TRANSPORTS.TCP_9100 && !config.printerHost) missing.push("GODEX_HOST");
+  if (config.transport === GODEX_PRINT_TRANSPORTS.TCP_9100 && (!Number.isFinite(config.printerPort) || config.printerPort <= 0)) missing.push("GODEX_PORT");
   if (missing.length) {
     throw new Error(`Faltan variables de entorno: ${missing.join(", ")}`);
   }

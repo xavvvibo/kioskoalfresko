@@ -7,7 +7,7 @@ Este documento deja el bridge GoDEX funcionando en un PC Windows 10/11 sin levan
 - PC bridge Windows: ejecuta Node.js y el servicio `KioskoGodexBridge`.
 - ERP: URL publica configurada en `ERP_API_URL`.
 - Cola de impresion: el bridge reclama trabajos por la API del ERP.
-- Impresora: GoDEX G500 en red, RAW TCP `192.168.1.37:9100`.
+- Impresora: GoDEX G500 en red, RAW TCP configurado con `GODEX_HOST:GODEX_PORT`.
 - Healthcheck local: `http://127.0.0.1:8787/health`.
 
 El PC del kiosko no debe usar `localhost` como ERP. Debe apuntar a la URL real, por ejemplo `https://kioskoalfresko.es`.
@@ -58,8 +58,8 @@ ERP_API_URL=https://kioskoalfresko.es
 ERP_API_TOKEN=<token_api_impresion>
 PRINTER_KEY=kiosko_godex_g500
 GODEX_PRINT_TRANSPORT=tcp_9100
-GODEX_PRINTER_HOST=192.168.1.37
-GODEX_PRINTER_PORT=9100
+GODEX_HOST=<IP_DE_LA_GODEX>
+GODEX_PORT=9100
 GODEX_TCP_TIMEOUT_MS=5000
 PRINT_DEBUG_TCP=false
 PRINT_DEBUG_EZPL=false
@@ -72,7 +72,10 @@ Notas:
 - `ERP_API_URL` no debe ser `localhost`.
 - `ERP_API_TOKEN` debe coincidir con el token aceptado por la API de impresion.
 - `PRINTER_KEY` debe ser `kiosko_godex_g500`.
+- `GODEX_HOST` debe ser la IP fija o reserva DHCP de la GoDEX en la LAN.
+- `GODEX_PORT` normalmente es `9100`.
 - En produccion normal mantener `PRINT_DEBUG_TCP=false` y `PRINT_DEBUG_EZPL=false`.
+- El ERP genera el EZPL APPCC 80x50 completo en `print_jobs.payload.raw_command`; el bridge no debe reconstruir la etiqueta salvo fallback temporal de trabajos antiguos.
 
 ## 4. Pruebas manuales
 
@@ -125,7 +128,7 @@ Ese unico comando:
 
 - ejecuta `npm install`;
 - copia `.env.example` a `.env.local` si falta;
-- verifica conectividad TCP con `192.168.1.37:9100`;
+- verifica conectividad TCP con `GODEX_HOST:GODEX_PORT`;
 - registra el bridge como servicio NSSM;
 - configura reinicio automatico;
 - arranca el servicio;
@@ -183,7 +186,7 @@ Si el healthcheck falla:
 ```powershell
 Get-Content C:\kioskoalfresko\logs\godex-bridge.log -Tail 80
 Get-Content C:\kioskoalfresko\logs\godex-bridge-error.log -Tail 80
-Test-NetConnection 192.168.1.37 -Port 9100
+Test-NetConnection <IP_DE_LA_GODEX> -Port 9100
 ```
 
 ## 9. Recuperacion rapida
@@ -197,7 +200,7 @@ API no accesible:
 Impresora no accesible:
 
 - Confirmar que la GoDEX esta encendida.
-- Ejecutar `Test-NetConnection 192.168.1.37 -Port 9100`.
+- Ejecutar `Test-NetConnection <IP_DE_LA_GODEX> -Port 9100`.
 - Confirmar IP fija o reserva DHCP.
 - Revisar firewall o aislamiento de red.
 
