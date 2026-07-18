@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireAdminPermission } from "@/lib/admin-kiosko/auth/permissions";
 import { getExpiryBuckets, getInventoryLotMovements, getInventoryLots, getInventoryMovements, getInventoryProductById, getInventoryProducts, listInventoryLotsRequiringReview } from "@/lib/admin-kiosko/database";
 import { buildZebraLabelZpl } from "@/lib/admin-kiosko/zebra";
@@ -101,6 +102,19 @@ export default async function InventarioPage({
                 <p className="mt-2 text-3xl font-black text-white">{String(value)}</p>
               </article>
             ))}
+          </section>
+
+          <section className="rounded-[2rem] border border-[#d94b2b]/30 bg-[#151515] p-5 sm:p-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">Inventario físico</p>
+                <h2 className="mt-2 text-2xl font-black uppercase tracking-[-0.03em] text-[#fff8ef]">Asistente de inventario inicial</h2>
+                <p className="mt-2 max-w-3xl text-sm text-stone-300">
+                  Crea una sesión de apertura, revisa evidencias fotográficas y prepara ajustes auditables sin modificar stock hasta aprobación explícita.
+                </p>
+              </div>
+              <Link href="/admin-kiosko/inventario/apertura" className="w-fit rounded-full border border-[#d94b2b] bg-[#d94b2b] px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-white">Abrir asistente</Link>
+            </div>
           </section>
 
           <section className="rounded-[2rem] border border-white/10 bg-[#151515] p-5 sm:p-6">

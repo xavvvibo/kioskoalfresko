@@ -16,6 +16,7 @@ export * from "./repositories/document-import.repository";
 export * from "./repositories/document-reconciliation.repository";
 export * from "./repositories/events.repository";
 export * from "./repositories/inventory.repository";
+export * from "./repositories/inventory-opening.repository";
 export * from "./repositories/inbox.repository";
 export * from "./repositories/labels.repository";
 export * from "./repositories/ocr.repository";

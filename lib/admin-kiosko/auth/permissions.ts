@@ -16,6 +16,10 @@ export type AdminPermission =
   | "incidents:create"
   | "inventory:manage"
   | "inventory:basic_view"
+  | "inventory_opening:count"
+  | "inventory_opening:manage"
+  | "inventory_opening:approve"
+  | "inventory_opening:apply"
   | "traceability:manage"
   | "print:manage"
   | "labels:basic_print"
@@ -96,6 +100,10 @@ export const ownerPermissions: AdminPermission[] = [
   "audit:view",
   "appcc:manage",
   "inventory:manage",
+  "inventory_opening:count",
+  "inventory_opening:manage",
+  "inventory_opening:approve",
+  "inventory_opening:apply",
   "traceability:manage",
   "print:manage",
   "reports:view",
@@ -178,6 +186,7 @@ export const employeePermissions: AdminPermission[] = [
   "appcc:basic_view",
   "labels:basic_print",
   "inventory:basic_view",
+  "inventory_opening:count",
 ];
 
 export function getPermissionsForRole(role: AdminRole) {

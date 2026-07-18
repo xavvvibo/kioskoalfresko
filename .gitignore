@@ -48,6 +48,10 @@ scripts/godex-print-service/*.journal.jsonl
 # packaged artifacts
 /dist/
 dist/
+private-imports/
+dist/inventory-imports/
+*.inventory-import.json
+inventory-opening-audit-output.txt
 *.tar
 *.tar.*
 *.jar

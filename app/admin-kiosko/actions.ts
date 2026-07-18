@@ -62,6 +62,7 @@ import {
   queueInboxDocument,
   buildReprintPayload,
   enqueuePrintJob,
+  createInventoryOpeningSession,
   getPrintJobById,
   getProductionBatchById,
 } from "@/lib/admin-kiosko/database";
@@ -236,6 +237,32 @@ export async function updateAdminUserAction(formData: FormData) {
   });
   revalidatePath("/admin-kiosko/usuarios");
   redirect("/admin-kiosko/usuarios?saved=updated");
+}
+
+export async function createInventoryOpeningSessionAction(formData: FormData) {
+  const session = await requireAdminPermission("inventory_opening:manage");
+  const name = text(formData, "name");
+  const cutoffAt = text(formData, "cutoff_at");
+  const locations = text(formData, "locations")
+    .split(",")
+    .map((location) => location.trim())
+    .filter(Boolean);
+  const origin = text(formData, "origin") === "manual" ? "manual" : text(formData, "origin") === "mixed" ? "mixed" : "photo_zip";
+
+  if (!name || !cutoffAt) redirect("/admin-kiosko/inventario/apertura?error=missing_fields");
+
+  const result = await createInventoryOpeningSession({
+    name,
+    locationNames: locations.length ? locations : ["Congelador"],
+    cutoffAt,
+    origin,
+    notes: text(formData, "notes"),
+    createdBy: session.id,
+  });
+
+  if (!result.ok) redirect(`/admin-kiosko/inventario/apertura?error=${encodeURIComponent(result.error.slice(0, 160))}`);
+  revalidatePath("/admin-kiosko/inventario/apertura");
+  redirect(`/admin-kiosko/inventario/apertura/${result.data.id}`);
 }
 
 const inboxDocumentTypes = new Set<InboxDocumentType>(DOCUMENT_TYPES);
