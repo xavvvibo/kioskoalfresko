@@ -50,49 +50,49 @@ export const siteConfig = {
     headline: "No es un kiosko. Es el plan.",
     subheadline:
       "Descubre las nuevas burgers de SMASH LAB by Alfresko en el Parque San Sebastián de Ogíjares.",
-    support: ["Martes a jueves y domingo · 21:00h a 24:00h", "Viernes y sábado · 21:00h a 01:30h", "Lunes cerrado"],
+    support: ["Esta semana · miércoles y viernes desde las 20:00h", "Jueves, sábado y domingo desde las 21:00h", "Lunes y martes cerrado"],
   },
   schedule: {
-    currentLabel: "Horario actual",
-    currentSummary: "Lunes cerrado. Martes, miércoles, jueves y domingo de 21:00h a 24:00h. Viernes y sábado de 21:00h a 01:30h.",
+    currentLabel: "Horario especial esta semana",
+    currentSummary: "Esta semana: lunes y martes cerrado. Miércoles abierto desde las 20:00h. Jueves abierto desde las 21:00h. Viernes abierto desde las 20:00h. Sábado y domingo abierto desde las 21:00h.",
     note: "SMASH LAB by Alfresko, cocina para compartir, terraza, delivery y recogida en Kiosko Alfresko.",
     rows: [
       { day: "Lunes", hours: "Cerrado", opens: null, closes: null },
-      { day: "Martes", hours: "21:00–24:00", opens: "21:00", closes: "00:00" },
-      { day: "Miércoles", hours: "21:00–24:00", opens: "21:00", closes: "00:00" },
-      { day: "Jueves", hours: "21:00–24:00", opens: "21:00", closes: "00:00" },
-      { day: "Viernes", hours: "21:00–01:30", opens: "21:00", closes: "01:30" },
-      { day: "Sábado", hours: "21:00–01:30", opens: "21:00", closes: "01:30" },
-      { day: "Domingo", hours: "21:00–24:00", opens: "21:00", closes: "00:00" },
+      { day: "Martes", hours: "Cerrado", opens: null, closes: null },
+      { day: "Miércoles", hours: "Desde las 20:00", opens: "20:00", closes: "00:00" },
+      { day: "Jueves", hours: "Desde las 21:00", opens: "21:00", closes: "00:00" },
+      { day: "Viernes", hours: "Desde las 20:00", opens: "20:00", closes: "01:30" },
+      { day: "Sábado", hours: "Desde las 21:00", opens: "21:00", closes: "01:30" },
+      { day: "Domingo", hours: "Desde las 21:00", opens: "21:00", closes: "00:00" },
     ],
   },
 };
 
 export const seasonalSchedule: SeasonalScheduleItem[] = [
-  { month: "Horario vigente", status: "confirmed", summary: "Lunes cerrado · Martes, miércoles, jueves y domingo 21:00h a 24:00h · Viernes y sábado 21:00h a 01:30h", note: "Consulta Instagram para cualquier ajuste puntual.", highlight: true },
+  { month: "Esta semana", status: "confirmed", summary: "Lunes y martes cerrado · Miércoles y viernes desde las 20:00h · Jueves, sábado y domingo desde las 21:00h", note: "Consulta Instagram para cualquier ajuste puntual.", highlight: true },
 ];
 
 export const maySchedule = {
-  normalLabel: "Horario actual",
-  normalHours: "Mar, mié, jue y dom · 21:00h a 24:00h · Vie y sáb · 21:00h a 01:30h",
-  normalSummary: "Horario actual: lunes cerrado. Martes, miércoles, jueves y domingo de 21:00h a 24:00h. Viernes y sábado de 21:00h a 01:30h.",
-  weekendNotice: "Horario actual",
+  normalLabel: "Horario especial esta semana",
+  normalHours: "Lun y mar cerrado · Mié y vie desde las 20:00h · Jue, sáb y dom desde las 21:00h",
+  normalSummary: "Horario especial esta semana: lunes y martes cerrado; miércoles y viernes desde las 20:00h; jueves, sábado y domingo desde las 21:00h.",
+  weekendNotice: "Esta semana",
   weekendLead: "SMASH LAB by Alfresko, cocina para compartir y terraza nocturna en Ogíjares.",
 };
 
 export const maySpecialEvents: ScheduleEvent[] = [
   {
-    date: "Martes, miércoles, jueves y domingo",
-    title: "SMASH LAB y terraza",
-    hours: "21:00h a 24:00h",
-    note: "Burgers, cocina para compartir, bebidas con tapa y reservas por Qamarero.",
+    date: "Miércoles 29 de julio",
+    title: "Planetario - Mirando a las estrellas",
+    hours: "Desde las 21:30h",
+    note: "Actividad familiar para observar el cielo en 360º y viajar entre los planetas. Parque San Sebastián (Recinto Ferial).",
     highlight: true,
   },
   {
-    date: "Viernes y sábado",
-    title: "Noches hasta la 01:30h",
-    hours: "21:00h a 01:30h",
-    note: "Reserva mesa en Qamarero o pide para recoger por teléfono y WhatsApp.",
+    date: "Viernes 31 de julio",
+    title: "Noche de humor",
+    hours: "22:00h",
+    note: "\"Lo de los Monólogos\" con Christian García, Rafa Frías y Manolo Lera. Parque San Sebastián (Recinto Ferial).",
     highlight: true,
   },
 ];
@@ -116,9 +116,9 @@ export const springHighlights = [
     detail: "FERXA TRUFADA, BOURBON BACON y POLLO KICK llegan a la carta de Kiosko Alfresko.",
   },
   {
-    date: "Horario vigente",
+    date: "Esta semana",
     title: "Noches en Parque San Sebastián",
-    detail: "Martes, miércoles, jueves y domingo de 21:00h a 24:00h; viernes y sábado de 21:00h a 01:30h.",
+    detail: "Esta semana: lunes y martes cerrado; miércoles y viernes desde las 20:00h; jueves, sábado y domingo desde las 21:00h.",
   },
   {
     date: "Instagram",
@@ -128,9 +128,9 @@ export const springHighlights = [
 ];
 
 export const upcomingEvents = {
-  eyebrow: "Planes en Ogíjares",
-  title: "Parque San Sebastián con reserva",
-  intro: "Estamos en Parque San Sebastián. Para venir en grupo, reserva mesa en Qamarero.",
+  eyebrow: "Planes de esta semana",
+  title: "Planetario y noche de humor en Parque San Sebastián",
+  intro: "Esta semana tenemos actividad familiar el miércoles y monólogos el viernes en el Recinto Ferial.",
   reservationTitle: "Reserva tu mesa",
   reservationBody:
     "Reserva mesa en Qamarero y revisa Instagram para novedades puntuales.",
@@ -142,12 +142,20 @@ export const upcomingEvents = {
   historicIntro: "Consulta Instagram para novedades de carta, delivery y horarios puntuales.",
   items: [
     {
-      title: "SMASH LAB by Alfresko",
-      date: "Horario vigente",
-      status: "Carta activa",
+      title: "Planetario - Mirando a las estrellas",
+      date: "Miércoles 29 de julio",
+      status: "Desde las 21:30h",
       description:
-        "Nuevas burgers, cocina para compartir, delivery, recogida y reservas en Qamarero.",
+        "Actividad familiar para observar el cielo en 360º y viajar entre los planetas. Parque San Sebastián (Recinto Ferial).",
       cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card") },
+    },
+    {
+      title: "Noche de humor",
+      date: "Viernes 31 de julio",
+      status: "22:00h",
+      description:
+        "\"Lo de los Monólogos\" con Christian García, Rafa Frías y Manolo Lera. Parque San Sebastián (Recinto Ferial).",
+      cta: { label: "Reservar mesa", href: getQamareroReservationUrl("event_card_humor") },
     },
   ],
   pastItems: [
@@ -168,9 +176,9 @@ export const specialWeekendCampaign = {
     "Ambiente en la terraza de Ogíjares: tapas, cerveza fría y smash burgers en Granada sur.",
   scheduleTitle: "Horario actual",
   schedule: [
-    { day: "Lunes", hours: "Cerrado" },
-    { day: "Martes, miércoles, jueves y domingo", hours: "21:00h a 24:00h" },
-    { day: "Viernes y sábado", hours: "21:00h a 01:30h" },
+    { day: "Lunes y martes", hours: "Cerrado" },
+    { day: "Miércoles y viernes", hours: "Abierto desde las 20:00h" },
+    { day: "Jueves, sábado y domingo", hours: "Abierto desde las 21:00h" },
   ],
   highlights: [
     "Terraza con ambiente",
@@ -183,19 +191,19 @@ export const specialWeekendCampaign = {
 };
 
 export const corpusClosureNotice = {
-  eyebrow: "Horario actual",
-  title: "Kiosko Alfresko · horario vigente",
+  eyebrow: "Esta semana",
+  title: "Kiosko Alfresko · horario especial",
   body:
-    "Lunes cerrado. Martes, miércoles, jueves y domingo de 21:00h a 24:00h. Viernes y sábado de 21:00h a 01:30h.",
+    "Lunes y martes cerrado. Miércoles abierto desde las 20:00h. Jueves abierto desde las 21:00h. Viernes abierto desde las 20:00h. Sábado y domingo abierto desde las 21:00h.",
   support:
     "SMASH LAB by Alfresko, cocina para compartir, delivery, recogida y reservas en Qamarero.",
 };
 
 export const summerReopening = {
-  badge: "Horario vigente",
-  returnTitle: "Horario actual",
-  days: "Lunes cerrado",
-  hours: "Mar, mié, jue y dom 21:00h a 24:00h · Vie y sáb 21:00h a 01:30h",
+  badge: "Esta semana",
+  returnTitle: "Horario especial",
+  days: "Lun y mar cerrado",
+  hours: "Mié y vie desde las 20:00h · Jue, sáb y dom desde las 21:00h",
   claim: "Reserva en Qamarero o pide para recoger",
 };
 
@@ -254,7 +262,7 @@ export const seoLandings: SeoLanding[] = [
 
 export const ownerSections = [
   { title: "Resumen de negocio", items: ["Horario actual publicado", "CTAs activos", "Páginas SEO publicadas", "Estado de placeholders"] },
-  { title: "Horario vigente", items: ["Lunes cerrado", "Martes a jueves 21:00–24:00", "Viernes y sábado 21:00–01:30", "Domingo 21:00–24:00"] },
+  { title: "Horario especial esta semana", items: ["Lunes y martes cerrado", "Miércoles y viernes desde las 20:00h", "Jueves, sábado y domingo desde las 21:00h"] },
   { title: "Carta y categorías", items: ["SMASH LAB by Alfresko", "Para compartir", "Patatas con toppings", "Carnes", "Bebidas"] },
   { title: "SEO local", items: ["Tomar algo en Ogíjares", "Tapas en Ogíjares", "Terraza en Ogíjares", "Bar en Ogíjares"] },
 ];
