@@ -8,6 +8,7 @@ import { trackEvent } from "@/lib/analytics";
 import { getQamareroReservationUrl } from "@/lib/integrations/qamarero";
 
 const links = [
+  { href: "/fiestas-ogijares-2026", label: "Fiestas" },
   { href: "/carta", label: "Carta", analyticsEvent: "click_ver_carta" },
   { href: "/#pide-alfresko", label: "Pedir", analyticsEvent: "click_pedir_ahora" },
   { href: "/horarios", label: "Horarios" },
@@ -52,13 +53,13 @@ export function SiteHeader() {
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}
-            className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-stone-950 bg-white text-stone-950 shadow-[0_12px_28px_rgba(0,0,0,0.08)] transition hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d94b2b] md:hidden"
+            className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-stone-950 bg-white text-stone-950 shadow-[0_12px_28px_rgba(0,0,0,0.08)] transition hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d94b2b] lg:hidden"
             aria-label={open ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={open}
           >
             <span className="text-2xl font-black leading-none">{open ? "✕" : "☰"}</span>
           </button>
-          <nav className="hidden items-center gap-7 rounded-full border border-stone-950/10 bg-white/70 px-5 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.05)] md:flex">
+          <nav className="hidden items-center gap-6 rounded-full border border-stone-950/10 bg-white/70 px-5 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.05)] lg:flex">
             {links.map((item) => (
               item.external ? (
                 <a
@@ -80,7 +81,7 @@ export function SiteHeader() {
       </header>
 
       <div
-        className={`fixed inset-0 z-50 bg-stone-950 text-white transition duration-300 md:hidden ${
+        className={`fixed inset-0 z-50 bg-stone-950 text-white transition duration-300 lg:hidden ${
           open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
         aria-hidden={!open}

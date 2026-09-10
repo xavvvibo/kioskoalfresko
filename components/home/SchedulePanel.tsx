@@ -7,9 +7,9 @@ const statusClasses = {
   special: "bg-amber-200 text-amber-950",
 };
 
-export function SchedulePanel() {
+export function SchedulePanel({ subdued = false }: { subdued?: boolean }) {
   return (
-    <div className="rounded-[2rem] border border-stone-950 bg-white p-8">
+    <div className={`rounded-[2rem] border border-stone-950 bg-white p-8 ${subdued ? "opacity-80" : ""}`}>
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d94b2b]">{siteConfig.schedule.currentLabel}</p>

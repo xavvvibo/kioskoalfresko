@@ -21,6 +21,7 @@ export function SiteFooter() {
           <h4 className="text-sm font-black uppercase tracking-[0.16em] text-[#efb7a8]">Enlaces útiles</h4>
           <div className="mt-4 space-y-2 text-sm text-stone-300">
             <Link className="block hover:text-white" href="/carta" onClick={() => trackEvent("click_ver_carta", { location: "footer" })}>Carta</Link>
+            <Link className="block hover:text-white" href="/fiestas-ogijares-2026">Fiestas de Ogíjares 2026</Link>
             <Link className="block hover:text-white" href="/#pide-alfresko" onClick={() => trackEvent("click_pedir_ahora", { location: "footer" })}>Pedir ahora</Link>
             <Link className="block hover:text-white" href="/horarios">Horarios</Link>
             <a className="block hover:text-white" href={getQamareroReservationUrl("footer")} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent("click_reserva_qamarero", { location: "footer" })}>Reservar mesa</a>

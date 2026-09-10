@@ -1,9 +1,10 @@
 import Image from "next/image";
+import { specialOpeningHours } from "@/content/fiestas-2026";
 import { featuredBurgers } from "@/content/menu";
 import { siteConfig } from "@/content/site";
 import { ActionButton } from "@/components/ui/ActionButton";
 
-export function Hero() {
+export function Hero({ festivalActive = false }: { festivalActive?: boolean }) {
   return (
     <section className="relative overflow-hidden border-b border-stone-950 bg-[radial-gradient(circle_at_82%_16%,rgba(217,75,43,0.34),transparent_22%),linear-gradient(180deg,#090909_0%,#14100f_56%,#060606_100%)] text-white">
       <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] [background-size:24px_24px]" />
@@ -30,14 +31,30 @@ export function Hero() {
             Descubre las nuevas burgers de SMASH LAB by Alfresko: FERXA TRUFADA, BOURBON BACON y POLLO KICK.
           </p>
 
-          <div className="mt-6 grid gap-2 rounded-[1.35rem] border border-white/12 bg-black/28 p-3 sm:grid-cols-2">
-            {siteConfig.schedule.rows.map((row) => (
-              <div key={row.day} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/6 px-3 py-2">
-                <span className="text-[11px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{row.day}</span>
-                <span className="text-sm font-black text-white">{row.hours}</span>
+          {festivalActive ? (
+            <div className="mt-6 rounded-[1.35rem] border border-[#d94b2b]/50 bg-[#d94b2b]/14 p-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">
+                Fiestas de Ogíjares 2026 · Horario especial
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {specialOpeningHours.map((row) => (
+                  <div key={row.day} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/24 px-3 py-2">
+                    <span className="text-[11px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{row.day}</span>
+                    <span className="text-sm font-black text-white">{row.shifts.join(" · ")}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-2 rounded-[1.35rem] border border-white/12 bg-black/28 p-3 sm:grid-cols-2">
+              {siteConfig.schedule.rows.map((row) => (
+                <div key={row.day} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/6 px-3 py-2">
+                  <span className="text-[11px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{row.day}</span>
+                  <span className="text-sm font-black text-white">{row.hours}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="mt-7 grid gap-3 sm:grid-cols-3">
             <ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "hero" }}>

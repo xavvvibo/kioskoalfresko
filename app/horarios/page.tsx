@@ -1,6 +1,8 @@
 import { siteConfig } from "@/content/site";
+import { festivalDates, isFestivalHomePromotionActive } from "@/content/fiestas-2026";
 import { buildMetadata } from "@/lib/metadata";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { FestivalHoursCard } from "@/components/fiestas/FestivalHoursCard";
 
 export const metadata = buildMetadata({
   title: "Horarios de Kiosko Alfresko | Ogíjares",
@@ -8,23 +10,40 @@ export const metadata = buildMetadata({
   path: "/horarios",
 });
 
+export const dynamic = "force-dynamic";
+
 export default function HorariosPage() {
+  const festivalActive = isFestivalHomePromotionActive();
+
   return (
     <main className="bg-[#f5efe5]">
       <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 md:py-24">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d94b2b]">Horarios</p>
         <h1 className="mt-3 text-4xl font-black uppercase tracking-[-0.04em] text-stone-950 md:text-5xl">
-          Horario actual de Kiosko Alfresko
+          {festivalActive ? "Horario especial Fiestas de Ogíjares 2026" : "Horario actual de Kiosko Alfresko"}
         </h1>
         <p className="mt-5 max-w-3xl text-lg leading-8 text-stone-700">
-          {siteConfig.schedule.currentSummary}
+          {festivalActive
+            ? `Durante las Fiestas de Ogíjares tenemos horario especial del 10 al 14 de septiembre en ${festivalDates.location}.`
+            : siteConfig.schedule.currentSummary}
         </p>
 
-        <section className="mt-8 rounded-[2rem] border border-stone-950 bg-white p-6 shadow-sm">
+        {festivalActive ? (
+          <section className="mt-8">
+            <FestivalHoursCard />
+          </section>
+        ) : null}
+
+        <section className={`mt-8 rounded-[2rem] border border-stone-950 bg-white p-6 shadow-sm ${festivalActive ? "opacity-75" : ""}`}>
           <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">Horario oficial</p>
           <h2 className="mt-3 text-2xl font-black uppercase tracking-[-0.03em] text-stone-950">
-            SMASH LAB, terraza, delivery y recogida
+            {festivalActive ? "Horario habitual de Alfresko" : "SMASH LAB, terraza, delivery y recogida"}
           </h2>
+          {festivalActive ? (
+            <p className="mt-3 text-sm font-semibold leading-6 text-stone-700">
+              El horario especial de fiestas sustituye temporalmente este horario habitual.
+            </p>
+          ) : null}
           <div className="mt-6 grid gap-3 md:grid-cols-2">
             {siteConfig.schedule.rows.map((item) => (
               <article key={item.day} className="rounded-[1.35rem] border border-stone-950/10 bg-[#f8f1e7] p-4">

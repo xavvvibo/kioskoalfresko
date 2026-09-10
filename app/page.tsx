@@ -1,10 +1,15 @@
 import { buildMetadata } from "@/lib/metadata";
+import { isFestivalHomePromotionActive } from "@/content/fiestas-2026";
 import { Section } from "@/components/ui/Section";
 import { Hero } from "@/components/home/Hero";
 import { QuickDecision } from "@/components/home/QuickDecision";
 import { MenuPreview } from "@/components/home/MenuPreview";
 import { ContactPanel } from "@/components/home/ContactPanel";
 import { DeliveryPanel } from "@/components/home/DeliveryPanel";
+import { HomeFestivalBanner } from "@/components/fiestas/HomeFestivalBanner";
+import { SchedulePanel } from "@/components/home/SchedulePanel";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = buildMetadata({
   title: "Kiosko Alfresko | Smash Lab, burgers y terraza en Ogíjares",
@@ -13,12 +18,20 @@ export const metadata = buildMetadata({
 });
 
 export default function HomePage() {
+  const festivalActive = isFestivalHomePromotionActive();
+
   return (
     <main>
-      <Hero />
+      <Hero festivalActive={festivalActive} />
+      {festivalActive ? <HomeFestivalBanner /> : null}
       <Section title="Elige tu plan" description="Ver la carta, pedir para recoger o reservar mesa en Kiosko Alfresko.">
         <QuickDecision />
       </Section>
+      {festivalActive ? (
+        <Section eyebrow="Horario habitual de Alfresko" title="Después del especial de fiestas" description="Durante las Fiestas de Ogíjares el horario especial sustituye temporalmente al horario habitual. Dejamos el horario ordinario como referencia secundaria.">
+          <SchedulePanel subdued />
+        </Section>
+      ) : null}
       <Section eyebrow="Lo que te espera" title="Qué puedes pedir">
         <div className="rounded-[2rem] border border-stone-950 bg-white p-8 shadow-[0_18px_40px_rgba(0,0,0,0.06)]">
           <div className="flex flex-wrap gap-3">
