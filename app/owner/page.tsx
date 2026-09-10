@@ -7,6 +7,8 @@ export const metadata = buildMetadata({
   path: "/owner",
 });
 
+export const dynamic = "force-dynamic";
+
 export default function OwnerPage() {
   return <OwnerDashboard />;
 }

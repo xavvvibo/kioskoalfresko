@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { siteConfig } from "@/content/site";
+import { festivalSpecialOpeningHoursSpecification } from "@/content/fiestas-2026";
 import { AnalyticsNoScript, AnalyticsScripts } from "@/components/analytics/AnalyticsScripts";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
@@ -25,6 +26,7 @@ const restaurantJsonLd = {
   priceRange: "€€",
   hasMenu: `${siteConfig.siteUrl}/carta`,
   sameAs: [siteConfig.contact.instagramUrl],
+  specialOpeningHoursSpecification: festivalSpecialOpeningHoursSpecification,
   address: {
     "@type": "PostalAddress",
     streetAddress: siteConfig.location.addressLine,
@@ -33,14 +35,6 @@ const restaurantJsonLd = {
     postalCode: siteConfig.location.postalCode,
     addressCountry: "ES",
   },
-  openingHoursSpecification: [
-    { "@type": "OpeningHoursSpecification", dayOfWeek: "Tuesday", opens: "21:00", closes: "00:00" },
-    { "@type": "OpeningHoursSpecification", dayOfWeek: "Wednesday", opens: "21:00", closes: "00:00" },
-    { "@type": "OpeningHoursSpecification", dayOfWeek: "Thursday", opens: "21:00", closes: "00:00" },
-    { "@type": "OpeningHoursSpecification", dayOfWeek: "Friday", opens: "21:00", closes: "01:30" },
-    { "@type": "OpeningHoursSpecification", dayOfWeek: "Saturday", opens: "21:00", closes: "01:30" },
-    { "@type": "OpeningHoursSpecification", dayOfWeek: "Sunday", opens: "21:00", closes: "00:00" },
-  ],
   potentialAction: [
     {
       "@type": "ReserveAction",

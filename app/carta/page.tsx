@@ -13,6 +13,8 @@ export const metadata = buildMetadata({
   path: "/carta",
 });
 
+export const dynamic = "force-dynamic";
+
 export default function CartaPage() {
   const sections = [...foodSections, ...drinksSections];
 

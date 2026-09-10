@@ -1,4 +1,5 @@
 import { DeliveryPanel } from "@/components/home/DeliveryPanel";
+import { festivalDates, isFestivalHomePromotionActive } from "@/content/fiestas-2026";
 import { siteConfig } from "@/content/site";
 import { getQamareroReservationUrl, getReservationEntryPoint } from "@/lib/integrations/qamarero";
 import { buildMetadata } from "@/lib/metadata";
@@ -11,8 +12,11 @@ export const metadata = buildMetadata({
   path: "/reservas-contacto",
 });
 
+export const dynamic = "force-dynamic";
+
 export default function ReservasContactoPage() {
   const reservation = getReservationEntryPoint("contact_page");
+  const festivalActive = isFestivalHomePromotionActive();
 
   return (
     <main className="bg-[#fffaf4]">
@@ -57,7 +61,10 @@ export default function ReservasContactoPage() {
         <article className="mt-8 rounded-[1.75rem] border border-stone-950 bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-black uppercase tracking-[-0.03em] text-stone-950">Estamos en el parque</h2>
           <p className="mt-4 text-sm leading-6 text-stone-700">
-            {siteConfig.location.area}, {siteConfig.location.city}, {siteConfig.location.province}. {siteConfig.schedule.currentSummary}
+            {siteConfig.location.area}, {siteConfig.location.city}, {siteConfig.location.province}.{" "}
+            {festivalActive
+              ? `Durante las Fiestas de Ogíjares tenemos horario especial del 10 al 14 de septiembre en ${festivalDates.location}.`
+              : siteConfig.schedule.currentSummary}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <ActionButton href={siteConfig.location.mapsUrl} newTab analyticsEvent="click_como_llegar" analyticsPayload={{ location: "reservas_contacto_location" }}>

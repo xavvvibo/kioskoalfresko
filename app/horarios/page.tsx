@@ -6,7 +6,7 @@ import { FestivalHoursCard } from "@/components/fiestas/FestivalHoursCard";
 
 export const metadata = buildMetadata({
   title: "Horarios de Kiosko Alfresko | Ogíjares",
-  description: "Horario actual de Kiosko Alfresko en Ogíjares: lunes cerrado; martes, miércoles, jueves y domingo de 21:00h a 24:00h; viernes y sábado de 21:00h a 01:30h.",
+  description: "Consulta los horarios actualizados de Kiosko Alfresko en Ogíjares, con avisos especiales cuando hay eventos o fiestas locales.",
   path: "/horarios",
 });
 
@@ -34,39 +34,48 @@ export default function HorariosPage() {
           </section>
         ) : null}
 
-        <section className={`mt-8 rounded-[2rem] border border-stone-950 bg-white p-6 shadow-sm ${festivalActive ? "opacity-75" : ""}`}>
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">Horario oficial</p>
-          <h2 className="mt-3 text-2xl font-black uppercase tracking-[-0.03em] text-stone-950">
-            {festivalActive ? "Horario habitual de Alfresko" : "SMASH LAB, terraza, delivery y recogida"}
-          </h2>
-          {festivalActive ? (
-            <p className="mt-3 text-sm font-semibold leading-6 text-stone-700">
-              El horario especial de fiestas sustituye temporalmente este horario habitual.
-            </p>
-          ) : null}
-          <div className="mt-6 grid gap-3 md:grid-cols-2">
-            {siteConfig.schedule.rows.map((item) => (
-              <article key={item.day} className="rounded-[1.35rem] border border-stone-950/10 bg-[#f8f1e7] p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-stone-950">{item.day}</h3>
-                  <p className="text-lg font-black text-[#d94b2b]">{item.hours}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-          <p className="mt-5 text-sm leading-6 text-stone-700">{siteConfig.schedule.note}</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <ActionButton href={siteConfig.ctas.booking.href} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "horarios" }}>
+        {!festivalActive ? (
+          <section className="mt-8 rounded-[2rem] border border-stone-950 bg-white p-6 shadow-sm">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#d94b2b]">Horario oficial</p>
+            <h2 className="mt-3 text-2xl font-black uppercase tracking-[-0.03em] text-stone-950">
+              SMASH LAB, terraza, delivery y recogida
+            </h2>
+            <div className="mt-6 grid gap-3 md:grid-cols-2">
+              {siteConfig.schedule.rows.map((item) => (
+                <article key={item.day} className="rounded-[1.35rem] border border-stone-950/10 bg-[#f8f1e7] p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <h3 className="text-lg font-black uppercase tracking-[-0.03em] text-stone-950">{item.day}</h3>
+                    <p className="text-lg font-black text-[#d94b2b]">{item.hours}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <p className="mt-5 text-sm leading-6 text-stone-700">{siteConfig.schedule.note}</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <ActionButton href={siteConfig.ctas.booking.href} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "horarios" }}>
+                Reservar mesa
+              </ActionButton>
+              <ActionButton href="/carta" kind="secondary" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "horarios" }}>
+                Ver carta
+              </ActionButton>
+              <ActionButton href={siteConfig.contact.instagramUrl} kind="ghost" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "horarios" }}>
+                Ver Instagram
+              </ActionButton>
+            </div>
+          </section>
+        ) : (
+          <div className="mt-8 flex flex-wrap gap-3">
+            <ActionButton href={siteConfig.ctas.booking.href} newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "horarios_fiestas" }}>
               Reservar mesa
             </ActionButton>
-            <ActionButton href="/carta" kind="secondary" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "horarios" }}>
+            <ActionButton href="/carta" kind="secondary" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "horarios_fiestas" }}>
               Ver carta
             </ActionButton>
-            <ActionButton href={siteConfig.contact.instagramUrl} kind="ghost" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "horarios" }}>
-              Ver Instagram
+            <ActionButton href="/fiestas-ogijares-2026" kind="ghost">
+              Ver programación
             </ActionButton>
           </div>
-        </section>
+        )}
       </div>
     </main>
   );

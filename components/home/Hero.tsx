@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { specialOpeningHours } from "@/content/fiestas-2026";
 import { featuredBurgers } from "@/content/menu";
 import { siteConfig } from "@/content/site";
 import { ActionButton } from "@/components/ui/ActionButton";
@@ -13,60 +12,71 @@ export function Hero({ festivalActive = false }: { festivalActive?: boolean }) {
           <p className="inline-flex rounded-full border border-white/15 bg-white/8 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#f2c6bb]">
             Kiosko Alfresko · {siteConfig.brandClaim}
           </p>
-          <p className="mt-4 text-[11px] font-black uppercase tracking-[0.28em] text-[#d94b2b]">
-            Presenta
-          </p>
-          <div className="mt-3">
-            <p className="text-[3.2rem] font-black uppercase leading-[0.78] tracking-[-0.07em] text-[#fff8ef] sm:text-[4.6rem] md:text-[6.4rem]">
-              SMASH<span className="text-[#d94b2b]">LAB</span>
-            </p>
-            <p className="mt-2 text-[1.45rem] font-black italic leading-none text-[#f2c6bb] sm:text-[2rem]">
-              by Alfresko
-            </p>
-          </div>
-          <h1 className="mt-6 max-w-2xl text-[2.45rem] font-black uppercase leading-[0.9] tracking-[-0.055em] text-white sm:text-[3.2rem] md:text-[4.5rem]">
-            No es un kiosko. Es el plan.
-          </h1>
-          <p className="mt-5 max-w-xl text-base font-semibold leading-7 text-stone-200 md:text-lg">
-            Descubre las nuevas burgers de SMASH LAB by Alfresko: FERXA TRUFADA, BOURBON BACON y POLLO KICK.
-          </p>
-
           {festivalActive ? (
-            <div className="mt-6 rounded-[1.35rem] border border-[#d94b2b]/50 bg-[#d94b2b]/14 p-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#f2c6bb]">
-                Fiestas de Ogíjares 2026 · Horario especial
+            <>
+              <p className="mt-5 text-[11px] font-black uppercase tracking-[0.28em] text-[#d94b2b]">
+                Fiestas de Ogíjares 2026
               </p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {specialOpeningHours.map((row) => (
-                  <div key={row.day} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/24 px-3 py-2">
+              <h1 className="mt-4 max-w-2xl text-[2.8rem] font-black uppercase leading-[0.86] tracking-[-0.055em] text-white sm:text-[3.6rem] md:text-[5.2rem]">
+                Alfresko en el centro de la fiesta
+              </h1>
+              <p className="mt-5 max-w-xl text-base font-black uppercase tracking-[0.12em] text-[#f2c6bb] md:text-lg">
+                10-14 septiembre · Parque San Sebastián
+              </p>
+              <p className="mt-5 max-w-xl text-base font-semibold leading-7 text-stone-200 md:text-lg">
+                SMASH LAB by Alfresko, terraza, pedidos y reservas en pleno Parque San Sebastián.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <ActionButton href="/fiestas-ogijares-2026" analyticsEvent="click_fiestas_programacion" analyticsPayload={{ location: "hero" }}>
+                  Ver horarios y programación
+                </ActionButton>
+                <ActionButton href="/carta" kind="secondary" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "hero" }}>
+                  Ver carta
+                </ActionButton>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="mt-4 text-[11px] font-black uppercase tracking-[0.28em] text-[#d94b2b]">
+                Presenta
+              </p>
+              <div className="mt-3">
+                <p className="text-[3.2rem] font-black uppercase leading-[0.78] tracking-[-0.07em] text-[#fff8ef] sm:text-[4.6rem] md:text-[6.4rem]">
+                  SMASH<span className="text-[#d94b2b]">LAB</span>
+                </p>
+                <p className="mt-2 text-[1.45rem] font-black italic leading-none text-[#f2c6bb] sm:text-[2rem]">
+                  by Alfresko
+                </p>
+              </div>
+              <h1 className="mt-6 max-w-2xl text-[2.45rem] font-black uppercase leading-[0.9] tracking-[-0.055em] text-white sm:text-[3.2rem] md:text-[4.5rem]">
+                No es un kiosko. Es el plan.
+              </h1>
+              <p className="mt-5 max-w-xl text-base font-semibold leading-7 text-stone-200 md:text-lg">
+                Descubre las nuevas burgers de SMASH LAB by Alfresko: FERXA TRUFADA, BOURBON BACON y POLLO KICK.
+              </p>
+
+              <div className="mt-6 grid gap-2 rounded-[1.35rem] border border-white/12 bg-black/28 p-3 sm:grid-cols-2">
+                {siteConfig.schedule.rows.map((row) => (
+                  <div key={row.day} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/6 px-3 py-2">
                     <span className="text-[11px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{row.day}</span>
-                    <span className="text-sm font-black text-white">{row.shifts.join(" · ")}</span>
+                    <span className="text-sm font-black text-white">{row.hours}</span>
                   </div>
                 ))}
               </div>
-            </div>
-          ) : (
-            <div className="mt-6 grid gap-2 rounded-[1.35rem] border border-white/12 bg-black/28 p-3 sm:grid-cols-2">
-              {siteConfig.schedule.rows.map((row) => (
-                <div key={row.day} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/6 px-3 py-2">
-                  <span className="text-[11px] font-black uppercase tracking-[0.16em] text-[#f2c6bb]">{row.day}</span>
-                  <span className="text-sm font-black text-white">{row.hours}</span>
-                </div>
-              ))}
-            </div>
-          )}
 
-          <div className="mt-7 grid gap-3 sm:grid-cols-3">
-            <ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "hero" }}>
-              Ver carta
-            </ActionButton>
-            <ActionButton href="#pide-alfresko" kind="secondary" analyticsEvent="click_pedir_ahora" analyticsPayload={{ location: "hero" }}>
-              Pedir ahora
-            </ActionButton>
-            <ActionButton href={siteConfig.ctas.booking.href} kind="ghost" newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "hero" }}>
-              Reservar mesa
-            </ActionButton>
-          </div>
+              <div className="mt-7 grid gap-3 sm:grid-cols-3">
+                <ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "hero" }}>
+                  Ver carta
+                </ActionButton>
+                <ActionButton href="#pide-alfresko" kind="secondary" analyticsEvent="click_pedir_ahora" analyticsPayload={{ location: "hero" }}>
+                  Pedir ahora
+                </ActionButton>
+                <ActionButton href={siteConfig.ctas.booking.href} kind="ghost" newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "hero" }}>
+                  Reservar mesa
+                </ActionButton>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="relative z-10 grid gap-4">

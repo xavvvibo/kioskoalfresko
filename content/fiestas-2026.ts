@@ -11,11 +11,11 @@ export const festivalDates = {
 };
 
 export const specialOpeningHours = [
-  { day: "Jueves 10", shifts: ["20:00 - 05:00"], service: "Cocina y terraza: 20:00-00:00" },
+  { day: "Jueves 10", shifts: ["20:00 - 03:00"], service: "Cocina y terraza: 20:00-00:00" },
   { day: "Viernes 11", shifts: ["11:30 - 17:00", "20:00 - 05:00"], service: "Cocina y terraza: 12:00-16:00 y 20:00-00:00" },
   { day: "Sábado 12", shifts: ["11:30 - 17:00", "20:00 - 05:00"], service: "Cocina y terraza: 12:00-16:00 y 20:00-00:00" },
-  { day: "Domingo 13", shifts: ["11:30 - 17:00", "20:00 - 05:00"], service: "Cocina y terraza: 12:00-16:00 y 20:00-00:00" },
-  { day: "Lunes 14", shifts: ["20:00 - 05:00"], service: "Cocina y terraza: 20:00-00:00" },
+  { day: "Domingo 13", shifts: ["11:30 - 17:00", "20:00 - 03:00"], service: "Cocina y terraza: 12:00-16:00 y 20:00-00:00" },
+  { day: "Lunes 14", shifts: ["20:00 - 03:00"], service: "Cocina y terraza: 20:00-00:00" },
 ];
 
 export const serviceHours = [
@@ -151,3 +151,14 @@ export function isFestivalHomePromotionActive(date = new Date()) {
 
   return madridDate >= festivalDates.startDate && madridDate < festivalDates.homePromotionEndsOn;
 }
+
+export const festivalSpecialOpeningHoursSpecification = [
+  { "@type": "OpeningHoursSpecification", validFrom: "2026-09-10", validThrough: "2026-09-10", dayOfWeek: "Thursday", opens: "20:00", closes: "03:00" },
+  { "@type": "OpeningHoursSpecification", validFrom: "2026-09-11", validThrough: "2026-09-11", dayOfWeek: "Friday", opens: "11:30", closes: "17:00" },
+  { "@type": "OpeningHoursSpecification", validFrom: "2026-09-11", validThrough: "2026-09-11", dayOfWeek: "Friday", opens: "20:00", closes: "05:00" },
+  { "@type": "OpeningHoursSpecification", validFrom: "2026-09-12", validThrough: "2026-09-12", dayOfWeek: "Saturday", opens: "11:30", closes: "17:00" },
+  { "@type": "OpeningHoursSpecification", validFrom: "2026-09-12", validThrough: "2026-09-12", dayOfWeek: "Saturday", opens: "20:00", closes: "05:00" },
+  { "@type": "OpeningHoursSpecification", validFrom: "2026-09-13", validThrough: "2026-09-13", dayOfWeek: "Sunday", opens: "11:30", closes: "17:00" },
+  { "@type": "OpeningHoursSpecification", validFrom: "2026-09-13", validThrough: "2026-09-13", dayOfWeek: "Sunday", opens: "20:00", closes: "03:00" },
+  { "@type": "OpeningHoursSpecification", validFrom: "2026-09-14", validThrough: "2026-09-14", dayOfWeek: "Monday", opens: "20:00", closes: "03:00" },
+];

@@ -262,7 +262,7 @@ export const seoLandings: SeoLanding[] = [
 
 export const ownerSections = [
   { title: "Resumen de negocio", items: ["Horario actual publicado", "CTAs activos", "Páginas SEO publicadas", "Estado de placeholders"] },
-  { title: "Horario especial esta semana", items: ["Lunes y martes cerrado", "Miércoles y viernes desde las 20:00h", "Jueves, sábado y domingo desde las 21:00h"] },
+  { title: "Horario operativo", items: ["Horario publicado en la web", "Avisos especiales cuando correspondan", "Reservas y pedidos activos"] },
   { title: "Carta y categorías", items: ["SMASH LAB by Alfresko", "Para compartir", "Patatas con toppings", "Carnes", "Bebidas"] },
   { title: "SEO local", items: ["Tomar algo en Ogíjares", "Tapas en Ogíjares", "Terraza en Ogíjares", "Bar en Ogíjares"] },
 ];

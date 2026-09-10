@@ -7,7 +7,6 @@ import { MenuPreview } from "@/components/home/MenuPreview";
 import { ContactPanel } from "@/components/home/ContactPanel";
 import { DeliveryPanel } from "@/components/home/DeliveryPanel";
 import { HomeFestivalBanner } from "@/components/fiestas/HomeFestivalBanner";
-import { SchedulePanel } from "@/components/home/SchedulePanel";
 
 export const dynamic = "force-dynamic";
 
@@ -27,11 +26,6 @@ export default function HomePage() {
       <Section title="Elige tu plan" description="Ver la carta, pedir para recoger o reservar mesa en Kiosko Alfresko.">
         <QuickDecision />
       </Section>
-      {festivalActive ? (
-        <Section eyebrow="Horario habitual de Alfresko" title="Después del especial de fiestas" description="Durante las Fiestas de Ogíjares el horario especial sustituye temporalmente al horario habitual. Dejamos el horario ordinario como referencia secundaria.">
-          <SchedulePanel subdued />
-        </Section>
-      ) : null}
       <Section eyebrow="Lo que te espera" title="Qué puedes pedir">
         <div className="rounded-[2rem] border border-stone-950 bg-white p-8 shadow-[0_18px_40px_rgba(0,0,0,0.06)]">
           <div className="flex flex-wrap gap-3">

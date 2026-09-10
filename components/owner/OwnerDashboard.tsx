@@ -1,6 +1,10 @@
+import { FestivalHoursCard } from "@/components/fiestas/FestivalHoursCard";
+import { isFestivalHomePromotionActive } from "@/content/fiestas-2026";
 import { ownerSections, seasonalSchedule, siteConfig } from "@/content/site";
 
 export function OwnerDashboard() {
+  const festivalActive = isFestivalHomePromotionActive();
+
   return (
     <main className="min-h-screen bg-stone-100">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
@@ -14,23 +18,29 @@ export function OwnerDashboard() {
             Base preparada para gestionar horarios actuales, datos de contacto, CTAs, home, landings SEO, carta y estados pendientes.
           </p>
         </div>
-        <div className="mt-6 grid gap-4 lg:grid-cols-3">
-          <section className="rounded-[1.8rem] border border-stone-950 bg-stone-950 p-6 text-white shadow-sm">
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#efb7a8]">Horario actual</p>
-            <h2 className="mt-3 text-2xl font-black uppercase leading-tight tracking-[-0.03em]">Lunes cerrado</h2>
-            <p className="mt-3 text-sm leading-6 text-stone-300">Martes, miércoles, jueves y domingo de 21:00h a 24:00h.</p>
-          </section>
-          <section className="rounded-[1.8rem] border border-stone-950 bg-[#d94b2b] p-6 text-white shadow-sm">
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/80">Viernes y sábado</p>
-            <h2 className="mt-3 text-2xl font-black uppercase leading-tight tracking-[-0.03em]">21:00h a 01:30h</h2>
-            <p className="mt-3 text-sm leading-6 text-white/85">SMASH LAB by Alfresko, terraza y pedidos.</p>
-          </section>
-          <section className="rounded-[1.8rem] border border-stone-950 bg-white p-6 shadow-sm">
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#d94b2b]">Domingo</p>
-            <h2 className="mt-3 text-2xl font-black uppercase leading-tight tracking-[-0.03em] text-stone-950">21:00h a 24:00h</h2>
-            <p className="mt-3 text-sm leading-6 text-stone-700">Horario publicado en contenido, home, horarios, reservas y SEO.</p>
-          </section>
-        </div>
+        {festivalActive ? (
+          <div className="mt-6">
+            <FestivalHoursCard />
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            <section className="rounded-[1.8rem] border border-stone-950 bg-stone-950 p-6 text-white shadow-sm">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#efb7a8]">Horario actual</p>
+              <h2 className="mt-3 text-2xl font-black uppercase leading-tight tracking-[-0.03em]">Lunes cerrado</h2>
+              <p className="mt-3 text-sm leading-6 text-stone-300">Martes, miércoles, jueves y domingo de 21:00h a 24:00h.</p>
+            </section>
+            <section className="rounded-[1.8rem] border border-stone-950 bg-[#d94b2b] p-6 text-white shadow-sm">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/80">Viernes y sábado</p>
+              <h2 className="mt-3 text-2xl font-black uppercase leading-tight tracking-[-0.03em]">21:00h a 01:30h</h2>
+              <p className="mt-3 text-sm leading-6 text-white/85">SMASH LAB by Alfresko, terraza y pedidos.</p>
+            </section>
+            <section className="rounded-[1.8rem] border border-stone-950 bg-white p-6 shadow-sm">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#d94b2b]">Domingo</p>
+              <h2 className="mt-3 text-2xl font-black uppercase leading-tight tracking-[-0.03em] text-stone-950">21:00h a 24:00h</h2>
+              <p className="mt-3 text-sm leading-6 text-stone-700">Horario publicado en contenido, home, horarios, reservas y SEO.</p>
+            </section>
+          </div>
+        )}
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
           {ownerSections.map((section) => (
             <section key={section.title} className="rounded-3xl border border-stone-950 bg-white p-6 shadow-sm">
@@ -42,17 +52,19 @@ export function OwnerDashboard() {
           ))}
         </div>
         <div className="mt-8 grid gap-4 lg:grid-cols-3">
-          <section className="rounded-3xl border border-stone-950 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-stone-950">Horarios estacionales</h2>
-            <div className="mt-4 space-y-3 text-sm text-stone-700">
-              {seasonalSchedule.map((item) => (
-                <div key={item.month} className="rounded-2xl bg-stone-50 p-3">
-                  <div className="font-black uppercase tracking-[0.04em] text-stone-900">{item.month}</div>
-                  <div>{item.summary}</div>
-                </div>
-              ))}
-            </div>
-          </section>
+          {!festivalActive ? (
+            <section className="rounded-3xl border border-stone-950 bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-stone-950">Horarios estacionales</h2>
+              <div className="mt-4 space-y-3 text-sm text-stone-700">
+                {seasonalSchedule.map((item) => (
+                  <div key={item.month} className="rounded-2xl bg-stone-50 p-3">
+                    <div className="font-black uppercase tracking-[0.04em] text-stone-900">{item.month}</div>
+                    <div>{item.summary}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
           <section className="rounded-3xl border border-stone-950 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-stone-950">CTAs activos</h2>
             <div className="mt-4 space-y-3 text-sm text-stone-700">

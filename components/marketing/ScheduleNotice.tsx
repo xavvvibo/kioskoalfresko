@@ -1,8 +1,46 @@
+import { FestivalHoursCard } from "@/components/fiestas/FestivalHoursCard";
+import { festivalDates, isFestivalHomePromotionActive } from "@/content/fiestas-2026";
 import { corpusClosureNotice, siteConfig, summerReopening } from "@/content/site";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { getQamareroReservationUrl } from "@/lib/integrations/qamarero";
 
 export function ScheduleNotice() {
+  const festivalActive = isFestivalHomePromotionActive();
+
+  if (festivalActive) {
+    return (
+      <section className="overflow-hidden rounded-[2rem] border border-stone-950/90 bg-[linear-gradient(90deg,#111111_0%,#111111_56%,#c74428_56%,#d94b2b_100%)] text-white shadow-[0_18px_42px_rgba(0,0,0,0.14)]">
+        <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="p-6 md:p-8">
+            <p className="inline-flex rounded-full border border-white/14 bg-white/8 px-3 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-[#f2c6bb]">
+              Fiestas de Ogíjares 2026
+            </p>
+            <h2 className="mt-4 text-[1.9rem] font-black uppercase leading-[0.98] tracking-[-0.04em] text-[#fff8ef] md:text-[2.8rem]">
+              Horario especial · 10-14 septiembre
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-stone-200 md:text-lg">
+              Durante las fiestas estamos en {festivalDates.location} con horario especial de apertura, cocina, terraza y barra.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <ActionButton href={festivalDates.pagePath} analyticsEvent="click_fiestas_programacion" analyticsPayload={{ location: "schedule_notice" }}>
+                Ver horarios y programación
+              </ActionButton>
+              <ActionButton href={getQamareroReservationUrl("schedule_notice_fiestas")} kind="secondary" newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "schedule_notice" }}>
+                Reservar mesa
+              </ActionButton>
+              <ActionButton href={siteConfig.location.mapsUrl} kind="ghost" newTab analyticsEvent="click_como_llegar" analyticsPayload={{ location: "schedule_notice" }}>
+                Cómo llegar
+              </ActionButton>
+            </div>
+          </div>
+          <div className="border-t border-white/12 bg-white/8 p-4 md:p-6 lg:border-l lg:border-t-0">
+            <FestivalHoursCard compact />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="overflow-hidden rounded-[2rem] border border-stone-950/90 bg-[linear-gradient(90deg,#111111_0%,#111111_56%,#c74428_56%,#d94b2b_100%)] text-white shadow-[0_18px_42px_rgba(0,0,0,0.14)]">
       <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
