@@ -32,10 +32,10 @@ export function HomeFestivalBanner() {
               </div>
               <div className="mt-7 flex flex-wrap gap-3">
                 <ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "fiestas_home_banner" }}>
-                  Ver carta
+                  Descubre SMASH LAB
                 </ActionButton>
-                <ActionButton href={siteConfig.contact.orderWhatsappUrl} kind="secondary" newTab analyticsEvent="click_whatsapp_pedido" analyticsPayload={{ location: "fiestas_home_banner" }}>
-                  Pedir
+                <ActionButton href={siteConfig.contact.instagramUrl} kind="secondary" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "fiestas_home_banner" }}>
+                  Instagram
                 </ActionButton>
                 <ActionButton href={festivalDates.pagePath} kind="ghost">
                   Ver programación de fiestas

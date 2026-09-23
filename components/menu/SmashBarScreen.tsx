@@ -131,10 +131,10 @@ export function SmashBarScreen({
           </ul>
 
           <div className={`mt-7 ${styles.actions}`}>
-            <ActionButton href="/#pide-alfresko" analyticsEvent="click_pedir_ahora" analyticsPayload={{ location: "smash_bar_screen" }}>Pedir ahora</ActionButton>
+            <ActionButton href="/" analyticsEvent="click_home" analyticsPayload={{ location: "smash_bar_screen" }}>Ver anuncio</ActionButton>
             {showSecondaryAction ? (
               <ActionButton href="/carta" kind="secondary" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "smash_bar_screen" }}>
-                Ver carta
+                Descubre SMASH LAB
               </ActionButton>
             ) : null}
           </div>

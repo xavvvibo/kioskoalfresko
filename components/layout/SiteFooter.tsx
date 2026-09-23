@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { seoLandings, siteConfig } from "@/content/site";
 import { trackEvent } from "@/lib/analytics";
-import { getQamareroReservationUrl } from "@/lib/integrations/qamarero";
 
 export function SiteFooter() {
   return (
@@ -15,16 +14,14 @@ export function SiteFooter() {
             <span className="bg-[#d94b2b] px-4 py-3">Alfresko</span>
           </div>
           <p className="mt-4 text-sm leading-6 text-stone-300">{siteConfig.location.area}, {siteConfig.location.city}, {siteConfig.location.province}</p>
-          <p className="mt-3 text-sm leading-6 text-white/90">Kiosko Alfresko presenta SMASH LAB by Alfresko: burgers, cocina para compartir, terraza y pedidos en Granada sur.</p>
+          <p className="mt-3 text-sm leading-6 text-white/90">Kiosko Alfresko cierra su temporada 2026 con gratitud y prepara una nueva apertura en el centro de Granada.</p>
         </div>
         <div>
           <h4 className="text-sm font-black uppercase tracking-[0.16em] text-[#efb7a8]">Enlaces útiles</h4>
           <div className="mt-4 space-y-2 text-sm text-stone-300">
-            <Link className="block hover:text-white" href="/carta" onClick={() => trackEvent("click_ver_carta", { location: "footer" })}>Carta</Link>
-            <Link className="block hover:text-white" href="/fiestas-ogijares-2026">Fiestas de Ogíjares 2026</Link>
-            <Link className="block hover:text-white" href="/#pide-alfresko" onClick={() => trackEvent("click_pedir_ahora", { location: "footer" })}>Pedir ahora</Link>
-            <Link className="block hover:text-white" href="/horarios">Horarios</Link>
-            <a className="block hover:text-white" href={getQamareroReservationUrl("footer")} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent("click_reserva_qamarero", { location: "footer" })}>Reservar mesa</a>
+            <Link className="block hover:text-white" href="/carta" onClick={() => trackEvent("click_ver_carta", { location: "footer" })}>Descubre SMASH LAB</Link>
+            <a className="block hover:text-white" href={siteConfig.contact.instagramUrl} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent("click_instagram", { location: "footer" })}>Instagram</a>
+            <a className="block hover:text-white" href={siteConfig.contact.whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent("click_whatsapp", { location: "footer" })}>WhatsApp</a>
             <Link className="block hover:text-white" href="/reservas-contacto">Contacto</Link>
             <Link className="block hover:text-white" href="/ubicacion-ogijares" onClick={() => trackEvent("click_como_llegar", { location: "footer" })}>Ubicación</Link>
           </div>

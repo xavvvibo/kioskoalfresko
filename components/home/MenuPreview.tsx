@@ -24,14 +24,14 @@ export function MenuPreview() {
               </span>
             ))}
           </div>
-          <div className="mt-7"><ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "menu_preview" }}>Ver carta</ActionButton></div>
+          <div className="mt-7"><ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "menu_preview" }}>Descubre SMASH LAB</ActionButton></div>
         </div>
         <SmashPromoCTA
           promo={smashPromo}
           size="md"
           theme="dark"
           compact
-          primaryAction={{ label: "Ver carta", href: "/carta" }}
+          primaryAction={{ label: "Descubre SMASH LAB", href: "/carta" }}
         />
       </div>
     </div>

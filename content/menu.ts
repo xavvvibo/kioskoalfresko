@@ -1,11 +1,11 @@
 import type { MenuPromo, MenuSection } from "@/types/site";
 
 export const menuHero = {
-  eyebrow: "Carta",
-  title: "SMASH LAB by Alfresko y carta para compartir",
-  subtitle: "Smash burgers, cocina para compartir, bebidas con tapa y terraza.",
+  eyebrow: "Descubre SMASH LAB",
+  title: "SMASH LAB by Alfresko",
+  subtitle: "Smash burgers, cocina para compartir y la esencia de Kiosko Alfresko.",
   supportingText:
-    "Kiosko Alfresko presenta SMASH LAB by Alfresko: burgers con patatas incluidas, platos para compartir y pedidos para recoger en Ogíjares.",
+    "Mientras llega la nueva apertura, descubre las burgers y platos que forman parte de la historia de Kiosko Alfresko.",
 };
 
 export const smashPromo: MenuPromo = {

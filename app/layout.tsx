@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { siteConfig } from "@/content/site";
-import { festivalSpecialOpeningHoursSpecification } from "@/content/fiestas-2026";
 import { AnalyticsNoScript, AnalyticsScripts } from "@/components/analytics/AnalyticsScripts";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { StickyMobileActions } from "@/components/layout/StickyMobileActions";
 
 export const metadata: Metadata = {
-  title: "Kiosko Alfresko | Smash Lab, burgers y terraza en Ogíjares",
+  title: "Kiosko Alfresko | Gracias por este verano",
   description: siteConfig.description,
   metadataBase: new URL(siteConfig.siteUrl),
 };
@@ -26,7 +25,12 @@ const restaurantJsonLd = {
   priceRange: "€€",
   hasMenu: `${siteConfig.siteUrl}/carta`,
   sameAs: [siteConfig.contact.instagramUrl],
-  specialOpeningHoursSpecification: festivalSpecialOpeningHoursSpecification,
+  event: {
+    "@type": "Event",
+    name: "Cierre de temporada 2026 de Kiosko Alfresko",
+    eventStatus: "https://schema.org/EventCompleted",
+    description: "Kiosko Alfresko ha cerrado su temporada 2026 y prepara una nueva apertura en el centro de Granada.",
+  },
   address: {
     "@type": "PostalAddress",
     streetAddress: siteConfig.location.addressLine,
@@ -35,18 +39,6 @@ const restaurantJsonLd = {
     postalCode: siteConfig.location.postalCode,
     addressCountry: "ES",
   },
-  potentialAction: [
-    {
-      "@type": "ReserveAction",
-      target: siteConfig.contact.bookingUrl,
-      name: "Reservar mesa en Qamarero",
-    },
-    {
-      "@type": "OrderAction",
-      target: siteConfig.contact.orderWhatsappUrl,
-      name: "Pedir para recoger en Kiosko Alfresko",
-    },
-  ],
   department: {
     "@type": "FoodEstablishment",
     name: siteConfig.subBrand.fullName,

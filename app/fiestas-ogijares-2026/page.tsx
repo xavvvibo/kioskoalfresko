@@ -6,9 +6,9 @@ import { siteConfig } from "@/content/site";
 import { buildMetadata } from "@/lib/metadata";
 
 export const metadata = buildMetadata({
-  title: "Fiestas de Ogíjares 2026 | Programación y horarios | Kiosko Alfresko",
+  title: "Archivo Fiestas de Ogíjares 2026 | Kiosko Alfresko",
   description:
-    "Consulta la programación de las Fiestas de Ogíjares 2026 y el horario especial de Kiosko Alfresko en Parque San Sebastián, del 10 al 14 de septiembre.",
+    "Archivo de la programación de las Fiestas de Ogíjares 2026. Kiosko Alfresko ha cerrado su temporada 2026 y prepara una nueva apertura.",
   path: festivalDates.pagePath,
 });
 
@@ -28,17 +28,17 @@ export default function FiestasOgijares2026Page() {
               Del 10 al 14 de septiembre · Parque San Sebastián
             </p>
             <p className="mt-5 max-w-xl text-base leading-7 text-stone-300">
-              Consulta la programación de las Fiestas de Ogíjares y el horario especial de Kiosko Alfresko para estos días.
+              Archivo de la programación de las Fiestas de Ogíjares. Kiosko Alfresko ha cerrado su temporada 2026 y prepara una nueva apertura.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "fiestas_landing_hero" }}>
-                Ver carta
+                Descubre SMASH LAB
               </ActionButton>
-              <ActionButton href={siteConfig.contact.orderWhatsappUrl} kind="secondary" newTab analyticsEvent="click_whatsapp_pedido" analyticsPayload={{ location: "fiestas_landing_hero" }}>
-                Pedir
+              <ActionButton href={siteConfig.contact.instagramUrl} kind="secondary" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "fiestas_landing_hero" }}>
+                Instagram
               </ActionButton>
-              <ActionButton href={siteConfig.ctas.booking.href} kind="ghost" newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "fiestas_landing_hero" }}>
-                Reservar
+              <ActionButton href="/" kind="ghost">
+                Ver anuncio
               </ActionButton>
             </div>
           </div>
@@ -69,13 +69,13 @@ export default function FiestasOgijares2026Page() {
           </h2>
           <div className="mt-7 flex flex-wrap gap-3">
             <ActionButton href="/carta" analyticsEvent="click_ver_carta" analyticsPayload={{ location: "fiestas_landing_final" }}>
-              Ver carta
+              Descubre SMASH LAB
             </ActionButton>
-            <ActionButton href={siteConfig.contact.orderWhatsappUrl} kind="secondary" newTab analyticsEvent="click_whatsapp_pedido" analyticsPayload={{ location: "fiestas_landing_final" }}>
-              Pedir
+            <ActionButton href={siteConfig.contact.instagramUrl} kind="secondary" newTab analyticsEvent="click_instagram" analyticsPayload={{ location: "fiestas_landing_final" }}>
+              Instagram
             </ActionButton>
-            <ActionButton href={siteConfig.ctas.booking.href} kind="ghost" newTab analyticsEvent="click_reserva_qamarero" analyticsPayload={{ location: "fiestas_landing_final" }}>
-              Reservar
+            <ActionButton href="/" kind="ghost">
+              Ver anuncio
             </ActionButton>
           </div>
         </div>

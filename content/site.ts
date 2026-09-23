@@ -14,7 +14,7 @@ export const siteConfig = {
   domain: "kioskoalfresko.es",
   locale: "es_ES",
   description:
-    "Kiosko Alfresko en Ogíjares: SMASH LAB by Alfresko, smash burgers, cocina para compartir, terraza, delivery y reservas en Qamarero.",
+    "Kiosko Alfresko cierra su temporada 2026 y prepara una nueva apertura en el centro de Granada con la esencia de SMASH LAB.",
   location: {
     area: "Parque San Sebastián",
     city: "Ogíjares",
@@ -41,35 +41,30 @@ export const siteConfig = {
     uberEatsUrl: process.env.NEXT_PUBLIC_UBEREATS_URL || "",
   },
   ctas: {
-    primary: { label: "Ver carta", href: "/carta" },
-    secondary: { label: "Pedir ahora", href: "#pide-alfresko" },
-    call: { label: "Llamar para recoger", href: "tel:696320465" },
-    booking: { label: "Reservar mesa", href: getQamareroReservationUrl("hero") },
+    primary: { label: "Descubre SMASH LAB", href: "/carta" },
+    secondary: { label: "Instagram", href: "https://www.instagram.com/alfresko.granada/" },
+    call: { label: "WhatsApp", href: "https://wa.me/34696320465" },
+    booking: { label: "Recibir novedades", href: "https://wa.me/34696320465" },
   },
   positioning: {
-    headline: "No es un kiosko. Es el plan.",
+    headline: "Gracias por este verano",
     subheadline:
-      "Descubre las nuevas burgers de SMASH LAB by Alfresko en el Parque San Sebastián de Ogíjares.",
-    support: ["Esta semana · miércoles y viernes desde las 20:00h", "Jueves, sábado y domingo desde las 21:00h", "Lunes y martes cerrado"],
+      "Kiosko Alfresko cierra su temporada 2026 y prepara una nueva apertura en el centro de Granada.",
+    support: ["La historia continúa", "Nueva apertura próximamente", "COMING SOON"],
   },
   schedule: {
-    currentLabel: "Horario especial esta semana",
-    currentSummary: "Esta semana: lunes y martes cerrado. Miércoles abierto desde las 20:00h. Jueves abierto desde las 21:00h. Viernes abierto desde las 20:00h. Sábado y domingo abierto desde las 21:00h.",
-    note: "SMASH LAB by Alfresko, cocina para compartir, terraza, delivery y recogida en Kiosko Alfresko.",
+    currentLabel: "Temporada 2026 cerrada",
+    currentSummary: "Kiosko Alfresko ha cerrado su temporada 2026. Nueva apertura próximamente en el centro de Granada.",
+    note: "Sigue Instagram y WhatsApp para recibir novedades de la nueva apertura.",
     rows: [
-      { day: "Lunes", hours: "Cerrado", opens: null, closes: null },
-      { day: "Martes", hours: "Cerrado", opens: null, closes: null },
-      { day: "Miércoles", hours: "Desde las 20:00", opens: "20:00", closes: "00:00" },
-      { day: "Jueves", hours: "Desde las 21:00", opens: "21:00", closes: "00:00" },
-      { day: "Viernes", hours: "Desde las 20:00", opens: "20:00", closes: "01:30" },
-      { day: "Sábado", hours: "Desde las 21:00", opens: "21:00", closes: "01:30" },
-      { day: "Domingo", hours: "Desde las 21:00", opens: "21:00", closes: "00:00" },
+      { day: "Temporada 2026", hours: "Cerrada", opens: null, closes: null },
+      { day: "Nueva apertura", hours: "Próximamente", opens: null, closes: null },
     ],
   },
 };
 
 export const seasonalSchedule: SeasonalScheduleItem[] = [
-  { month: "Esta semana", status: "confirmed", summary: "Lunes y martes cerrado · Miércoles y viernes desde las 20:00h · Jueves, sábado y domingo desde las 21:00h", note: "Consulta Instagram para cualquier ajuste puntual.", highlight: true },
+  { month: "Temporada 2026", status: "confirmed", summary: "Cierre de temporada confirmado", note: "Consulta Instagram y WhatsApp para recibir novedades de la nueva apertura.", highlight: true },
 ];
 
 export const maySchedule = {
@@ -216,9 +211,9 @@ export const menuCategories: MenuCategory[] = [
 ];
 
 export const heroActions: ActionLink[] = [
-  { label: "Ver carta", href: "/carta", kind: "primary" },
-  { label: "Pedir ahora", href: "#pide-alfresko", kind: "secondary" },
-  { label: "Reservar mesa", href: getQamareroReservationUrl("hero_actions"), kind: "ghost" },
+  { label: "Instagram", href: "https://www.instagram.com/alfresko.granada/", kind: "primary" },
+  { label: "WhatsApp", href: "https://wa.me/34696320465", kind: "secondary" },
+  { label: "Descubre SMASH LAB", href: "/carta", kind: "ghost" },
 ];
 
 export const seoLandings: SeoLanding[] = [

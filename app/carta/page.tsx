@@ -1,15 +1,13 @@
 import Image from "next/image";
-import { DeliveryPanel } from "@/components/home/DeliveryPanel";
 import { MenuHero } from "@/components/menu/MenuHero";
 import { MenuSectionBlock } from "@/components/menu/MenuSectionBlock";
 import { SmashPromoCTA } from "@/components/menu/SmashPromoCTA";
-import { ScheduleNotice } from "@/components/marketing/ScheduleNotice";
 import { drinksSections, foodSections, menuArtwork, menuFooter, menuHero, smashPromo } from "@/content/menu";
 import { buildMetadata } from "@/lib/metadata";
 
 export const metadata = buildMetadata({
-  title: "Carta Kiosko Alfresko | SMASH LAB by Alfresko en Ogíjares",
-  description: "Carta de Kiosko Alfresko: SMASH LAB by Alfresko, burgers a 14 €, platos para compartir, patatas, carnes, bebidas con tapa y pedidos para recoger.",
+  title: "Descubre SMASH LAB | Kiosko Alfresko",
+  description: "Descubre SMASH LAB by Alfresko: burgers, platos para compartir y la esencia de Kiosko Alfresko mientras llega la nueva apertura.",
   path: "/carta",
 });
 
@@ -22,9 +20,6 @@ export default function CartaPage() {
     <main className="bg-[linear-gradient(180deg,#090909_0%,#151515_24%,#100f0f_58%,#0b0b0b_100%)] text-white">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 md:py-16">
         <MenuHero {...menuHero} />
-        <div className="mt-6">
-          <ScheduleNotice />
-        </div>
 
         <nav className="mt-6 flex gap-2 overflow-x-auto pb-2" aria-label="Categorías de carta">
           {sections.map((section) => (
@@ -41,8 +36,8 @@ export default function CartaPage() {
         <section className="mt-8 space-y-5 md:mt-10">
           <SmashPromoCTA
             promo={smashPromo}
-            primaryAction={{ label: "Pedir ahora", href: "#pide-alfresko", analyticsEvent: "click_pedir_ahora" }}
-            secondaryAction={{ label: "Reservar mesa", href: "/reservas-contacto", analyticsEvent: "click_reserva_contacto" }}
+            primaryAction={{ label: "Ver Instagram", href: "https://www.instagram.com/alfresko.granada/", analyticsEvent: "click_instagram" }}
+            secondaryAction={{ label: "Volver al anuncio", href: "/", analyticsEvent: "click_home" }}
           />
 
           <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
@@ -76,10 +71,6 @@ export default function CartaPage() {
               <MenuSectionBlock key={section.id} section={section} />
             ))}
           </div>
-        </section>
-
-        <section className="mt-12">
-          <DeliveryPanel />
         </section>
 
         <section className="mt-12 rounded-[2rem] border border-white/10 bg-white/6 p-4 md:p-6">

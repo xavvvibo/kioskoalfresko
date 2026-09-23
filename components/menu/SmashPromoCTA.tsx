@@ -1,6 +1,5 @@
 import type { MenuPromo } from "@/types/site";
 import { ActionButton } from "@/components/ui/ActionButton";
-import { getQamareroReservationUrl } from "@/lib/integrations/qamarero";
 
 export function SmashPromoCTA({
   promo,
@@ -14,7 +13,7 @@ export function SmashPromoCTA({
   primaryAction?: { label: string; href: string; analyticsEvent?: string };
   secondaryAction?: { label: string; href: string; analyticsEvent?: string };
 }) {
-  const primaryHref = primaryAction?.href || getQamareroReservationUrl("menu");
+  const primaryHref = primaryAction?.href || "/";
   const primaryExternal = primaryHref.startsWith("http");
   const backgroundImage = promo.image?.src
     ? [
@@ -70,10 +69,10 @@ export function SmashPromoCTA({
           <ActionButton
             href={primaryHref}
             newTab={primaryExternal}
-            analyticsEvent={primaryAction?.analyticsEvent || "click_reserva_qamarero"}
+            analyticsEvent={primaryAction?.analyticsEvent || "click_home"}
             analyticsPayload={{ location: "smash_promo" }}
           >
-            {primaryAction?.label || "Pedir ahora"}
+            {primaryAction?.label || "Ver anuncio"}
           </ActionButton>
 
           <ActionButton

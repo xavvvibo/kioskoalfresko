@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { seoLandings, siteConfig } from "@/content/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const staticRoutes = ["", "/carta", "/fiestas-ogijares-2026", "/horarios", "/ubicacion-ogijares", "/reservas-contacto", "/owner", "/aviso-legal", "/privacidad", "/cookies"];
+  const staticRoutes = ["", "/carta", "/horarios", "/ubicacion-ogijares", "/reservas-contacto", "/owner", "/aviso-legal", "/privacidad", "/cookies"];
   return [
     ...staticRoutes.map((path) => ({
       url: `${siteConfig.siteUrl}${path}`,
